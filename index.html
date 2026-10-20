@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Xưởng Prompt Thời Trang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: two-pane workbench — controls left, live prompt "slate" right; stacks on phones */
+:root{
+  --bg:#F3F2F5; --surface:#FFFFFF; --sunk:#ECEAF0; --line:#DAD6E0;
+  --fg:#1B1820; --muted:#6B6475; --accent:#9C2A5C; --accent-ink:#FFFFFF; --accent-soft:#F6E3EC;
+  --ok:#1F7A4D;
+  --display:"Bricolage Grotesque", "Be Vietnam Pro", system-ui, sans-serif;
+  --body:"Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141218; --surface:#1D1A22; --sunk:#26222C; --line:#37323F;
+  --fg:#EEEAF2; --muted:#A49CAE; --accent:#E27AA6; --accent-ink:#1B1018; --accent-soft:#3A2230; --ok:#5CC48F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141218; --surface:#1D1A22; --sunk:#26222C; --line:#37323F;
+  --fg:#EEEAF2; --muted:#A49CAE; --accent:#E27AA6; --accent-ink:#1B1018; --accent-soft:#3A2230; --ok:#5CC48F; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(24px,3.4vw,34px);letter-spacing:-.02em;margin:0;line-height:1.05;text-wrap:balance}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin:4px 0 0;max-width:60ch}
+.tabs{display:flex;gap:4px;background:var(--sunk);padding:4px;border-radius:10px}
+.tabs button{border:0;background:transparent;color:var(--muted);font:600 13px var(--body);padding:7px 14px;border-radius:7px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgb(0 0 0/.08)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.sec{display:flex;flex-direction:column;gap:10px}
+.sec-h{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:5px;font-weight:500;font-size:13px;min-width:0}
+input[type=text],select,textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+textarea{font-family:var(--mono);font-size:12.5px;line-height:1.55;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.hint{font-size:12px;color:var(--muted)}
+
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{border:1px solid var(--line);background:var(--bg);padding:6px 12px;border-radius:999px;cursor:pointer;font-weight:500;font-size:13px;user-select:none}
+.seg input:checked+label{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg input:focus-visible+label{outline:2px solid var(--accent);outline-offset:2px}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer}
+.check input{margin-top:3px;accent-color:var(--accent)}
+
+/* timeline */
+.tl{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px}
+.tl i{background:var(--accent);opacity:.35;display:block}
+.tl i:first-child,.tl i:last-child{opacity:.8}
+.beats{display:flex;flex-direction:column;gap:8px}
+.beat{display:grid;grid-template-columns:62px minmax(0,1fr);gap:10px;align-items:center}
+.tc{font:500 12px var(--mono);font-variant-numeric:tabular-nums;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:6px 0;text-align:center}
+.beat small{grid-column:2;color:var(--muted);font-size:11.5px;margin-top:-4px}
+
+.btn{font:600 13px var(--body);border-radius:8px;padding:8px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+
+/* slate */
+.slate{position:sticky;top:12px}
+@media (max-width:860px){.slate{position:static}}
+.out{background:var(--sunk);border-radius:10px;padding:14px;font:12.5px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;max-height:62vh;overflow:auto;margin:0}
+.out mark{background:var(--accent-soft);color:var(--fg);border-radius:3px;padding:0 2px}
+.out.neg{max-height:none}
+.meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.toast{color:var(--ok);font-weight:600}
+
+/* library */
+.lib{display:flex;flex-direction:column;gap:6px}
+.lib-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;border-top:1px solid var(--line);padding-top:8px}
+.lib-item b{font-weight:600;font-size:13px}
+.lib-item p{margin:2px 0 0;font:12px/1.5 var(--mono);color:var(--muted)}
+.tag{font:600 10px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-left:6px}
+.x{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px;border-radius:6px}
+.x:hover{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Xưởng Prompt <span>Thời Trang</span></h1>
+      <p class="sub">Chọn người mẫu, bối cảnh và chuỗi động tác. Prompt tiếng Anh cập nhật ngay bên phải, bấm copy là dán vào công cụ video.</p>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-build" aria-selected="true">Tạo prompt</button>
+      <button role="tab" id="tab-tpl" aria-selected="false">Template</button>
+      <button role="tab" id="tab-lib" aria-selected="false">Thư viện động tác</button>
+    </div>
+  </header>
+
+  <!-- BUILD -->
+  <div class="grid" id="view-build">
+    <div class="panel">
+      <div class="sec">
+        <div class="sec-h">Người mẫu trong ảnh</div>
+        <div class="seg" id="gender">
+          <input type="radio" name="gender" id="g-f" value="f" checked><label for="g-f">Nữ</label>
+          <input type="radio" name="gender" id="g-m" value="m"><label for="g-m">Nam</label>
+        </div>
+        <p class="hint" style="margin:0">Chỉ dùng để viết she/he cho đúng. Người mẫu, sản phẩm và bối cảnh đều lấy theo ảnh tham chiếu.</p>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h">Thời lượng <span id="beatCount" class="hint" style="text-transform:none;letter-spacing:0"></span></div>
+        <div class="seg" id="dur">
+          <input type="radio" name="dur" id="d-10" value="10" checked><label for="d-10">10 giây</label>
+          <input type="radio" name="dur" id="d-15" value="15"><label for="d-15">15 giây</label>
+          <input type="radio" name="dur" id="d-20" value="20"><label for="d-20">20 giây</label>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h">Chuỗi động tác
+          <button class="btn ghost" id="shuffle" type="button" style="text-transform:none;letter-spacing:0;padding:5px 10px">Đổi ngẫu nhiên</button>
+        </div>
+        <div class="tl" id="tl"></div>
+        <div class="beats" id="beats"></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h">Tuỳ chọn</div>
+        <label class="check"><input type="checkbox" id="closed" checked> Áo luôn đóng, không mở (áo khoác, sơ mi, áo mưa)</label>
+        <label class="check"><input type="checkbox" id="cont"> Nối từ khung cuối clip trước ("Continue exactly from the provided image")</label>
+        <label class="f">Âm thanh
+          <select id="audio">
+            <option value="none">Không có (sẽ ghép nhiều clip, lồng tiếng sau)</option>
+            <option value="amb">Chỉ tiếng môi trường nhẹ</option>
+          </select>
+        </label>
+        <label class="f">Lỗi riêng của sản phẩm cần chặn (tiếng Anh, cách nhau bằng dấu phẩy)
+          <input type="text" id="extraNeg" placeholder="vd: shrinking brim, missing face covering, missing drawstring">
+        </label>
+      </div>
+    </div>
+
+    <div class="panel slate">
+      <div class="sec">
+        <div class="sec-h">Prompt <span class="toast" id="t1"></span></div>
+        <pre class="out" id="out"></pre>
+        <div class="meta"><span id="count"></span><span>9:16 · 1080p · 24fps</span></div>
+        <div class="btns">
+          <button class="btn primary" id="copyP" type="button">Copy prompt</button>
+          <button class="btn" id="copyAll" type="button">Copy prompt + negative</button>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-h">Negative prompt <span class="toast" id="t2"></span></div>
+        <pre class="out neg" id="neg"></pre>
+        <div class="btns"><button class="btn" id="copyN" type="button">Copy negative</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEMPLATE -->
+  <div class="panel" id="view-tpl" hidden>
+    <div class="sec">
+      <div class="sec-h">Khung prompt <span class="toast" id="t3"></span></div>
+      <p class="hint" style="margin:0">Sửa thoải mái phần chữ cố định. Các ô <b>{{...}}</b> sẽ được thay bằng lựa chọn ở tab Tạo prompt:
+        <code>{{continue}} {{person}} {{duration}} {{actions}} {{closed_line}} {{extra_neg}} {{audio}} {{pronoun}} {{Pronoun}} {{possessive}} {{Possessive}} {{object}}</code> ({{garment}} luôn là "product"). Template lưu trên trình duyệt này.</p>
+      <textarea id="tpl" rows="28"></textarea>
+      <label class="f">Negative prompt mặc định
+        <textarea id="negTpl" rows="4"></textarea>
+      </label>
+      <div class="btns">
+        <button class="btn primary" id="saveTpl" type="button">Lưu template</button>
+        <button class="btn" id="resetTpl" type="button">Khôi phục mặc định</button>
+        <span id="resetConfirm" hidden><button class="btn" id="resetYes" type="button">Chắc chắn khôi phục</button></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIBRARY -->
+  <div class="grid" id="view-lib" hidden>
+    <div class="panel">
+      <div class="sec">
+        <div class="sec-h">Thêm động tác mới <span class="toast" id="t4"></span></div>
+        <label class="f">Nhóm
+          <select id="newGroup">
+            <option value="open">Mở đầu</option>
+            <option value="mid">Khoe form (giữa)</option>
+            <option value="end">Kết</option>
+          </select>
+        </label>
+        <label class="f">Tên hiển thị (tiếng Việt)
+          <input type="text" id="newLabel" placeholder="vd: Đi chéo qua khung hình rồi quay lại">
+        </label>
+        <label class="f">Câu lệnh tiếng Anh
+          <textarea id="newText" rows="4" placeholder="{S} walks slowly diagonally across the frame, then turns and walks back to the center, arms relaxed away from the {g}."></textarea>
+        </label>
+        <p class="hint" style="margin:0">Dùng <code>{S}</code> = She/He, <code>{s}</code> = she/he, <code>{p}</code> = her/his, <code>{g}</code> = loại đồ. Giữ nguyên quy tắc: tay không chạm sản phẩm, không gió, máy đứng yên.</p>
+        <div class="btns"><button class="btn primary" id="addAct" type="button">Thêm vào thư viện</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="sec">
+        <div class="sec-h">Tất cả động tác</div>
+        <div class="lib" id="libList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const BUILTIN = {
+  open: [
+    {id:"o1",label:"Đứng như ảnh mẫu, nhìn máy, thở nhẹ",text:"Starting exactly as in the reference image, {s} stands full-body with arms relaxed, looks into the camera with a calm expression and takes a slow relaxed breath."},
+    {id:"o2",label:"Mỉm cười, dồn nhẹ trọng tâm sang một chân",text:"Starting exactly as in the reference image, {s} smiles softly at the camera and gently shifts {p} weight onto one leg, arms relaxed at {p} sides."},
+    {id:"o3",label:"Xoay nhẹ 30° rồi quay lại",text:"Starting exactly as in the reference image, {s} slowly turns about thirty degrees to one side, holds for a moment, then turns back to face the camera."}
+  ],
+  mid: [
+    {id:"m1",label:"Bước chậm 2–3 bước lại gần máy (khung nửa người)",text:"{S} takes two or three slow, steady steps toward the camera, arms relaxed at {p} sides, and stops gently in a waist-up medium shot."},
+    {id:"m3",label:"Xoay 30° sang phải rồi quay lại",text:"{S} slowly turns {p} body about thirty degrees to {p} right, holds the pose for a moment, then slowly turns back to face the camera."},
+    {id:"m4",label:"Xoay 30° sang trái rồi quay lại",text:"{S} slowly turns {p} body about thirty degrees to {p} left, holds the pose for a moment, then slowly turns back to face the camera."},
+    {id:"m9",label:"Quay đầu chậm sang một bên rồi nhìn lại máy",text:"{S} slowly turns {p} head to one side, showing the {g} in profile, holds for a moment, then slowly turns back to look into the camera."},
+    {id:"m5",label:"Nghiêng đầu nhẹ, mỉm cười, giữ dáng",text:"{S} tilts {p} head slightly, smiles softly at the camera and holds the pose, breathing calmly."},
+    {id:"p1",label:"[Chỉ tay]Chỉ tay nhẹ về phía sản phẩm rồi hạ tay",text:"{S} slowly raises one hand and gestures toward the {g} with an open palm, the hand staying a clear distance away and never touching it, holds for a moment, then slowly lowers the hand back to {p} side."},
+    {id:"p2",label:"[Chỉ tay]Nhìn máy mỉm cười, chỉ tay về sản phẩm",text:"{S} looks into the camera with a soft smile and gestures toward the {g} with one open hand held well away from it, never touching it, then slowly lowers the hand."},
+    {id:"p3",label:"[Chỉ tay]Hai tay mở ra giới thiệu sản phẩm",text:"{S} slowly brings both hands up in front of {p} body, palms open in a gentle presenting gesture toward the {g}, hands held well away from it and never touching it, then slowly lowers them."},
+    {id:"p4",label:"[Chỉ tay]Xoay nhẹ 30° kèm chỉ tay về sản phẩm",text:"{S} slowly turns about thirty degrees to one side while gesturing toward the {g} with one open hand held well away from it, never touching it, then turns back to face the camera and lowers the hand."},
+    {id:"p5",label:"[Chỉ tay]Chỉ tay lên nón/mũ (đồ đội đầu)",text:"{S} slowly raises one hand and points up toward the headwear on {p} head, the fingertips staying a clear distance from it and never touching it, holds for a moment, then slowly lowers the hand."},
+    {id:"m8",label:"Lùi chậm về khung toàn thân",text:"{S} steps backward in small, smooth steps until {s} is framed full-body again."}
+  ],
+  end: [
+    {id:"e1",label:"Lùi về toàn thân, về dáng khung đầu",text:"{S} steps backward in small, smooth steps to a full-body framing and settles into the same relaxed pose as the first frame."},
+    {id:"e2",label:"Về đúng dáng khung đầu (để lặp mượt)",text:"{S} slowly returns to the exact same relaxed pose and position as the first frame, looking into the camera with a soft smile."},
+    {id:"e3",label:"Đứng yên nửa giây cuối (để nối clip)",text:"{S} settles into a relaxed, natural pose facing the camera and holds completely still for the final half second, ready for the next clip."}
+  ]
+};
+
+const SETTINGS = [
+  {id:"ref",label:"Giữ bối cảnh như ảnh tham chiếu",in:"in the same setting as the reference image",env:"the same setting as in the reference image, unchanged"},
+  {id:"studio",label:"Studio nền trơn sáng",in:"in a minimal photo studio",env:"minimal photo studio with a seamless light gray backdrop and soft even lighting"},
+  {id:"store",label:"Cửa hàng quần áo hiện đại",in:"inside a modern clothing store",env:"bright modern clothing store with a light tiled floor, wooden display shelves with folded clothes, hanging racks and warm spotlights"},
+  {id:"street",label:"Vỉa hè phố, nắng dịu",in:"on a quiet city sidewalk",env:"quiet city sidewalk with clean pavement, soft afternoon daylight and blurred shopfronts with no readable text"},
+  {id:"cafe",label:"Quán cà phê",in:"in a cozy café",env:"cozy café with wooden tables, warm pendant lights and green plants, softly blurred background"},
+  {id:"home",label:"Phòng khách tại nhà",in:"in a bright living room",env:"bright minimalist living room with a beige sofa, a large window with sheer curtains and soft natural light"},
+  {id:"garden",label:"Sân vườn",in:"in a sunlit garden",env:"sunlit garden path with green shrubs and soft dappled light that stays constant throughout"},
+  {id:"custom",label:"Tự nhập…",in:"",env:""}
+];
+
+const DEFAULT_TPL = `{{continue}}The {{person}} from the reference image, wearing the product shown in it, performs one continuous {{duration}}-second product showcase in the same setting as the reference image. ONE SINGLE UNBROKEN TAKE, no cuts, no scene changes.
+
+Product: reproduce the product exactly as in the reference image, with no changes to color, material, pattern, cut or details.
+
+Action — one continuous chain of movements, each gesture flowing into the next:
+{{actions}}
+
+Motion quality: every movement is slow, fluid and graceful, like a high-end fashion film. Each gesture flows into the next without stopping, with natural weight shifts and a steady unhurried pace. No sudden, jerky or fast movements. {{Possessive}} hands never touch, pull, smooth or adjust the {{garment}}; they keep a clear distance from it at all times, even when gesturing toward it. The {{garment}} moves only with {{possessive}} body movements.
+
+PRODUCT FIDELITY CONSTRAINTS
+The {{garment}} is a real product. Keep it exactly as shown in the reference image in every frame: same color, same material and gloss, same pattern size and spacing, same buttons, same closures, same length and same cut. Do not add any new detail: no pockets, zippers, extra buttons, belts, straps, logos, labels, text, patches, prints, trims or lining.{{closed_line}} The pattern stays fixed on the material, moving only with it.
+
+Environment: the same setting as in the reference image, unchanged. No signs, no store name, no logos, no other people.
+
+Style: photorealistic lifestyle fashion commercial, natural skin texture, true-to-life colors, soft even lighting that stays constant throughout.
+
+Camera: locked-off tripod at chest height, no pan, no zoom, no camera movement. The framing changes only because {{pronoun}} walks toward and away from the camera. Focus stays on {{object}}. One continuous take from the first frame to the last.
+
+Quality: 1080p, 24fps, smooth natural motion, sharp detail on the fabric and finishing. Face, hairstyle and the {{garment}} stay identical throughout. Natural hands with five fingers. {{Pronoun}} does not speak.
+
+Audio: {{audio}}
+
+No horizontal video, no 16:9, no square format, no scene cuts, no transitions, no sudden zooms, no camera shake, no product redesign, no changing {{garment}} color, no changing pattern, no missing details, no fabric flickering, no distorted seams{{extra_neg}}, no hands touching the {{garment}}, no deformed hands, no extra fingers, no face distortion, no unnatural eye movement, no sudden pose changes, no clothing changes, no background changes, no added logos, no subtitles, no text overlays, no watermarks.
+
+FINAL REQUIREMENTS
+
+Duration: exactly {{duration}} seconds.
+Aspect ratio: 9:16 vertical.
+Platform: TikTok and TikTok Shop.
+Motion: smooth, natural, realistic.
+Priority: accurately showcase the original {{garment}} while preserving the reference model and setting.`;
+
+const DEFAULT_NEG = "wind, breeze, fluttering, camera cut, jump cut, scene change, zoom, camera pan, back view, extra people, pockets, zipper, logo, label, text, extra buttons, opened garment, changed pattern, hand touching garment, hands pulling fabric, morphing, jerky motion, watermark";
+
+const SPLITS = {10:[0,3,7,10],15:[0,3,7,11,15],20:[0,3,7,11,15,20]};
+
+// ---- storage helpers
+const store = {
+  get(k,d){try{const v=localStorage.getItem("fps:"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{localStorage.setItem("fps:"+k,JSON.stringify(v))}catch(e){}}
+};
+let custom = store.get("custom",{open:[],mid:[],end:[]});
+let tpl = store.get("tpl",DEFAULT_TPL);
+let negTpl = store.get("neg",DEFAULT_NEG);
+
+const $ = id => document.getElementById(id);
+const acts = g => BUILTIN[g].concat(custom[g]||[]);
+const find = id => ["open","mid","end"].flatMap(acts).find(a=>a.id===id);
+
+// ---- state
+let state = Object.assign({gender:"f",age:"mid-20s",garment:"dress",setting:"ref",settingCustom:"",dur:10,closed:true,cont:false,audio:"none",note:"",extraNeg:"",beats:["o1","m1","m3","e1","e1","e1"]}, store.get("state",{}));
+
+function beatGroups(n){return Array.from({length:n},(_,i)=>i===0?"open":i===n-1?"end":"mid")}
+
+function renderSettings(){
+  $("setting").innerHTML = SETTINGS.map(s=>`<option value="${s.id}">${s.label}</option>`).join("");
+}
+
+function renderBeats(){
+  const sp = SPLITS[state.dur], n = sp.length-1, groups = beatGroups(n);
+  $("beatCount").textContent = `${n} nhịp, mỗi nhịp 3–5 giây`;
+  $("tl").innerHTML = groups.map((g,i)=>`<i style="flex:${sp[i+1]-sp[i]}"></i>`).join("");
+  // fix beats array to valid ids per slot
+  const nb=[];
+  for(let i=0;i<n;i++){
+    const list=acts(groups[i]);
+    let cur = i===n-1 ? (state.beats.find((b,j)=>j>=n-1 && list.some(a=>a.id===b)) || state.beats[n-1]) : state.beats[i];
+    if(!list.some(a=>a.id===cur)) cur = list[Math.min(i===0?0:(i-1)%list.length,list.length-1)].id;
+    nb.push(cur);
+  }
+  state.beats = nb;
+  const names={open:"Mở đầu",mid:"Khoe form",end:"Kết"};
+  $("beats").innerHTML = groups.map((g,i)=>`
+    <div class="beat">
+      <div class="tc">${sp[i]}–${sp[i+1]}s</div>
+      <select id="beat-${i}" data-i="${i}" aria-label="Nhịp ${i+1}">
+        ${acts(g).map(a=>`<option value="${a.id}" ${a.id===nb[i]?"selected":""}>${a.label}</option>`).join("")}
+      </select>
+      <small>${names[g]}</small>
+    </div>`).join("");
+  $("beats").querySelectorAll("select").forEach(s=>s.addEventListener("change",e=>{state.beats[+e.target.dataset.i]=e.target.value;update()}));
+}
+
+function shuffle(){
+  const n=SPLITS[state.dur].length-1, g=beatGroups(n), used=new Set();
+  state.beats = g.map((grp,i)=>{
+    let list=acts(grp).filter(a=>!used.has(a.id));
+    if(grp==="mid"){
+      // m1 (walk in) works best early; m8 (walk back) only after it
+      list=list.filter(a=> a.id!=="m8" || used.has("m1"));
+      // head-wear pointing only for hats; at most one pointing beat per clip
+      const pointed=[...used].some(id=>/^p/.test(id));
+      list=list.filter(a=> a.id!=="p5" && !(pointed&&/^p/.test(a.id)));
+    }
+    const pick=list[Math.floor(Math.random()*list.length)]||acts(grp)[0];
+    used.add(pick.id); return pick.id;
+  });
+  renderBeats(); update();
+}
+
+function fill(text,v){
+  return text.replace(/\{S\}/g,v.Pronoun).replace(/\{s\}/g,v.pronoun).replace(/\{p\}/g,v.possessive).replace(/\{g\}/g,v.garment);
+}
+
+function build(){
+  const f = state.gender==="f";
+  const v = {
+    pronoun: f?"she":"he", Pronoun: f?"She":"He", possessive: f?"her":"his", Possessive: f?"Her":"His", object: f?"her":"him",
+    garment: "product", person: f?"woman":"man"
+  };
+  v.model = v.person; v.duration = state.dur;
+  v.setting = "in the same setting as the reference image";
+  v.environment = "The same setting as in the reference image, unchanged";
+  v.continue = state.cont ? "Continue exactly from the provided image: " : "";
+  v.product_note = "";
+  v.closed_line = state.closed ? " The product stays fully closed and is never opened." : "";
+  v.keep_setting = " and setting";
+  v.extra_neg = state.extraNeg.split(",").map(x=>x.trim()).filter(Boolean).map(x=>/^no\s/i.test(x)?x:"no "+x).map(x=>", "+x).join("");
+  v.audio = state.audio==="none" ? "none." : "soft quiet ambience only, no music, no speech.";
+  const sp=SPLITS[state.dur];
+  v.actions = state.beats.map((id,i)=>{const a=find(id);return `${sp[i]}–${sp[i+1]}s: ${a?fill(a.text,v):""}`}).join("\n");
+  let out = tpl.replace(/\{\{(\w+)\}\}/g,(m,k)=> k in v ? String(v[k]) : m);
+  if(state.cont) out = out.replace(/Continue exactly from the provided image: The /,"Continue exactly from the provided image: the ");
+  return out;
+}
+
+function update(){
+  store.set("state",state);
+  const p=build();
+  $("out").textContent=p;
+  $("neg").textContent=negTpl;
+  const words=p.trim().split(/\s+/).length;
+  $("count").textContent=`${words} từ · ${p.length} ký tự`;
+}
+
+function flash(id,msg){const el=$(id);el.textContent=msg;clearTimeout(el._t);el._t=setTimeout(()=>el.textContent="",1800)}
+function copy(text,toastId,srcEl){
+  const done=()=>flash(toastId,"Đã copy");
+  try{
+    navigator.clipboard.writeText(text).then(done,()=>fallback());
+  }catch(e){fallback()}
+  function fallback(){
+    if(srcEl){const r=document.createRange();r.selectNodeContents(srcEl);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+    flash(toastId,"Đã bôi đen, nhấn Ctrl/Cmd+C");
+  }
+}
+
+// ---- bind build controls
+function syncControls(){
+  $("g-"+state.gender).checked=true;
+  $("d-"+state.dur).checked=true;
+  $("closed").checked=state.closed; $("cont").checked=state.cont; $("audio").value=state.audio;$("extraNeg").value=state.extraNeg||"";
+}
+document.querySelectorAll('input[name=gender]').forEach(r=>r.addEventListener("change",e=>{state.gender=e.target.value;update()}));
+document.querySelectorAll('input[name=dur]').forEach(r=>r.addEventListener("change",e=>{state.dur=+e.target.value;renderBeats();update()}));
+$("closed").addEventListener("change",e=>{state.closed=e.target.checked;update()});
+$("cont").addEventListener("change",e=>{state.cont=e.target.checked;update()});
+$("audio").addEventListener("change",e=>{state.audio=e.target.value;update()});
+$("extraNeg").addEventListener("input",e=>{state.extraNeg=e.target.value;update()});
+$("shuffle").addEventListener("click",shuffle);
+$("copyP").addEventListener("click",()=>copy(build(),"t1",$("out")));
+$("copyN").addEventListener("click",()=>copy(negTpl,"t2",$("neg")));
+$("copyAll").addEventListener("click",()=>copy(build()+"\n\nNegative prompt: "+negTpl,"t1",$("out")));
+
+// ---- tabs
+const views={build:"view-build",tpl:"view-tpl",lib:"view-lib"};
+Object.keys(views).forEach(k=>$("tab-"+k).addEventListener("click",()=>{
+  Object.keys(views).forEach(j=>{$("tab-"+j).setAttribute("aria-selected",j===k);$(views[j]).hidden=j!==k});
+  if(k==="tpl"){$("tpl").value=tpl;$("negTpl").value=negTpl}
+  if(k==="lib")renderLib();
+  if(k==="build"){renderBeats();update()}
+}));
+
+// ---- template
+$("saveTpl").addEventListener("click",()=>{tpl=$("tpl").value;negTpl=$("negTpl").value;store.set("tpl",tpl);store.set("neg",negTpl);update();flash("t3","Đã lưu")});
+$("resetTpl").addEventListener("click",()=>{$("resetConfirm").hidden=false});
+$("resetYes").addEventListener("click",()=>{tpl=DEFAULT_TPL;negTpl=DEFAULT_NEG;store.set("tpl",tpl);store.set("neg",negTpl);$("tpl").value=tpl;$("negTpl").value=negTpl;$("resetConfirm").hidden=true;update();flash("t3","Đã khôi phục")});
+
+// ---- library
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function renderLib(){
+  const names={open:"Mở đầu",mid:"Khoe form",end:"Kết"};
+  $("libList").innerHTML=["open","mid","end"].map(g=>`
+    <div class="sec-h" style="margin-top:6px">${names[g]}</div>
+    ${acts(g).map(a=>{const mine=(custom[g]||[]).some(c=>c.id===a.id);return `
+      <div class="lib-item"><div><b>${esc(a.label)}</b>${mine?'<span class="tag">Của bạn</span>':""}<p>${esc(a.text)}</p></div>
+      ${mine?`<button class="x" data-g="${g}" data-id="${a.id}" aria-label="Xoá ${esc(a.label)}">×</button>`:"<span></span>"}</div>`}).join("")}
+  `).join("");
+  $("libList").querySelectorAll(".x").forEach(b=>b.addEventListener("click",()=>{
+    custom[b.dataset.g]=custom[b.dataset.g].filter(c=>c.id!==b.dataset.id);store.set("custom",custom);renderLib();
+  }));
+}
+$("addAct").addEventListener("click",()=>{
+  const g=$("newGroup").value,label=$("newLabel").value.trim(),text=$("newText").value.trim();
+  if(!label||!text){flash("t4","Cần nhập cả tên và câu lệnh");return}
+  (custom[g]=custom[g]||[]).push({id:"c"+Date.now().toString(36),label,text});
+  store.set("custom",custom);$("newLabel").value="";$("newText").value="";renderLib();flash("t4","Đã thêm");
+});
+
+syncControls(); renderBeats(); update();
+</script>
+
+</body>
+</html>

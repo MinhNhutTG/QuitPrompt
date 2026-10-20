@@ -1,0 +1,19 @@
+{
+  "name": "prompt-studio",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Xưởng Prompt Thời Trang: tạo prompt video AI cho từng sản phẩm",
+  "scripts": {
+    "postinstall": "npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently -n server,client -c magenta,cyan \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm install --prefix server --omit=dev && npm install --prefix client --include=dev && npm run build --prefix client",
+    "start": "npm start --prefix server",
+    "reset-password": "npm run reset-password --prefix server --"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=20.6"
+  }
+}
