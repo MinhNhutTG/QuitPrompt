@@ -14,4 +14,6 @@ export const config = {
   allowRegister: env.ALLOW_REGISTER !== "false",
   cloudinaryUrl: env.CLOUDINARY_URL || "",
   clientOrigin: env.CLIENT_ORIGIN || "",
+  // Proxy hops in front of Express: 1 = Render only, 2 = Vercel rewrite + Render.
+  trustProxy: Number(env.TRUST_PROXY) || 1,
 };

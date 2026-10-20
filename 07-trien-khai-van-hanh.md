@@ -41,7 +41,8 @@
 | `ALLOW_REGISTER` | Không | `true` / `false` | Tạo xong tài khoản cho nhóm thì đặt `false` |
 | `NODE_ENV` | Có khi deploy | `production` | Bật cookie Secure, phục vụ file build |
 | `PORT` | Không | `4000` | Render tự cấp |
-| `CLIENT_ORIGIN` | Không | `http://localhost:5173` | Chỉ khi frontend ở domain khác |
+| `CLIENT_ORIGIN` | Không | `http://localhost:5173` | Chỉ khi frontend gọi thẳng API ở domain khác (không dùng khi đi qua rewrite của Vercel) |
+| `TRUST_PROXY` | Không | `1` / `2` | Số tầng proxy trước server: `1` khi chỉ có Render, `2` khi đi qua rewrite của Vercel. Sai số này thì chống dò mật khẩu tính nhầm IP |
 
 ## 3. Các bước deploy
 
@@ -72,8 +73,20 @@
 
 Có sẵn file `render.yaml` để tạo bằng **Blueprint** nếu muốn.
 
+### Bước 4b. Vercel (tuỳ chọn: giao diện trên CDN, API vẫn ở Render)
+Giao diện mở ngay cả khi máy chủ Render đang ngủ, rồi hiện màn hình chờ trong lúc Render thức dậy.
+
+1. Tạo tài khoản tại vercel.com, chọn **Add New → Project**, import repo.
+2. **Root Directory:** `client`. Các thiết lập còn lại lấy từ `client/vercel.json`.
+3. Không cần biến môi trường nào trên Vercel.
+4. Nếu địa chỉ Render khác `https://xuong-prompt.onrender.com`, sửa dòng `destination` trong `client/vercel.json`.
+
+`/api/*` đi qua **rewrite** của Vercel sang Render, nên trình duyệt chỉ thấy một tên miền: cookie đăng nhập vẫn là cookie cùng trang, không bị Safari hay Chrome chặn như cookie bên thứ ba. Không gọi thẳng API Render từ domain Vercel.
+
+Trên Render, phần giao diện vẫn chạy ở địa chỉ `onrender.com` làm bản dự phòng.
+
 ### Bước 5. Sau khi deploy
-1. Mở địa chỉ, chọn **Tạo tài khoản**.
+1. Mở địa chỉ (Vercel nếu có, không thì Render), chọn **Tạo tài khoản**.
 2. Tạo đủ tài khoản cho nhóm, rồi đặt `ALLOW_REGISTER=false` trên Render.
 3. Vào **Cài đặt → Chuyển dữ liệu**, nhập file sao lưu `.json` từ bản tĩnh cũ.
 

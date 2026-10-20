@@ -17,7 +17,7 @@ import transferRoutes from "./routes/transfer.js";
 
 const app = express();
 app.disable("x-powered-by");
-app.set("trust proxy", 1); // Render sits behind one proxy; needed for rate limiting by real IP.
+app.set("trust proxy", config.trustProxy); // needed for rate limiting by the real client IP
 
 app.use(
   helmet({
