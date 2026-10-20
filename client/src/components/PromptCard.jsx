@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { mapCachedPrompts } from "../lib/queries.js";
-import { fmtDateTime } from "../lib/util.js";
+import { fmtDateTime, fmtDateTimeFull } from "../lib/util.js";
 import { ConfirmButton, Field } from "./ui.jsx";
 import { ToolInput } from "./PromptFields.jsx";
 import LazyImage from "./LazyImage.jsx";
@@ -101,6 +101,8 @@ export default function PromptCard({ item, showProduct = false }) {
   // Pasted prompts (and some imported ones) have no builder choices to load back.
   const canReuse = item.source !== "external" && item.settings && Object.keys(item.settings).length > 0;
   const external = item.source === "external";
+  // More than a minute apart: the note, tool or text was edited after saving.
+  const edited = item.updatedAt && item.createdAt && new Date(item.updatedAt) - new Date(item.createdAt) > 60 * 1000;
 
   return (
     <article className="card pc">
@@ -114,7 +116,17 @@ export default function PromptCard({ item, showProduct = false }) {
         </Link>
       )}
       <div className="pc-meta">
-        <span>{fmtDateTime(item.createdAt)}</span>
+        <span>
+          Lưu bởi <b className="pc-who">{item.savedBy?.displayName || "bạn"}</b> ·{" "}
+          <time dateTime={item.createdAt} title={fmtDateTimeFull(item.createdAt)}>
+            {fmtDateTimeFull(item.createdAt)}
+          </time>
+        </span>
+        {edited && (
+          <span title={fmtDateTimeFull(item.updatedAt)}>
+            sửa lúc <time dateTime={item.updatedAt}>{fmtDateTime(item.updatedAt)}</time>
+          </span>
+        )}
         {external && <span className="badge">Dán từ ngoài</span>}
         {item.tool && <span>{item.tool}</span>}
         {summary(item.settings).map((s) => (

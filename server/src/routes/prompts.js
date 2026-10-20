@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { Prompt } from "../models/Prompt.js";
 import { Product } from "../models/Product.js";
+import { User } from "../models/User.js";
 import { ah, parse, assertId, isId, escapeRegex, text, HttpError } from "../lib/http.js";
 import { findOrCreateProduct } from "./products.js";
 
@@ -29,12 +30,25 @@ const patchSchema = z.object({
 
 const PRODUCT_FIELDS = { name: 1, sku: 1, images: { $slice: 1 } };
 
-// Attaches { _id, name, sku, images: [cover] } to each prompt with one extra query.
-async function withProducts(owner, prompts) {
+// The saver is looked up by owner id (not stored as text), so a renamed account shows its current name.
+async function savedByMap(prompts) {
+  const ids = [...new Set(prompts.map((p) => String(p.owner)))];
+  const users = await User.find({ _id: { $in: ids } }, { username: 1, displayName: 1 }).lean();
+  return new Map(users.map((u) => [String(u._id), { username: u.username, displayName: u.displayName || u.username }]));
+}
+
+const GONE = { username: "", displayName: "(tài khoản đã xoá)" };
+
+// Attaches product { _id, name, sku, images: [cover] } and savedBy { username, displayName }; drops the raw owner id.
+async function decorate(owner, prompts) {
   const ids = [...new Set(prompts.map((p) => String(p.product)))];
-  const products = await Product.find({ owner, _id: { $in: ids } }, PRODUCT_FIELDS).lean();
+  const [products, savers] = await Promise.all([Product.find({ owner, _id: { $in: ids } }, PRODUCT_FIELDS).lean(), savedByMap(prompts)]);
   const byId = new Map(products.map((p) => [String(p._id), p]));
-  return prompts.map((p) => ({ ...p, product: byId.get(String(p.product)) || { _id: p.product, name: "(sản phẩm đã xoá)", images: [] } }));
+  return prompts.map(({ owner: o, ...p }) => ({
+    ...p,
+    product: byId.get(String(p.product)) || { _id: p.product, name: "(sản phẩm đã xoá)", images: [] },
+    savedBy: savers.get(String(o)) || GONE,
+  }));
 }
 
 router.get(
@@ -54,10 +68,10 @@ router.get(
     }
 
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
-    const rows = await Prompt.find(filter).select("-owner -__v").sort({ _id: -1 }).limit(limit + 1).lean();
+    const rows = await Prompt.find(filter).select("-__v").sort({ _id: -1 }).limit(limit + 1).lean();
     const page = rows.slice(0, limit);
     res.json({
-      items: await withProducts(owner, page),
+      items: await decorate(owner, page),
       nextCursor: rows.length > limit ? String(page[page.length - 1]._id) : null,
     });
   })
@@ -93,8 +107,7 @@ router.post(
       { new: true, projection: PRODUCT_FIELDS }
     ).lean();
 
-    const item = doc.toObject();
-    delete item.owner;
+    const [item] = await decorate(owner, [doc.toObject()]);
     res.status(201).json({ item: { ...item, product: updated }, product: { _id: updated._id, name: updated.name } });
   })
 );
@@ -105,10 +118,10 @@ router.patch(
     assertId(req.params.id, "prompt");
     const data = parse(patchSchema, req.body);
     const doc = await Prompt.findOneAndUpdate({ _id: req.params.id, owner: req.userId }, { $set: data }, { new: true })
-      .select("-owner -__v")
+      .select("-__v")
       .lean();
     if (!doc) throw new HttpError(404, "Không tìm thấy prompt.");
-    const [item] = await withProducts(req.userId, [doc]);
+    const [item] = await decorate(req.userId, [doc]);
     res.json({ item });
   })
 );

@@ -1163,6 +1163,10 @@ select.input {
   flex-wrap: wrap;
   gap: 4px 10px;
 }
+.pc-who {
+  color: var(--fg);
+  font-weight: 600;
+}
 .pc-note {
   white-space: pre-wrap;
 }

@@ -27,6 +27,12 @@ export const fmtDateTime = (d) => {
   const t = new Date(d);
   return `${pad(t.getDate())}/${pad(t.getMonth() + 1)} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
 };
+// "20/10/2026 12:07"
+export const fmtDateTimeFull = (d) => {
+  if (!d) return "";
+  const t = new Date(d);
+  return `${pad(t.getDate())}/${pad(t.getMonth() + 1)}/${t.getFullYear()} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
+};
 export const fmtDate = (d) => (d ? dateOnly.format(new Date(d)) : "");
 
 // ---- localStorage that never throws (private mode, blocked storage)

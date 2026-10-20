@@ -137,14 +137,15 @@ Xoá sản phẩm, ảnh trên Cloudinary và mọi prompt của nó. `200 { "ok
 200 {
   "items": [
     { "_id": "671b...", "prompt": "The woman from the reference image...", "negative": "wind, ...",
-      "note": "Ra đẹp lần đầu", "tool": "Meta AI", "settings": { ... }, "createdAt": "...",
+      "note": "Ra đẹp lần đầu", "tool": "Meta AI", "settings": { ... }, "createdAt": "...", "updatedAt": "...",
+      "savedBy": { "username": "nhut", "displayName": "nhut" },
       "product": { "_id": "671a0c...", "name": "Nón chống nắng vành rộng", "sku": "N12",
                    "images": [ { "url": "...", "width": 1500, "height": 2000 } ] } }
   ],
   "nextCursor": "671a9..."   // null nếu hết
 }
 ```
-Chỉ trả ảnh đại diện của sản phẩm để giảm dung lượng.
+Chỉ trả ảnh đại diện của sản phẩm để giảm dung lượng. `savedBy` là tài khoản đã lưu prompt (tra theo `owner` mỗi lần đọc, nên đổi tên hiển thị thì hiện tên mới); `createdAt` là lúc lưu, `updatedAt` là lần sửa gần nhất.
 
 ### `POST /api/prompts`
 Cần `product` (mã sản phẩm có sẵn) **hoặc** `productName` (tìm sản phẩm trùng tên không phân biệt hoa thường, chưa có thì tạo mới).
