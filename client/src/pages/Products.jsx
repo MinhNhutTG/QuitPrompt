@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, Field, Modal, Skeleton } from "../components/ui
 import LazyImage from "../components/LazyImage.jsx";
 import { DropZone, JobList, MAX_IMAGES, useUploads } from "../components/Uploader.jsx";
 import { useToast } from "../components/Toast.jsx";
+import { EMPTY_EXTERNAL, ExternalPromptFields, externalBody } from "../components/PromptFields.jsx";
 
 function Previews({ files, onRemove }) {
   const urls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
@@ -34,6 +35,8 @@ function NewProductForm({ onClose }) {
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
   const [files, setFiles] = useState([]);
+  const [withPrompt, setWithPrompt] = useState(false);
+  const [external, setExternal] = useState(EMPTY_EXTERNAL);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const uploads = useUploads((item) => putProduct(qc, item));
@@ -53,8 +56,21 @@ function NewProductForm({ onClose }) {
       setBusy(false);
       return;
     }
+    const problems = [];
+    if (withPrompt && external.prompt.trim()) {
+      try {
+        await api.createPrompt(externalBody(item._id, external));
+        qc.invalidateQueries({ queryKey: ["prompts"] });
+        qc.invalidateQueries({ queryKey: ["products"] });
+        // The cached detail was written with promptCount 0 just above.
+        qc.invalidateQueries({ queryKey: ["product", item._id] });
+      } catch (err) {
+        problems.push(`prompt chưa lưu được (${err.message})`);
+      }
+    }
     const failed = files.length ? await uploads.run(item._id, files) : 0;
-    toast(failed ? `Đã tạo sản phẩm, ${failed} ảnh chưa tải được` : "Đã tạo sản phẩm", { tone: failed ? "danger" : "ok" });
+    if (failed) problems.push(`${failed} ảnh chưa tải được`);
+    toast(problems.length ? `Đã tạo sản phẩm, ${problems.join(", ")}` : "Đã tạo sản phẩm", { tone: problems.length ? "danger" : "ok" });
     onClose();
     navigate(`/products/${item._id}`);
   }
@@ -78,6 +94,21 @@ function NewProductForm({ onClose }) {
           </>
         )}
       </div>
+      {withPrompt ? (
+        <fieldset className="subform" disabled={busy}>
+          <legend>
+            Prompt tốt có sẵn
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => (setWithPrompt(false), setExternal(EMPTY_EXTERNAL))}>
+              Bỏ
+            </button>
+          </legend>
+          <ExternalPromptFields value={external} onChange={setExternal} />
+        </fieldset>
+      ) : (
+        <button type="button" className="btn btn-dashed" onClick={() => setWithPrompt(true)} disabled={busy}>
+          + Thêm prompt có sẵn
+        </button>
+      )}
       {error && (
         <p className="error" role="alert">
           {error}
@@ -173,7 +204,7 @@ export default function Products() {
         </div>
       )}
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Sản phẩm mới">
+      <Modal open={creating} onClose={() => setCreating(false)} title="Sản phẩm mới" wide>
         <NewProductForm onClose={() => setCreating(false)} />
       </Modal>
     </div>

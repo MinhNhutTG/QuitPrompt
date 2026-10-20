@@ -16,10 +16,16 @@ const createSchema = z
     note: text("ghi chú", 1000).optional().default(""),
     tool: text("tên công cụ", 60).optional().default(""),
     settings: z.record(z.unknown()).optional().default({}),
+    source: z.enum(["builder", "external"]).optional().default("builder"),
   })
   .refine((d) => d.product || d.productName, { message: "Chọn sản phẩm hoặc gõ tên sản phẩm mới." });
 
-const patchSchema = z.object({ note: text("ghi chú", 1000).optional(), tool: text("tên công cụ", 60).optional() });
+const patchSchema = z.object({
+  note: text("ghi chú", 1000).optional(),
+  tool: text("tên công cụ", 60).optional(),
+  prompt: text("prompt", 20000, 1).optional(),
+  negative: text("negative", 5000).optional(),
+});
 
 const PRODUCT_FIELDS = { name: 1, sku: 1, images: { $slice: 1 } };
 
@@ -78,7 +84,8 @@ router.post(
       negative: data.negative,
       note: data.note,
       tool: data.tool,
-      settings: data.settings,
+      source: data.source,
+      settings: data.source === "external" ? {} : data.settings,
     });
     const updated = await Product.findByIdAndUpdate(
       product._id,

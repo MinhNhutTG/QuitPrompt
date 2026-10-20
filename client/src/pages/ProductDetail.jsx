@@ -4,9 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { dropProduct, putProduct, usePrompts } from "../lib/queries.js";
 import { fmtDate } from "../lib/util.js";
-import { ConfirmButton, EmptyState, ErrorState, Field, Skeleton } from "../components/ui.jsx";
+import { ConfirmButton, EmptyState, ErrorState, Field, Modal, Skeleton } from "../components/ui.jsx";
 import LazyImage from "../components/LazyImage.jsx";
 import PromptCard from "../components/PromptCard.jsx";
+import { EMPTY_EXTERNAL, ExternalPromptFields, externalBody } from "../components/PromptFields.jsx";
 import { DropZone, JobList, MAX_IMAGES, useUploads } from "../components/Uploader.jsx";
 import { useToast } from "../components/Toast.jsx";
 
@@ -128,12 +129,68 @@ function InfoForm({ product }) {
   );
 }
 
+function AddPromptForm({ productId, onClose }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [value, setValue] = useState(EMPTY_EXTERNAL);
+  const [error, setError] = useState("");
+  const save = useMutation({
+    mutationFn: () => api.createPrompt(externalBody(productId, value)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["prompts"] });
+      qc.invalidateQueries({ queryKey: ["product", productId] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      toast("Đã thêm prompt");
+      onClose();
+    },
+    onError: (e) => setError(e.message),
+  });
+  return (
+    <form
+      className="form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!value.prompt.trim()) return setError("Cần dán nội dung prompt.");
+        setError("");
+        save.mutate();
+      }}
+    >
+      <ExternalPromptFields value={value} onChange={setValue} autoFocus />
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="btns btns-end">
+        <button type="button" className="btn btn-ghost" onClick={onClose}>
+          Huỷ
+        </button>
+        <button type="submit" className="btn btn-primary" disabled={save.isPending}>
+          {save.isPending ? "Đang lưu..." : "Lưu prompt"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function ProductPrompts({ productId }) {
   const { data, isLoading, error, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } = usePrompts({ product: productId });
+  const [adding, setAdding] = useState(false);
   const items = data?.pages.flatMap((p) => p.items) || [];
+  const addButton = (
+    <button type="button" className="btn" onClick={() => setAdding(true)}>
+      + Thêm prompt
+    </button>
+  );
   return (
     <section className="sec">
-      <h2>Prompt tốt của sản phẩm này</h2>
+      <Modal open={adding} onClose={() => setAdding(false)} title="Thêm prompt có sẵn" wide>
+        <AddPromptForm productId={productId} onClose={() => setAdding(false)} />
+      </Modal>
+      <div className="page-head">
+        <h2>Prompt tốt của sản phẩm này</h2>
+        {items.length > 0 && addButton}
+      </div>
       {isLoading ? (
         <Skeleton h={120} r={14} />
       ) : error ? (
@@ -142,12 +199,15 @@ function ProductPrompts({ productId }) {
         <EmptyState
           title="Chưa lưu prompt nào"
           action={
-            <Link className="btn btn-primary" to={`/?product=${productId}`}>
-              Tạo prompt cho sản phẩm này
-            </Link>
+            <div className="btns">
+              <Link className="btn btn-primary" to={`/?product=${productId}`}>
+                Tạo prompt cho sản phẩm này
+              </Link>
+              {addButton}
+            </div>
           }
         >
-          Tạo prompt, thử trên công cụ video, ra đẹp thì bấm “★ Lưu prompt tốt”.
+          Tạo prompt, thử trên công cụ video, ra đẹp thì bấm “★ Lưu prompt tốt”. Có sẵn prompt tốt viết ở chỗ khác thì bấm “+ Thêm prompt” để dán vào.
         </EmptyState>
       ) : (
         <div className="plist">

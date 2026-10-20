@@ -4,7 +4,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { mapCachedPrompts } from "../lib/queries.js";
 import { fmtDateTime } from "../lib/util.js";
-import { ConfirmButton } from "./ui.jsx";
+import { ConfirmButton, Field } from "./ui.jsx";
+import { ToolInput } from "./PromptFields.jsx";
 import LazyImage from "./LazyImage.jsx";
 import { useCopy, withNegative } from "./PromptPanel.jsx";
 import { useToast } from "./Toast.jsx";
@@ -21,13 +22,18 @@ function summary(settings = {}) {
   return parts;
 }
 
+// Builder prompts can be rebuilt from settings, so only their note and tool are editable;
+// pasted ones have nothing to rebuild from, so their text is editable too.
 function NoteEditor({ item, onDone }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const external = item.source === "external";
   const [note, setNote] = useState(item.note || "");
   const [tool, setTool] = useState(item.tool || "");
+  const [prompt, setPrompt] = useState(item.prompt || "");
+  const [negative, setNegative] = useState(item.negative || "");
   const save = useMutation({
-    mutationFn: () => api.updatePrompt(item._id, { note, tool }),
+    mutationFn: () => api.updatePrompt(item._id, external ? { note, tool, prompt, negative } : { note, tool }),
     onSuccess: ({ item: updated }) => {
       mapCachedPrompts(qc, (items) => items.map((x) => (x._id === updated._id ? updated : x)));
       toast("Đã lưu");
@@ -40,11 +46,26 @@ function NoteEditor({ item, onDone }) {
       className="form"
       onSubmit={(e) => {
         e.preventDefault();
+        if (external && !prompt.trim()) return toast("Prompt không được để trống.", { tone: "danger" });
         save.mutate();
       }}
     >
-      <input className="input" aria-label="Công cụ" placeholder="Công cụ" value={tool} maxLength={60} onChange={(e) => setTool(e.target.value)} />
-      <textarea className="input" aria-label="Ghi chú" rows={3} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} autoFocus />
+      {external && (
+        <>
+          <Field label="Prompt">
+            <textarea className="input mono" rows={9} maxLength={20000} spellCheck={false} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+          </Field>
+          <Field label="Negative">
+            <textarea className="input mono" rows={3} maxLength={5000} spellCheck={false} value={negative} onChange={(e) => setNegative(e.target.value)} />
+          </Field>
+        </>
+      )}
+      <Field label="Công cụ">
+        <ToolInput value={tool} onChange={setTool} />
+      </Field>
+      <Field label="Ghi chú">
+        <textarea className="input" rows={2} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} autoFocus={!external} />
+      </Field>
       <div className="btns">
         <button type="submit" className="btn btn-primary btn-sm" disabled={save.isPending}>
           {save.isPending ? "Đang lưu..." : "Lưu"}
@@ -77,6 +98,9 @@ export default function PromptCard({ item, showProduct = false }) {
   });
 
   const reuse = () => navigate("/", { state: { reuse: { productId: product._id, settings: item.settings } } });
+  // Pasted prompts (and some imported ones) have no builder choices to load back.
+  const canReuse = item.source !== "external" && item.settings && Object.keys(item.settings).length > 0;
+  const external = item.source === "external";
 
   return (
     <article className="card pc">
@@ -91,6 +115,7 @@ export default function PromptCard({ item, showProduct = false }) {
       )}
       <div className="pc-meta">
         <span>{fmtDateTime(item.createdAt)}</span>
+        {external && <span className="badge">Dán từ ngoài</span>}
         {item.tool && <span>{item.tool}</span>}
         {summary(item.settings).map((s) => (
           <span key={s}>{s}</span>
@@ -122,12 +147,14 @@ export default function PromptCard({ item, showProduct = false }) {
             Copy + negative
           </button>
         )}
-        <button type="button" className="btn btn-sm" onClick={reuse}>
-          Dùng lại và chỉnh
-        </button>
+        {canReuse && (
+          <button type="button" className="btn btn-sm" onClick={reuse}>
+            Dùng lại và chỉnh
+          </button>
+        )}
         {!editing && (
           <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(true)}>
-            Sửa ghi chú
+            {external ? "Sửa" : "Sửa ghi chú"}
           </button>
         )}
         <ConfirmButton className="btn btn-sm btn-danger-ghost" onConfirm={() => remove.mutate()} disabled={remove.isPending}>

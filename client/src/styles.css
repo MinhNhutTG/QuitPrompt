@@ -1098,6 +1098,24 @@ select.input {
   background: var(--surface);
   font-size: 14px;
 }
+.subform {
+  margin: 0;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.subform legend {
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .danger-zone {
   border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
   display: flex;

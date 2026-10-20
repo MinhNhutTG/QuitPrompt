@@ -43,6 +43,7 @@ erDiagram
     string negative
     string note
     string tool
+    string source
     object settings
   }
   SETTINGS {
@@ -108,7 +109,8 @@ Mọi collection có `createdAt` và `updatedAt` tự động (`timestamps: true
 | `negative` | string | tối đa 5000 | |
 | `note` | string | tối đa 1000 | "Ra đẹp lần đầu, tay không lỗi" |
 | `tool` | string | tối đa 60 | "Meta AI", "Dola AI"... |
-| `settings` | object | | Ảnh chụp lựa chọn của bộ tạo, xem mục 3 |
+| `source` | string | `builder` hoặc `external`, mặc định `builder` | `external`: prompt dán từ ngoài, không có `settings` nên không "Dùng lại và chỉnh" được, nhưng sửa được nội dung |
+| `settings` | object | | Ảnh chụp lựa chọn của bộ tạo, xem mục 3. Rỗng khi `source = external` |
 
 **Chỉ mục:**
 

@@ -6,8 +6,7 @@ import { store } from "../lib/util.js";
 import { Field, Modal } from "./ui.jsx";
 import ProductPicker from "./ProductPicker.jsx";
 import { useToast } from "./Toast.jsx";
-
-const TOOLS = ["Meta AI", "Dola AI", "Kling AI", "Google Veo", "Hailuo AI", "Runway"];
+import { ToolInput } from "./PromptFields.jsx";
 
 function SaveForm({ state, result, onClose, onSaved }) {
   const qc = useQueryClient();
@@ -67,12 +66,7 @@ function SaveForm({ state, result, onClose, onSaved }) {
         />
       </Field>
       <Field label="Công cụ đã dùng">
-        <input className="input" list="tool-list" value={tool} maxLength={60} onChange={(e) => setTool(e.target.value)} />
-        <datalist id="tool-list">
-          {TOOLS.map((t) => (
-            <option key={t} value={t} />
-          ))}
-        </datalist>
+        <ToolInput value={tool} onChange={setTool} />
       </Field>
       <Field label="Ghi chú" hint="Ví dụ: ra đẹp lần đầu, tay không lỗi">
         <textarea className="input" rows={3} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} />

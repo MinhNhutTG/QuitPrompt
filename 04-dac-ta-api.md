@@ -159,11 +159,14 @@ Cần `product` (mã sản phẩm có sẵn) **hoặc** `productName` (tìm sả
 }
 201 { "item": { ... }, "product": { "_id": "...", "name": "..." } }
 ```
+Prompt dán từ ngoài (nút "+ Thêm prompt" ở trang sản phẩm) gửi thêm `"source": "external"`; khi đó `settings` luôn được lưu rỗng.
+
 Tác dụng phụ: `product.promptCount += 1`, `product.lastPromptAt = now`.
 
 ### `PATCH /api/prompts/:id`
 ```json
 { "note": "Dùng cho video livestream", "tool": "Dola AI" }
+// thêm được "prompt", "negative": giao diện chỉ cho sửa với prompt dán từ ngoài
 200 { "item": { ... } }
 ```
 

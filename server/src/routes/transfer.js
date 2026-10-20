@@ -116,6 +116,7 @@ router.post(
         negative: str(r.negative, 5000),
         note: str(r.note, 1000),
         tool: str(r.tool, 60),
+        source: r.source === "external" ? "external" : "builder",
         settings: r.settings && typeof r.settings === "object" ? r.settings : {},
         ...(at ? { createdAt: at, updatedAt: at } : {}),
       });
