@@ -384,6 +384,7 @@ textarea {
   background: var(--danger-soft);
   border-color: transparent;
 }
+.btn-danger,
 .btn-danger-ghost.is-armed,
 .btn.is-armed {
   background: var(--danger);

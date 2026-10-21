@@ -22,7 +22,7 @@ Giai đoạn 1 đến 7 làm liên tục sau khi tài liệu được duyệt.
 | Nhóm | Ca kiểm thử |
 |---|---|
 | Đăng nhập | Tạo tài khoản; trùng tên → 409; sai mật khẩu → 401; ghi nhớ → cookie có `Max-Age`; `/me` khi chưa đăng nhập → 401; đăng xuất xoá cookie |
-| Phân quyền | Tài khoản A không đọc, sửa, xoá được sản phẩm của B; A thấy prompt của B trong danh sách (`mine: false`) nhưng không sửa, xoá được (→ 404) |
+| Phân quyền | Tài khoản A không đọc, sửa, xoá được sản phẩm của B; A thấy prompt của B trong danh sách (`mine: false`), xoá được nhưng không sửa được (→ 404) |
 | Sản phẩm | Tạo, sửa, xoá; xoá sản phẩm xoá luôn prompt; tìm theo tên và mã |
 | Prompt | Lưu theo `product`; lưu theo `productName` mới → tạo sản phẩm; phân trang con trỏ không trùng không sót; tìm theo ghi chú và tên sản phẩm; `promptCount` tăng giảm đúng |
 | Ảnh | Không có Cloudinary → 503 rõ ràng; file không phải ảnh → 400; quá 12 ảnh → 400 (Cloudinary thật được giả lập khi test) |

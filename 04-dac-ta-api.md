@@ -147,7 +147,7 @@ Trả prompt đã lưu của **mọi thành viên**, mới nhất trước.
   "nextCursor": "671a9..."   // null nếu hết
 }
 ```
-Chỉ trả ảnh đại diện của sản phẩm để giảm dung lượng. `savedBy` là tài khoản đã lưu prompt (tra theo `owner` mỗi lần đọc, nên đổi tên hiển thị thì hiện tên mới); `createdAt` là lúc lưu, `updatedAt` là lần sửa gần nhất. `mine` cho biết người xem có phải người lưu không: chỉ người lưu mới sửa, xoá được (`PATCH`, `DELETE` với prompt của người khác trả 404). Sản phẩm của prompt người khác thuộc tài khoản họ, nên giao diện không mở trang sản phẩm đó và "Dùng lại và chỉnh" chỉ nạp lựa chọn, không nạp sản phẩm.
+Chỉ trả ảnh đại diện của sản phẩm để giảm dung lượng. `savedBy` là tài khoản đã lưu prompt (tra theo `owner` mỗi lần đọc, nên đổi tên hiển thị thì hiện tên mới); `createdAt` là lúc lưu, `updatedAt` là lần sửa gần nhất. `mine` cho biết người xem có phải người lưu không: chỉ người lưu mới sửa được (`PATCH` với prompt của người khác trả 404), còn xoá thì thành viên nào cũng xoá được (giao diện hỏi xác nhận Có/Không trước). Sản phẩm của prompt người khác thuộc tài khoản họ, nên giao diện không mở trang sản phẩm đó và "Dùng lại và chỉnh" chỉ nạp lựa chọn, không nạp sản phẩm.
 
 ### `POST /api/prompts`
 Cần `product` (mã sản phẩm có sẵn) **hoặc** `productName` (tìm sản phẩm trùng tên không phân biệt hoa thường, chưa có thì tạo mới).
@@ -174,7 +174,7 @@ Tác dụng phụ: `product.promptCount += 1`, `product.lastPromptAt = now`.
 ```
 
 ### `DELETE /api/prompts/:id`
-`200 { "ok": true }`. Tác dụng phụ: `promptCount -= 1`.
+Xoá được prompt của bất kỳ thành viên nào. `200 { "ok": true }`. Tác dụng phụ: `promptCount -= 1`.
 
 ---
 

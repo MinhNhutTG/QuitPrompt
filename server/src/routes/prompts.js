@@ -133,7 +133,8 @@ router.delete(
   "/:id",
   ah(async (req, res) => {
     assertId(req.params.id, "prompt");
-    const doc = await Prompt.findOneAndDelete({ _id: req.params.id, owner: req.userId });
+    // Any member may delete any prompt (the app asks for confirmation); editing stays with the saver.
+    const doc = await Prompt.findOneAndDelete({ _id: req.params.id });
     if (!doc) throw new HttpError(404, "Không tìm thấy prompt.");
     await Product.updateOne({ _id: doc.product, promptCount: { $gt: 0 } }, { $inc: { promptCount: -1 } });
     res.json({ ok: true });

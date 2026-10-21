@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { mapCachedPrompts } from "../lib/queries.js";
 import { fmtDateTime, fmtDateTimeFull } from "../lib/util.js";
-import { ConfirmButton, Field } from "./ui.jsx";
+import { Field, Modal } from "./ui.jsx";
 import { ToolInput } from "./PromptFields.jsx";
 import LazyImage from "./LazyImage.jsx";
 import { useCopy, withNegative } from "./PromptPanel.jsx";
@@ -94,6 +94,7 @@ export default function PromptCard({ item, showProduct = false }) {
   const navigate = useNavigate();
   const { flash, copy } = useCopy();
   const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const product = item.product || {};
 
   const remove = useMutation({
@@ -102,6 +103,7 @@ export default function PromptCard({ item, showProduct = false }) {
       mapCachedPrompts(qc, (items) => items.filter((x) => x._id !== item._id));
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["product", product._id] });
+      setConfirming(false);
       toast("Đã xoá");
     },
     onError: (e) => toast(e.message, { tone: "danger" }),
@@ -182,12 +184,24 @@ export default function PromptCard({ item, showProduct = false }) {
             {external ? "Sửa" : "Sửa ghi chú"}
           </button>
         )}
-        {mine && (
-          <ConfirmButton className="btn btn-sm btn-danger-ghost" onConfirm={() => remove.mutate()} disabled={remove.isPending}>
-            Xoá
-          </ConfirmButton>
-        )}
+        <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => setConfirming(true)}>
+          Xoá
+        </button>
       </div>
+      <Modal open={confirming} onClose={() => setConfirming(false)} title="Xoá prompt này?">
+        <p>
+          {mine ? "Prompt của bạn" : <>Prompt do <b>{item.savedBy?.displayName}</b> lưu</>} cho <b>{product.name}</b> sẽ bị xoá với mọi
+          thành viên và không khôi phục được.
+        </p>
+        <div className="btns">
+          <button type="button" className="btn btn-danger" onClick={() => remove.mutate()} disabled={remove.isPending}>
+            {remove.isPending ? "Đang xoá..." : "Có, xoá"}
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={() => setConfirming(false)} autoFocus>
+            Không
+          </button>
+        </div>
+      </Modal>
     </article>
   );
 }
