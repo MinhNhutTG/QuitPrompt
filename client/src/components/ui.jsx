@@ -109,3 +109,46 @@ export function Field({ label, hint, children, className = "" }) {
     </label>
   );
 }
+
+// 1 … 4 5 [6] 7 8 … 20: first, last and two either side of the current page.
+function pageList(page, pages) {
+  const out = [];
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || Math.abs(i - page) <= 2) out.push(i);
+    else if (out[out.length - 1] !== "…") out.push("…");
+  }
+  return out;
+}
+
+export function Pager({ page, pages, onPage, disabled }) {
+  if (pages <= 1) return null;
+  return (
+    <nav className="pager" aria-label="Phân trang">
+      <button type="button" className="btn btn-sm" disabled={disabled || page <= 1} onClick={() => onPage(page - 1)}>
+        ‹ Trước
+      </button>
+      {pageList(page, pages).map((n, i) =>
+        n === "…" ? (
+          <span key={`gap${i}`} className="pager-gap" aria-hidden="true">
+            …
+          </span>
+        ) : (
+          <button
+            key={n}
+            type="button"
+            className={`btn btn-sm pager-n ${n === page ? "btn-primary" : "btn-ghost"}`}
+            aria-current={n === page ? "page" : undefined}
+            aria-label={`Trang ${n}`}
+            disabled={disabled}
+            onClick={() => n !== page && onPage(n)}
+          >
+            {n}
+          </button>
+        )
+      )}
+      <button type="button" className="btn btn-sm" disabled={disabled || page >= pages} onClick={() => onPage(page + 1)}>
+        Sau ›
+      </button>
+    </nav>
+  );
+}

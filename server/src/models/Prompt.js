@@ -20,5 +20,6 @@ schema.index({ owner: 1, _id: -1 });
 schema.index({ owner: 1, product: 1, _id: -1 });
 // Shared listing across members (no owner filter).
 schema.index({ product: 1, _id: -1 });
+schema.index({ createdAt: -1 });
 
 export const Prompt = mongoose.model("Prompt", schema);

@@ -84,6 +84,7 @@ const ProductLabel = ({ product }) => (
     <span>
       {product.name}
       {product.sku && <small className="hint"> · {product.sku}</small>}
+      {product.category && <small className="hint"> · {product.category}</small>}
     </span>
   </>
 );
@@ -101,6 +102,8 @@ export default function PromptCard({ item, showProduct = false }) {
     mutationFn: () => api.deletePrompt(item._id),
     onSuccess: () => {
       mapCachedPrompts(qc, (items) => items.filter((x) => x._id !== item._id));
+      // Numbered pages refill from the next page and recount the total.
+      qc.invalidateQueries({ queryKey: ["prompts", "page"] });
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["product", product._id] });
       setConfirming(false);

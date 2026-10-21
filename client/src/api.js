@@ -90,6 +90,7 @@ export const api = {
   uploadImage,
 
   prompts: (params) => request("GET", "/prompts" + qs(params)),
+  promptFilters: () => request("GET", "/prompts/filters"),
   createPrompt: (body) => request("POST", "/prompts", body),
   updatePrompt: (id, body) => request("PATCH", `/prompts/${id}`, body),
   deletePrompt: (id) => request("DELETE", `/prompts/${id}`),

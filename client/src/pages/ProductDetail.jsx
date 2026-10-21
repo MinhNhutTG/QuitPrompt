@@ -10,9 +10,10 @@ import PromptCard from "../components/PromptCard.jsx";
 import { EMPTY_EXTERNAL, ExternalPromptFields, externalBody } from "../components/PromptFields.jsx";
 import { DropZone, JobList, MAX_IMAGES, useUploads } from "../components/Uploader.jsx";
 import { useToast } from "../components/Toast.jsx";
+import { CategoryInput } from "../components/CategoryInput.jsx";
 
-const FIELDS = ["name", "sku", "closed", "extraNeg", "note"];
-const formOf = (p) => ({ name: p.name || "", sku: p.sku || "", closed: p.closed !== false, extraNeg: p.extraNeg || "", note: p.note || "" });
+const FIELDS = ["name", "sku", "category", "closed", "extraNeg", "note"];
+const formOf = (p) => ({ name: p.name || "", sku: p.sku || "", category: p.category || "", closed: p.closed !== false, extraNeg: p.extraNeg || "", note: p.note || "" });
 
 function Gallery({ product }) {
   const qc = useQueryClient();
@@ -84,6 +85,9 @@ function InfoForm({ product }) {
     mutationFn: () => api.updateProduct(product._id, { ...form, name: form.name.trim() }),
     onSuccess: ({ item }) => {
       putProduct(qc, item);
+      // Category or name shows on saved prompts and feeds the category filter.
+      qc.invalidateQueries({ queryKey: ["prompt-filters"] });
+      qc.invalidateQueries({ queryKey: ["prompts"] });
       toast("Đã lưu thay đổi");
     },
     onError: (e) => toast(e.message, { tone: "danger" }),
@@ -101,9 +105,14 @@ function InfoForm({ product }) {
       <Field label="Tên sản phẩm">
         <input className="input" value={form.name} maxLength={160} onChange={setF("name")} />
       </Field>
-      <Field label="Mã sản phẩm">
-        <input className="input" value={form.sku} maxLength={60} onChange={setF("sku")} />
-      </Field>
+      <div className="grid-2">
+        <Field label="Mã sản phẩm">
+          <input className="input" value={form.sku} maxLength={60} onChange={setF("sku")} />
+        </Field>
+        <Field label="Loại sản phẩm">
+          <CategoryInput value={form.category} onChange={(v) => setForm((f) => ({ ...f, category: v }))} />
+        </Field>
+      </div>
       <div className="sec-h">Thông tin dùng cho prompt</div>
       <label className="check">
         <input type="checkbox" checked={form.closed} onChange={setF("closed")} />
@@ -283,6 +292,7 @@ export default function ProductDetail() {
         <div>
           <h1>{p.name}</h1>
           <p>
+            {p.category ? `${p.category} · ` : ""}
             {p.sku ? `Mã: ${p.sku} · ` : ""}
             {nPrompts} prompt tốt · cập nhật {fmtDate(p.updatedAt)}
           </p>

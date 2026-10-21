@@ -95,7 +95,7 @@ Danh sách sản phẩm của người đang đăng nhập, mới cập nhật t
 
 ### `POST /api/products`
 ```json
-{ "name": "Áo mưa poncho", "sku": "AM02", "note": "", "extraNeg": "missing hood", "closed": true }
+{ "name": "Áo mưa poncho", "sku": "AM02", "category": "Áo khoác", "note": "", "extraNeg": "missing hood", "closed": true }
 201 { "item": { ...sản phẩm đầy đủ } }
 ```
 
@@ -127,13 +127,24 @@ Xoá sản phẩm, ảnh trên Cloudinary và mọi prompt của nó. `200 { "ok
 
 ## 4. Prompt tốt `/api/prompts`
 
-### `GET /api/prompts?product=&q=&mine=&cursor=&limit=`
-Trả prompt đã lưu của **mọi thành viên**, mới nhất trước.
-- `mine=1`: chỉ prompt của tài khoản đang đăng nhập.
+### `GET /api/prompts/filters`
+Lựa chọn cho bộ lọc ở trang Prompt đã lưu (cũng dùng làm gợi ý loại khi sửa sản phẩm).
+```json
+200 { "members": [ { "id": "671...", "username": "nhut", "displayName": "Nhựt" } ],
+      "categories": ["Áo", "Nón"] }
+```
+
+### `GET /api/prompts?by=&mine=&category=&from=&to=&product=&q=&page=&cursor=&limit=`
+Trả prompt đã lưu của **mọi thành viên**, mới nhất trước. Các bộ lọc kết hợp với nhau (và).
+- `by`: id thành viên đã lưu. `mine=1`: chỉ prompt của tài khoản đang đăng nhập.
+- `category`: loại sản phẩm, không phân biệt hoa thường; `__none` là sản phẩm chưa phân loại.
+- `from`, `to`: thời điểm ISO, lọc `createdAt` trong `[from, to)`. Giao diện tự tính đầu ngày theo giờ máy người dùng.
 - `product`: lọc theo một sản phẩm.
 - `q`: tìm trong ghi chú, công cụ, tên hoặc mã sản phẩm.
-- `cursor`: `_id` của mục cuối trang trước (phân trang bằng con trỏ, ổn định khi có prompt mới chen vào).
 - `limit`: mặc định 20, tối đa 50.
+- Phân trang, chọn một trong hai:
+  - `page` (từ 1): trang đánh số, trả thêm `total`, `page`, `pages`, `limit`. Trang vượt quá thì trả trang cuối. Trang Prompt đã lưu dùng cách này.
+  - `cursor`: `_id` của mục cuối trang trước, trả `nextCursor` (ổn định khi có prompt mới chen vào). Trang chi tiết sản phẩm dùng cách này.
 
 ```json
 200 {

@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../api.js";
 
 export const useProducts = () => useQuery({ queryKey: ["products"], queryFn: () => api.products({ limit: 500 }) });
@@ -13,6 +13,13 @@ export const usePrompts = (params) =>
     getNextPageParam: (last) => last.nextCursor || undefined,
   });
 
+// One numbered page ({ items, total, page, pages }); the old page stays on screen while the next loads.
+export const usePromptPage = (params) =>
+  useQuery({ queryKey: ["prompts", "page", params], queryFn: () => api.prompts({ ...params, limit: 20 }), placeholderData: keepPreviousData });
+
+// Members and product categories for the saved-prompts filters (also the category suggestions).
+export const usePromptFilters = () => useQuery({ queryKey: ["prompt-filters"], queryFn: api.promptFilters, staleTime: 60 * 1000 });
+
 // Keeps the product list and the detail cache in sync after any product change.
 export function putProduct(qc, item) {
   qc.setQueryData(["product", item._id], { item });
@@ -25,9 +32,11 @@ export function dropProduct(qc, id) {
   qc.invalidateQueries({ queryKey: ["prompts"] });
 }
 
-// Applies fn to every cached prompt page (all filters at once).
+// Applies fn to every cached prompt list (all filters at once), infinite or numbered.
 export function mapCachedPrompts(qc, fn) {
-  qc.setQueriesData({ queryKey: ["prompts"] }, (old) =>
-    old ? { ...old, pages: old.pages.map((pg) => ({ ...pg, items: fn(pg.items) })) } : old
-  );
+  qc.setQueriesData({ queryKey: ["prompts"] }, (old) => {
+    if (!old) return old;
+    if (old.pages) return { ...old, pages: old.pages.map((pg) => ({ ...pg, items: fn(pg.items) })) };
+    return { ...old, items: fn(old.items) };
+  });
 }

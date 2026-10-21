@@ -11,6 +11,7 @@ const router = Router();
 const createSchema = z.object({
   name: text("tên sản phẩm", 160, 1),
   sku: text("mã sản phẩm", 60).optional(),
+  category: text("loại sản phẩm", 60).optional(),
   note: text("ghi chú", 2000).optional(),
   extraNeg: text("lỗi riêng cần chặn", 1000).optional(),
   closed: z.boolean({ invalid_type_error: "Ô “Áo luôn đóng” không hợp lệ." }).optional(),

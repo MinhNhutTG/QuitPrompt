@@ -9,6 +9,7 @@ import LazyImage from "../components/LazyImage.jsx";
 import { DropZone, JobList, MAX_IMAGES, useUploads } from "../components/Uploader.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { EMPTY_EXTERNAL, ExternalPromptFields, externalBody } from "../components/PromptFields.jsx";
+import { CategoryInput } from "../components/CategoryInput.jsx";
 
 function Previews({ files, onRemove }) {
   const urls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
@@ -34,6 +35,7 @@ function NewProductForm({ onClose }) {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
+  const [category, setCategory] = useState("");
   const [files, setFiles] = useState([]);
   const [withPrompt, setWithPrompt] = useState(false);
   const [external, setExternal] = useState(EMPTY_EXTERNAL);
@@ -49,8 +51,9 @@ function NewProductForm({ onClose }) {
     setBusy(true);
     let item;
     try {
-      ({ item } = await api.createProduct({ name: name.trim(), sku: sku.trim() }));
+      ({ item } = await api.createProduct({ name: name.trim(), sku: sku.trim(), category: category.trim() }));
       putProduct(qc, item);
+      if (item.category) qc.invalidateQueries({ queryKey: ["prompt-filters"] });
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -80,9 +83,14 @@ function NewProductForm({ onClose }) {
       <Field label="Tên sản phẩm">
         <input className="input" value={name} maxLength={160} required autoFocus onChange={(e) => setName(e.target.value)} placeholder="Nón chống nắng vành rộng" />
       </Field>
-      <Field label="Mã sản phẩm" hint="Không bắt buộc">
-        <input className="input" value={sku} maxLength={60} onChange={(e) => setSku(e.target.value)} placeholder="N12" />
-      </Field>
+      <div className="grid-2">
+        <Field label="Mã sản phẩm" hint="Không bắt buộc">
+          <input className="input" value={sku} maxLength={60} onChange={(e) => setSku(e.target.value)} placeholder="N12" />
+        </Field>
+        <Field label="Loại sản phẩm" hint="Dùng để lọc prompt đã lưu">
+          <CategoryInput value={category} onChange={setCategory} />
+        </Field>
+      </div>
       <div className="field">
         <span className="field-label">Ảnh</span>
         {busy ? (
@@ -195,6 +203,7 @@ export default function Products() {
               <div>
                 <b>{p.name}</b>
                 <span className="hint">
+                  {p.category ? `${p.category} · ` : ""}
                   {p.sku ? `${p.sku} · ` : ""}
                   {p.promptCount || 0} prompt · {p.images?.length || 0} ảnh
                 </span>

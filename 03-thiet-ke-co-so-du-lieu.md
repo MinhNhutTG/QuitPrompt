@@ -23,6 +23,7 @@ erDiagram
     ObjectId owner
     string name
     string sku
+    string category
     string note
     string extraNeg
     bool closed
@@ -81,6 +82,7 @@ Mọi collection có `createdAt` và `updatedAt` tự động (`timestamps: true
 | `owner` | ObjectId → users | bắt buộc | |
 | `name` | string | bắt buộc, tối đa 160 | Ví dụ "Nón chống nắng vành rộng" |
 | `sku` | string | tối đa 60 | Mã sản phẩm tuỳ chọn |
+| `category` | string | tối đa 60, mặc định `""` | Loại sản phẩm gõ tự do ("Áo", "Nón"...), dùng để lọc prompt đã lưu |
 | `note` | string | tối đa 2000 | Ghi chú tự do |
 | `extraNeg` | string | tối đa 1000 | Lỗi riêng cần chặn, cách nhau bằng dấu phẩy |
 | `closed` | bool | mặc định `true` | "Áo luôn đóng, không mở" |
@@ -118,6 +120,8 @@ Mọi collection có `createdAt` và `updatedAt` tự động (`timestamps: true
 |---|---|
 | `{ owner: 1, _id: -1 }` | Tất cả prompt, mới nhất trước, phân trang bằng con trỏ `_id` |
 | `{ owner: 1, product: 1, _id: -1 }` | Prompt của một sản phẩm |
+| `{ product: 1, _id: -1 }` | Danh sách chung của cả nhóm, lọc theo sản phẩm hoặc loại sản phẩm |
+| `{ createdAt: -1 }` | Lọc theo thời gian lưu |
 
 **Vì sao prompt là collection riêng:** số lượng tăng không giới hạn theo thời gian và cần phân trang. Nhúng vào sản phẩm sẽ làm tài liệu sản phẩm phình to.
 

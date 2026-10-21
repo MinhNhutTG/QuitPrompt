@@ -28,7 +28,17 @@ const patchSchema = z.object({
   negative: text("negative", 5000).optional(),
 });
 
-const PRODUCT_FIELDS = { name: 1, sku: 1, images: { $slice: 1 } };
+const PRODUCT_FIELDS = { name: 1, sku: 1, category: 1, images: { $slice: 1 } };
+
+// Sent as ?category= to find prompts whose product has no category yet.
+const NO_CATEGORY = "__none";
+
+// "2026-10-21T00:00:00.000Z" → Date, anything unparsable → null.
+function dateParam(v) {
+  if (typeof v !== "string" || !v) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 // The saver is looked up by owner id (not stored as text), so a renamed account shows its current name.
 async function savedByMap(prompts) {
@@ -54,23 +64,63 @@ async function decorate(viewer, prompts) {
   }));
 }
 
+// Options for the filters on the saved-prompts page: every member, every product category in use.
+router.get(
+  "/filters",
+  ah(async (req, res) => {
+    const [users, categories] = await Promise.all([
+      User.find({}, { username: 1, displayName: 1 }).sort({ createdAt: 1 }).lean(),
+      Product.distinct("category"),
+    ]);
+    res.json({
+      members: users.map((u) => ({ id: String(u._id), username: u.username, displayName: u.displayName || u.username })),
+      categories: categories.filter(Boolean).sort((a, b) => a.localeCompare(b, "vi")),
+    });
+  })
+);
+
+// Every member sees every saved prompt. Filters: by (saver id) or mine=1, product, category, q, from/to (createdAt).
+// With ?page= it answers one numbered page plus the total; without it, cursor pages (nextCursor).
 router.get(
   "/",
   ah(async (req, res) => {
-    // Every member sees every saved prompt; ?mine=1 narrows to the viewer's own.
-    const filter = req.query.mine === "1" ? { owner: req.userId } : {};
+    const filter = {};
+    const and = [];
+    if (req.query.mine === "1") filter.owner = req.userId;
+    else if (req.query.by) filter.owner = assertId(String(req.query.by), "thành viên");
     const { product, cursor } = req.query;
     if (product) filter.product = assertId(String(product), "sản phẩm");
-    if (cursor && isId(String(cursor))) filter._id = { $lt: cursor };
+
+    if (typeof req.query.category === "string" && req.query.category) {
+      const category = req.query.category.trim().slice(0, 60);
+      const cond = category === NO_CATEGORY ? { category: { $in: ["", null] } } : { category: new RegExp(`^${escapeRegex(category)}$`, "i") };
+      const inCategory = await Product.find(cond, { _id: 1 }).lean();
+      and.push({ product: { $in: inCategory.map((p) => p._id) } });
+    }
+
+    const from = dateParam(req.query.from);
+    const to = dateParam(req.query.to);
+    if (from || to) filter.createdAt = { ...(from && { $gte: from }), ...(to && { $lt: to }) };
 
     const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
     if (q) {
       const rx = new RegExp(escapeRegex(q), "i");
       const matching = await Product.find({ $or: [{ name: rx }, { sku: rx }] }, { _id: 1 }).lean();
-      filter.$or = [{ note: rx }, { tool: rx }, { product: { $in: matching.map((p) => p._id) } }];
+      and.push({ $or: [{ note: rx }, { tool: rx }, { product: { $in: matching.map((p) => p._id) } }] });
     }
+    if (and.length) filter.$and = and;
 
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
+
+    if (req.query.page !== undefined) {
+      const total = await Prompt.countDocuments(filter);
+      const pages = Math.max(Math.ceil(total / limit), 1);
+      const page = Math.min(Math.max(Math.floor(Number(req.query.page)) || 1, 1), pages);
+      const rows = await Prompt.find(filter).select("-__v").sort({ _id: -1 }).skip((page - 1) * limit).limit(limit).lean();
+      return res.json({ items: await decorate(req.userId, rows), total, page, pages, limit });
+    }
+
+    if (cursor && isId(String(cursor))) filter._id = { $lt: cursor };
     const rows = await Prompt.find(filter).select("-__v").sort({ _id: -1 }).limit(limit + 1).lean();
     const page = rows.slice(0, limit);
     res.json({

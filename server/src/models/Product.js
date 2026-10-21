@@ -12,6 +12,8 @@ const schema = new mongoose.Schema(
     owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     name: { type: String, required: true, trim: true, maxlength: 160 },
     sku: { type: String, trim: true, maxlength: 60, default: "" },
+    // Free text ("Áo", "Nón"...), used to filter saved prompts.
+    category: { type: String, trim: true, maxlength: 60, default: "" },
     note: { type: String, maxlength: 2000, default: "" },
     extraNeg: { type: String, maxlength: 1000, default: "" },
     closed: { type: Boolean, default: true },
