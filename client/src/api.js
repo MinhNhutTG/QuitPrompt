@@ -91,6 +91,11 @@ export const api = {
 
   prompts: (params) => request("GET", "/prompts" + qs(params)),
   promptFilters: () => request("GET", "/prompts/filters"),
+
+  plans: (params) => request("GET", "/plans" + qs(params)),
+  createPlans: (body) => request("POST", "/plans", body),
+  updatePlan: (id, body) => request("PATCH", `/plans/${id}`, body),
+  deletePlan: (id) => request("DELETE", `/plans/${id}`),
   createPrompt: (body) => request("POST", "/prompts", body),
   updatePrompt: (id, body) => request("PATCH", `/prompts/${id}`, body),
   deletePrompt: (id) => request("DELETE", `/prompts/${id}`),

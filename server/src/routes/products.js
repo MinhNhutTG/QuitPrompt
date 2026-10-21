@@ -3,6 +3,7 @@ import multer from "multer";
 import { z } from "zod";
 import { Product, MAX_IMAGES } from "../models/Product.js";
 import { Prompt } from "../models/Prompt.js";
+import { VideoPlan } from "../models/VideoPlan.js";
 import { ah, parse, assertId, escapeRegex, text, HttpError } from "../lib/http.js";
 import { requireCloudinary, uploadBuffer, destroyImages } from "../lib/cloudinary.js";
 
@@ -18,9 +19,11 @@ const createSchema = z.object({
 });
 const patchSchema = createSchema.partial();
 
-async function findOwned(req, id = req.params.id) {
+// Products belong to the whole team: any member may read, change or delete any of them.
+// `owner` only records who created it.
+async function findProduct(req, id = req.params.id) {
   assertId(id, "sản phẩm");
-  const item = await Product.findOne({ _id: id, owner: req.userId });
+  const item = await Product.findById(id);
   if (!item) throw new HttpError(404, "Không tìm thấy sản phẩm.");
   return item;
 }
@@ -28,7 +31,7 @@ async function findOwned(req, id = req.params.id) {
 router.get(
   "/",
   ah(async (req, res) => {
-    const filter = { owner: req.userId };
+    const filter = {};
     const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
     if (q) {
       const rx = new RegExp(escapeRegex(q), "i");
@@ -52,7 +55,7 @@ router.post(
 router.get(
   "/:id",
   ah(async (req, res) => {
-    res.json({ item: await findOwned(req) });
+    res.json({ item: await findProduct(req) });
   })
 );
 
@@ -60,7 +63,7 @@ router.patch(
   "/:id",
   ah(async (req, res) => {
     const data = parse(patchSchema, req.body);
-    const item = await findOwned(req);
+    const item = await findProduct(req);
     item.set(data);
     await item.save();
     res.json({ item });
@@ -70,8 +73,8 @@ router.patch(
 router.delete(
   "/:id",
   ah(async (req, res) => {
-    const item = await findOwned(req);
-    await Prompt.deleteMany({ owner: req.userId, product: item._id });
+    const item = await findProduct(req);
+    await Promise.all([Prompt.deleteMany({ product: item._id }), VideoPlan.deleteMany({ product: item._id })]);
     await item.deleteOne();
     await destroyImages(item.images.map((i) => i.publicId));
     res.json({ ok: true });
@@ -106,9 +109,9 @@ function receiveImages(req, res, next) {
 router.post(
   "/:id/images",
   requireCloudinary,
-  // Ownership is checked before the upload body is read.
+  // The product is checked before the upload body is read.
   ah(async (req, res, next) => {
-    req.product = await findOwned(req);
+    req.product = await findProduct(req);
     next();
   }),
   receiveImages,
@@ -131,7 +134,7 @@ router.post(
 
     // Atomic guard: the browser uploads several images in parallel.
     const item = await Product.findOneAndUpdate(
-      { _id: product._id, owner: req.userId, [`images.${MAX_IMAGES - images.length}`]: { $exists: false } },
+      { _id: product._id, [`images.${MAX_IMAGES - images.length}`]: { $exists: false } },
       { $push: { images: { $each: images } } },
       { new: true }
     );
@@ -147,7 +150,7 @@ router.delete(
   "/:id/images",
   ah(async (req, res) => {
     const publicId = String(req.query.publicId || "");
-    const product = await findOwned(req);
+    const product = await findProduct(req);
     if (!product.images.some((i) => i.publicId === publicId)) throw new HttpError(404, "Không tìm thấy ảnh này.");
     const item = await Product.findOneAndUpdate({ _id: product._id }, { $pull: { images: { publicId } } }, { new: true });
     await destroyImages([publicId]);
@@ -159,7 +162,7 @@ router.post(
   "/:id/cover",
   ah(async (req, res) => {
     const { publicId } = parse(z.object({ publicId: z.string({ required_error: "Thiếu ảnh cần đặt." }) }), req.body);
-    const item = await findOwned(req);
+    const item = await findProduct(req);
     const i = item.images.findIndex((img) => img.publicId === publicId);
     if (i < 0) throw new HttpError(404, "Không tìm thấy ảnh này.");
     const [img] = item.images.splice(i, 1);
@@ -171,9 +174,10 @@ router.post(
 
 export default router;
 
-// Case-insensitive exact name match; created when missing. Used when saving prompts and importing.
+// Case-insensitive exact name match across the team; created (owned by `owner`) when missing.
+// Used when saving prompts.
 export async function findOrCreateProduct(owner, name) {
   const clean = name.trim().slice(0, 160);
-  const existing = await Product.findOne({ owner, name: new RegExp(`^${escapeRegex(clean)}$`, "i") });
+  const existing = await Product.findOne({ name: new RegExp(`^${escapeRegex(clean)}$`, "i") });
   return existing || Product.create({ owner, name: clean });
 }

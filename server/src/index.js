@@ -12,6 +12,7 @@ import { requireAuth } from "./middleware/auth.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
 import promptRoutes from "./routes/prompts.js";
+import planRoutes from "./routes/plans.js";
 import settingsRoutes from "./routes/settings.js";
 import transferRoutes from "./routes/transfer.js";
 
@@ -63,6 +64,7 @@ app.use("/api", (req, res, next) =>
 app.use("/api/auth", authRoutes);
 app.use("/api/products", requireAuth, productRoutes);
 app.use("/api/prompts", requireAuth, promptRoutes);
+app.use("/api/plans", requireAuth, planRoutes);
 app.use("/api/settings", requireAuth, settingsRoutes);
 app.use("/api/transfer", requireAuth, transferRoutes);
 app.use("/api", (req, res, next) => next(new HttpError(404, "Không có đường dẫn API này.")));

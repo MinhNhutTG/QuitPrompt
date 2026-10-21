@@ -56,8 +56,8 @@ router.post(
       throw new HttpError(400, "File không đúng định dạng sao lưu của Xưởng Prompt.");
     }
 
-    // ---- products, grouped by case-insensitive name
-    const existing = await Product.find({ owner }, { name: 1 }).lean();
+    // ---- products (shared by the team), grouped by case-insensitive name
+    const existing = await Product.find({}, { name: 1 }).lean();
     const byName = new Map(existing.map((p) => [p.name.toLowerCase(), p._id]));
     let createdProducts = 0;
 
@@ -72,6 +72,7 @@ router.post(
         owner,
         name: clean,
         sku: str(data.sku, 60),
+        category: str(data.category, 60),
         note: str(data.note, 2000),
         extraNeg: str(data.extraNeg, 1000),
         closed: data.closed !== false,
@@ -84,7 +85,7 @@ router.post(
 
     for (const p of productsData) if (p?.name) await productFor(p.name, p);
 
-    // ---- prompts, skipping exact duplicates within the same product
+    // ---- prompts, skipping exact duplicates within the same product (whoever saved them)
     let skipped = 0;
     const prepared = [];
     for (const r of records) {
@@ -97,7 +98,7 @@ router.post(
     }
 
     const touched = [...new Set(prepared.map((p) => String(p.product)))];
-    const already = await Prompt.find({ owner, product: { $in: touched } }, { product: 1, prompt: 1 }).lean();
+    const already = await Prompt.find({ product: { $in: touched } }, { product: 1, prompt: 1 }).lean();
     const seen = new Set(already.map((p) => `${p.product}\n${p.prompt}`));
 
     const docs = [];
@@ -126,7 +127,7 @@ router.post(
     // Recount so promptCount and lastPromptAt stay exact.
     if (touched.length) {
       const stats = await Prompt.aggregate([
-        { $match: { owner: oid(owner), product: { $in: touched.map(oid) } } },
+        { $match: { product: { $in: touched.map(oid) } } },
         { $group: { _id: "$product", count: { $sum: 1 }, last: { $max: "$createdAt" } } },
       ]);
       await Promise.all(stats.map((s) => Product.updateOne({ _id: s._id }, { $set: { promptCount: s.count, lastPromptAt: s.last } })));
@@ -158,13 +159,14 @@ router.post(
   })
 );
 
+// Products and prompts are the whole team's; template and custom actions are the exporter's own.
 router.get(
   "/export",
   ah(async (req, res) => {
     const owner = req.userId;
     const [products, prompts, settings] = await Promise.all([
-      Product.find({ owner }).select("-owner -__v").sort({ createdAt: 1 }).lean(),
-      Prompt.find({ owner }).select("-owner -__v").sort({ _id: 1 }).lean(),
+      Product.find({}).select("-owner -__v").sort({ createdAt: 1 }).lean(),
+      Prompt.find({}).select("-owner -__v").sort({ _id: 1 }).lean(),
       Settings.findOne({ owner }).lean(),
     ]);
     const names = new Map(products.map((p) => [String(p._id), p.name]));

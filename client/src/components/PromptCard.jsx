@@ -112,9 +112,8 @@ export default function PromptCard({ item, showProduct = false }) {
     onError: (e) => toast(e.message, { tone: "danger" }),
   });
 
-  // Another member's prompt points at their product, which the viewer can't open: reuse only the choices.
   const mine = item.mine !== false;
-  const reuse = () => navigate("/", { state: { reuse: { productId: mine ? product._id : null, settings: item.settings } } });
+  const reuse = () => navigate("/", { state: { reuse: { productId: product._id, settings: item.settings } } });
   // Pasted prompts (and some imported ones) have no builder choices to load back.
   const canReuse = item.source !== "external" && item.settings && Object.keys(item.settings).length > 0;
   const external = item.source === "external";
@@ -123,16 +122,11 @@ export default function PromptCard({ item, showProduct = false }) {
 
   return (
     <article className="card pc">
-      {showProduct &&
-        (mine ? (
-          <Link to={`/products/${product._id}`} className="pc-prod">
-            <ProductLabel product={product} />
-          </Link>
-        ) : (
-          <div className="pc-prod">
-            <ProductLabel product={product} />
-          </div>
-        ))}
+      {showProduct && (
+        <Link to={`/products/${product._id}`} className="pc-prod">
+          <ProductLabel product={product} />
+        </Link>
+      )}
       <div className="pc-meta">
         <span>
           Lưu bởi <b className="pc-who">{mine ? "bạn" : item.savedBy?.displayName}</b> ·{" "}

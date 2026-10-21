@@ -25,7 +25,7 @@ Phiên bản hiện tại là một trang HTML tĩnh. Nó đã giải quyết vi
 | Vai trò | Mô tả | Nhu cầu chính |
 |---|---|---|
 | Người làm nội dung (chính) | Một người hoặc nhóm nhỏ làm affiliate, tạo nhiều video mỗi ngày | Tạo prompt nhanh, đổi động tác dễ, lưu lại prompt tốt |
-| Thành viên nhóm | Người được cấp tài khoản riêng | Có dữ liệu riêng, không lẫn với người khác |
+| Thành viên nhóm | Người được cấp tài khoản riêng | Dùng chung sản phẩm, prompt đã lưu và kế hoạch video với cả nhóm; template và động tác riêng vẫn theo từng tài khoản |
 
 Phiên bản này **chưa** có vai trò quản trị viên hay chia sẻ dữ liệu giữa các tài khoản (xem mục 6).
 

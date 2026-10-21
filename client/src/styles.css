@@ -1154,7 +1154,7 @@ select.input {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-a.pc-prod:hover span {
+.pc-prod:hover span {
   color: var(--accent);
 }
 .pc-meta {
@@ -1344,7 +1344,7 @@ a.pc-prod:hover span {
   }
   .tabbar {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     position: fixed;
     left: 0;
     right: 0;
@@ -1486,5 +1486,256 @@ a.pc-prod:hover span {
   }
   .filter-product {
     grid-column: 1 / -1;
+  }
+}
+
+/* ---- video plans */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 10px;
+  border-radius: 99px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+.chip button {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.chip button:hover {
+  background: var(--surface);
+}
+.plan-sum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  font-size: 14px;
+}
+.plan-sum-main {
+  display: grid;
+  gap: 6px;
+  min-width: 220px;
+}
+.plan-sum-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  align-items: center;
+}
+.meter {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--sunk);
+  overflow: hidden;
+}
+.meter span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.status {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 99px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.status-todo {
+  background: var(--sunk);
+  color: var(--muted);
+}
+.status-partial {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.status-done {
+  background: color-mix(in srgb, var(--ok) 15%, transparent);
+  color: var(--ok);
+}
+.status-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+select.status-select {
+  width: auto;
+  min-height: 32px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.status-done.input,
+.status-partial.input,
+.status-todo.input {
+  border-color: transparent;
+}
+.status-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.status-count input {
+  width: 56px;
+  min-height: 32px;
+  padding: 2px 6px;
+}
+.plan-overdue {
+  color: var(--danger);
+  font-weight: 600;
+}
+.plan-me {
+  font-weight: 600;
+  color: var(--accent);
+}
+.plan-prod {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--fg);
+  text-decoration: none;
+}
+.plan-prod .img {
+  width: 40px;
+  flex: none;
+}
+.plan-prod > span {
+  display: grid;
+  min-width: 0;
+}
+a.plan-prod:hover b {
+  color: var(--accent);
+}
+.plan-note {
+  color: var(--muted);
+  font-style: italic;
+}
+.ptable-wrap {
+  padding: 0;
+  overflow-x: auto;
+}
+.ptable-wrap.is-stale {
+  opacity: 0.55;
+}
+.ptable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.ptable th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.ptable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.ptable tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ptable tr.is-done td:not(.plan-actions) {
+  opacity: 0.7;
+}
+.ptable .num {
+  text-align: right;
+  white-space: nowrap;
+}
+.plan-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+.plan-actions .btn + .btn {
+  margin-left: 4px;
+}
+/* Phones: each row becomes a card, cells stacked with their column name. */
+@media (max-width: 760px) {
+  .ptable-wrap {
+    background: none;
+    border: 0;
+    box-shadow: none;
+  }
+  .ptable thead {
+    display: none;
+  }
+  .ptable,
+  .ptable tbody {
+    display: grid;
+    gap: 12px;
+  }
+  .ptable tr {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+  }
+  .ptable td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0;
+    border: 0;
+  }
+  .ptable td[data-label]::before {
+    content: attr(data-label);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .ptable td:first-child {
+    display: block;
+    padding-bottom: 4px;
+  }
+  .ptable td:first-child::before {
+    content: none;
+  }
+  .ptable .num {
+    text-align: left;
+  }
+  .plan-actions {
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+    padding-top: 6px !important;
   }
 }

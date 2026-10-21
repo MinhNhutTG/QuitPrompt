@@ -81,7 +81,7 @@ Giao diện gọi đầu tiên khi mở app để quyết định vào thẳng h
 ## 3. Sản phẩm `/api/products`
 
 ### `GET /api/products?q=&limit=`
-Danh sách sản phẩm của người đang đăng nhập, mới cập nhật trước. `q` tìm theo tên hoặc mã (không phân biệt hoa thường). Tối đa 500.
+Danh sách sản phẩm **của cả nhóm**, mới cập nhật trước. Sản phẩm dùng chung: thành viên nào cũng xem, sửa, xoá, tải ảnh được. Xoá sản phẩm xoá luôn prompt và kế hoạch video của nó. `q` tìm theo tên hoặc mã (không phân biệt hoa thường). Tối đa 500.
 ```json
 200 {
   "items": [
@@ -158,7 +158,7 @@ Trả prompt đã lưu của **mọi thành viên**, mới nhất trước. Các
   "nextCursor": "671a9..."   // null nếu hết
 }
 ```
-Chỉ trả ảnh đại diện của sản phẩm để giảm dung lượng. `savedBy` là tài khoản đã lưu prompt (tra theo `owner` mỗi lần đọc, nên đổi tên hiển thị thì hiện tên mới); `createdAt` là lúc lưu, `updatedAt` là lần sửa gần nhất. `mine` cho biết người xem có phải người lưu không: chỉ người lưu mới sửa được (`PATCH` với prompt của người khác trả 404), còn xoá thì thành viên nào cũng xoá được (giao diện hỏi xác nhận Có/Không trước). Sản phẩm của prompt người khác thuộc tài khoản họ, nên giao diện không mở trang sản phẩm đó và "Dùng lại và chỉnh" chỉ nạp lựa chọn, không nạp sản phẩm.
+Chỉ trả ảnh đại diện của sản phẩm để giảm dung lượng. `savedBy` là tài khoản đã lưu prompt (tra theo `owner` mỗi lần đọc, nên đổi tên hiển thị thì hiện tên mới); `createdAt` là lúc lưu, `updatedAt` là lần sửa gần nhất. `mine` cho biết người xem có phải người lưu không: chỉ người lưu mới sửa được (`PATCH` với prompt của người khác trả 404), còn xoá thì thành viên nào cũng xoá được (giao diện hỏi xác nhận Có/Không trước). Sản phẩm dùng chung nên "Dùng lại và chỉnh" luôn nạp cả sản phẩm và lựa chọn.
 
 ### `POST /api/prompts`
 Cần `product` (mã sản phẩm có sẵn) **hoặc** `productName` (tìm sản phẩm trùng tên không phân biệt hoa thường, chưa có thì tạo mới).
@@ -226,3 +226,50 @@ Quy tắc:
 
 ### `GET /api/transfer/export`
 Trả toàn bộ dữ liệu của tài khoản (sản phẩm kèm URL ảnh, prompt, cài đặt) dạng file `.json` để tải về.
+
+---
+
+## 7. Kế hoạch video `/api/plans`
+
+Kế hoạch dùng chung cho cả nhóm. Thành viên nào cũng lập, sửa mục tiêu, người thực hiện, hạn, ghi chú và xoá được; **chỉ người thực hiện** đổi được trạng thái. Xem [tài liệu 09](09-ke-hoach-video.md).
+
+### `GET /api/plans?assignee=&status=&category=&q=&dueFrom=&dueTo=&overdue=&today=&page=&limit=`
+- `assignee`: id người thực hiện.
+- `status`: `todo`, `partial`, `done`, hoặc `open` (= `todo` + `partial`).
+- `category`: loại sản phẩm (`__none` là chưa phân loại). `q`: tên hoặc mã sản phẩm.
+- `dueFrom`, `dueTo`: ngày `YYYY-MM-DD`, tính cả hai đầu. `overdue=1`: hạn trước `today` và chưa hoàn thành.
+- `today`: ngày hôm nay theo máy người xem, dùng để tính quá hạn (thiếu thì lấy ngày UTC của máy chủ).
+- Sắp xếp: hạn gần nhất trước, kế hoạch không có hạn ở cuối. Mặc định 20 mỗi trang, tối đa 50.
+
+```json
+200 {
+  "items": [
+    { "_id": "...", "target": 10, "done": 7, "status": "partial", "dueDate": "2026-10-25", "note": "",
+      "product": { "_id": "...", "name": "Nón lá", "sku": "N12", "category": "Nón", "images": [ { "url": "..." } ] },
+      "assignee": { "id": "...", "displayName": "Bình" }, "createdBy": { "id": "...", "displayName": "An" },
+      "createdAt": "...", "updatedAt": "..." }
+  ],
+  "total": 12, "page": 1, "pages": 1, "limit": 20, "today": "2026-10-21",
+  "summary": { "plans": 12, "target": 80, "done": 47, "todo": 4, "partial": 5, "finished": 3, "overdue": 2 }
+}
+```
+`summary` tính trên toàn bộ kết quả lọc, không chỉ trang đang xem.
+
+### `POST /api/plans`
+Lập một hoặc nhiều kế hoạch cùng lúc, mỗi sản phẩm một dòng.
+```json
+{ "products": ["671a...", "671b..."], "target": 5, "assignee": "6719...", "dueDate": "2026-10-31", "note": "" }
+201 { "items": [ ... ] }
+```
+Lỗi: sản phẩm hoặc người thực hiện không tồn tại → 404; mục tiêu ngoài 1–999 → 400.
+
+### `PATCH /api/plans/:id`
+```json
+{ "target": 8, "assignee": "...", "dueDate": "", "note": "..." }   // ai cũng sửa được
+{ "status": "partial", "done": 3 }                                   // chỉ người thực hiện, người khác → 403
+200 { "item": { ... } }
+```
+`done` tự chỉnh theo trạng thái: `todo` → 0, `done` → bằng `target`, `partial` → giữ trong khoảng 0 đến `target − 1`.
+
+### `DELETE /api/plans/:id`
+`200 { "ok": true }`.

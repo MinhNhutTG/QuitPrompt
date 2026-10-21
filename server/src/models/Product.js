@@ -25,7 +25,8 @@ const schema = new mongoose.Schema(
   { timestamps: true }
 );
 
-schema.index({ owner: 1, updatedAt: -1 });
-schema.index({ owner: 1, name: 1 });
+// Shared by the whole team, so lists are not narrowed by owner.
+schema.index({ updatedAt: -1 });
+schema.index({ name: 1 });
 
 export const Product = mongoose.model("Product", schema);

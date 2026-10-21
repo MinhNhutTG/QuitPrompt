@@ -169,7 +169,7 @@ export default function Saved() {
           </>
         )}
         <div className="filter filter-product">
-          <span>Sản phẩm của tôi</span>
+          <span>Sản phẩm</span>
           <ProductPicker
             value={product || null}
             onChange={(p) => set({ product: p?._id || "" })}

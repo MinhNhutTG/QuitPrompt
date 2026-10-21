@@ -17,6 +17,9 @@ export const usePrompts = (params) =>
 export const usePromptPage = (params) =>
   useQuery({ queryKey: ["prompts", "page", params], queryFn: () => api.prompts({ ...params, limit: 20 }), placeholderData: keepPreviousData });
 
+export const usePlans = (params) =>
+  useQuery({ queryKey: ["plans", params], queryFn: () => api.plans({ ...params, limit: 20 }), placeholderData: keepPreviousData });
+
 // Members and product categories for the saved-prompts filters (also the category suggestions).
 export const usePromptFilters = () => useQuery({ queryKey: ["prompt-filters"], queryFn: api.promptFilters, staleTime: 60 * 1000 });
 

@@ -144,9 +144,9 @@ PROMPT TỐT CỦA SẢN PHẨM NÀY
 
 ### 4.5 Prompt đã lưu `/saved`
 
-- Hiện prompt của cả nhóm. Thanh lọc: ô tìm kiếm, **Người lưu** (mọi người, tôi, từng thành viên), **Loại sản phẩm** (các loại đang có, "Chưa phân loại"), **Thời gian lưu** (hôm nay, 7 ngày, 30 ngày, tháng này, chọn từ ngày đến ngày), sản phẩm của tôi (có ảnh). Nút "Xoá bộ lọc" khi đang lọc.
+- Hiện prompt của cả nhóm. Thanh lọc: ô tìm kiếm, **Người lưu** (mọi người, tôi, từng thành viên), **Loại sản phẩm** (các loại đang có, "Chưa phân loại"), **Thời gian lưu** (hôm nay, 7 ngày, 30 ngày, tháng này, chọn từ ngày đến ngày), sản phẩm (có ảnh). Nút "Xoá bộ lọc" khi đang lọc.
 - Dòng tóm tắt "21–40 trên 57 prompt".
-- Danh sách thẻ như ở trang chi tiết, thêm ảnh nhỏ, tên và loại sản phẩm ở đầu thẻ. Bấm tên thì sang trang sản phẩm (chỉ với sản phẩm của mình).
+- Danh sách thẻ như ở trang chi tiết, thêm ảnh nhỏ, tên và loại sản phẩm ở đầu thẻ. Bấm tên thì sang trang sản phẩm.
 - Phân trang đánh số, 20 mục mỗi trang: "‹ Trước 1 … 4 5 [6] 7 8 … 20 Sau ›". Bộ lọc và trang nằm trên URL nên tải lại hoặc bấm Quay lại vẫn giữ nguyên; đổi bộ lọc thì về trang 1.
 - "Dùng lại và chỉnh" mở bộ tạo với sản phẩm và toàn bộ lựa chọn cũ.
 

@@ -315,7 +315,8 @@ export default function ProductDetail() {
         <div>
           <b>Xoá sản phẩm</b>
           <p className="hint">
-            Xoá cả {nImages} ảnh và {nPrompts} prompt. Không khôi phục được.
+            Sản phẩm dùng chung cả nhóm: xoá là mất với mọi người, cùng {nImages} ảnh, {nPrompts} prompt và các kế hoạch video của nó. Không khôi
+            phục được.
           </p>
         </div>
         <ConfirmButton onConfirm={() => remove.mutate()} disabled={remove.isPending} confirmLabel="Bấm lần nữa để xoá hẳn">

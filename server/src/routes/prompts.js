@@ -49,9 +49,8 @@ async function savedByMap(prompts) {
 
 const GONE = { username: "", displayName: "(tài khoản đã xoá)" };
 
-// Attaches product { _id, name, sku, images: [cover] }, savedBy { username, displayName } and mine
+// Attaches product { _id, name, sku, category, images: [cover] }, savedBy { username, displayName } and mine
 // (whether the viewer saved it, so may edit it); drops the raw owner id.
-// Prompts are shared between members, so their products may belong to another member.
 async function decorate(viewer, prompts) {
   const ids = [...new Set(prompts.map((p) => String(p.product)))];
   const [products, savers] = await Promise.all([Product.find({ _id: { $in: ids } }, PRODUCT_FIELDS).lean(), savedByMap(prompts)]);
@@ -74,7 +73,8 @@ router.get(
     ]);
     res.json({
       members: users.map((u) => ({ id: String(u._id), username: u.username, displayName: u.displayName || u.username })),
-      categories: categories.filter(Boolean).sort((a, b) => a.localeCompare(b, "vi")),
+      // "áo" and "Áo" are one category (filters match case-insensitively); one spelling is kept.
+      categories: [...new Map(categories.filter(Boolean).map((c) => [c.toLowerCase(), c])).values()].sort((a, b) => a.localeCompare(b, "vi")),
     });
   })
 );
@@ -138,7 +138,7 @@ router.post(
     let product;
     if (data.product) {
       assertId(data.product, "sản phẩm");
-      product = await Product.findOne({ _id: data.product, owner });
+      product = await Product.findById(data.product);
       if (!product) throw new HttpError(404, "Không tìm thấy sản phẩm.");
     } else {
       product = await findOrCreateProduct(owner, data.productName);

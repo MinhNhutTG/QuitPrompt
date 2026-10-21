@@ -211,7 +211,7 @@ function TransferBlock() {
     <section className="card form" id="transfer">
       <h2>Chuyển dữ liệu</h2>
       <p className="hint">
-        Nhập file sao lưu <code>.json</code> từ bản tĩnh cũ hoặc từ app này. Nhập lại nhiều lần không bị trùng. Máy chủ miễn phí không tự sao lưu: nên xuất dữ liệu mỗi tuần.
+        Nhập file sao lưu <code>.json</code> từ bản tĩnh cũ hoặc từ app này. Nhập lại nhiều lần không bị trùng. File xuất gồm sản phẩm và prompt của cả nhóm, cùng template và động tác riêng của bạn. Máy chủ miễn phí không tự sao lưu: nên xuất dữ liệu mỗi tuần.
       </p>
       <div className="btns">
         <input

@@ -22,7 +22,7 @@ Giai đoạn 1 đến 7 làm liên tục sau khi tài liệu được duyệt.
 | Nhóm | Ca kiểm thử |
 |---|---|
 | Đăng nhập | Tạo tài khoản; trùng tên → 409; sai mật khẩu → 401; ghi nhớ → cookie có `Max-Age`; `/me` khi chưa đăng nhập → 401; đăng xuất xoá cookie |
-| Phân quyền | Tài khoản A không đọc, sửa, xoá được sản phẩm của B; A thấy prompt của B trong danh sách (`mine: false`), xoá được nhưng không sửa được (→ 404) |
+| Phân quyền | A đọc, sửa, xoá được sản phẩm do B tạo; A thấy prompt của B (`mine: false`), xoá được nhưng không sửa được (→ 404); A không đổi được trạng thái kế hoạch giao cho B (→ 403) nhưng sửa được mục tiêu, người thực hiện, hạn |
 | Sản phẩm | Tạo, sửa, xoá; xoá sản phẩm xoá luôn prompt; tìm theo tên và mã |
 | Prompt | Lưu theo `product`; lưu theo `productName` mới → tạo sản phẩm; phân trang con trỏ không trùng không sót; tìm theo ghi chú và tên sản phẩm; `promptCount` tăng giảm đúng |
 | Ảnh | Không có Cloudinary → 503 rõ ràng; file không phải ảnh → 400; quá 12 ảnh → 400 (Cloudinary thật được giả lập khi test) |
@@ -62,7 +62,7 @@ Nếu không có ý kiến khác, app sẽ làm theo **mặc định** ở cột
 | # | Câu hỏi | Mặc định đề xuất |
 |---|---|---|
 | Q1 | Ai dùng app: chỉ bạn, hay cả nhóm với tài khoản riêng? | Nhiều tài khoản, dữ liệu tách riêng; tắt đăng ký sau khi tạo xong |
-| Q2 | Các thành viên có cần **dùng chung** sản phẩm và prompt không? | Chưa (để giai đoạn sau) |
+| Q2 | Các thành viên có cần **dùng chung** sản phẩm và prompt không? | **Đã chốt: dùng chung** sản phẩm, prompt và kế hoạch video cho cả nhóm |
 | Q3 | Nơi deploy | Render + Atlas + Cloudinary, đều miễn phí |
 | Q4 | Có cần chọn công cụ video (Meta AI, Dola AI) để template tự đổi theo công cụ không? | Chưa; chỉ ghi tên công cụ khi lưu prompt |
 | Q5 | Số ảnh tối đa mỗi sản phẩm | 12 |

@@ -161,7 +161,7 @@ sequenceDiagram
 | Dò mật khẩu | Tối đa 30 lần mỗi 15 phút cho mỗi địa chỉ IP trên route đăng nhập và đăng ký |
 | Đánh cắp phiên qua JavaScript | Cookie `httpOnly`; không lưu token trong localStorage |
 | Giả mạo request từ trang khác (CSRF) | Cookie `SameSite=Lax`; API chỉ nhận JSON hoặc multipart từ cùng nguồn |
-| Đọc dữ liệu người khác | Mọi truy vấn có điều kiện `owner = userId` |
+| Đọc dữ liệu người khác | Sản phẩm, prompt và kế hoạch là của cả nhóm (mọi tài khoản đã đăng nhập); cài đặt lọc theo `owner = userId`; sửa prompt chỉ người lưu, đổi trạng thái kế hoạch chỉ người thực hiện |
 | Tải file độc | Chỉ nhận ảnh, tối đa 10 MB mỗi file, 8 file mỗi lần; Cloudinary xử lý lại ảnh |
 | Lộ khoá bí mật | Biến môi trường; file `.env` nằm trong `.gitignore` |
 | Header không an toàn | `helmet` với Content-Security-Policy cho phép ảnh từ `res.cloudinary.com` và font từ Google Fonts |

@@ -77,9 +77,11 @@ Mọi collection có `createdAt` và `updatedAt` tự động (`timestamps: true
 
 ### 2.2 `products`
 
+Sản phẩm **dùng chung cho cả nhóm**: thành viên nào cũng xem, sửa, xoá được. `owner` chỉ ghi lại người tạo.
+
 | Trường | Kiểu | Ràng buộc | Ghi chú |
 |---|---|---|---|
-| `owner` | ObjectId → users | bắt buộc | |
+| `owner` | ObjectId → users | bắt buộc | Người tạo, không dùng để giới hạn quyền |
 | `name` | string | bắt buộc, tối đa 160 | Ví dụ "Nón chống nắng vành rộng" |
 | `sku` | string | tối đa 60 | Mã sản phẩm tuỳ chọn |
 | `category` | string | tối đa 60, mặc định `""` | Loại sản phẩm gõ tự do ("Áo", "Nón"...), dùng để lọc prompt đã lưu |
@@ -96,8 +98,8 @@ Mọi collection có `createdAt` và `updatedAt` tự động (`timestamps: true
 
 | Chỉ mục | Phục vụ truy vấn |
 |---|---|
-| `{ owner: 1, updatedAt: -1 }` | Danh sách sản phẩm mới cập nhật lên trước |
-| `{ owner: 1, name: 1 }` | Tìm theo tên, tìm hoặc tạo sản phẩm khi lưu prompt |
+| `{ updatedAt: -1 }` | Danh sách sản phẩm mới cập nhật lên trước |
+| `{ name: 1 }` | Tìm theo tên, tìm hoặc tạo sản phẩm khi lưu prompt |
 
 **Vì sao ảnh nhúng trong sản phẩm:** ảnh luôn được đọc cùng sản phẩm, số lượng ít (tối đa 12), không bao giờ truy vấn ảnh riêng lẻ. Nhúng giúp một lần đọc là đủ.
 
@@ -125,7 +127,25 @@ Mọi collection có `createdAt` và `updatedAt` tự động (`timestamps: true
 
 **Vì sao prompt là collection riêng:** số lượng tăng không giới hạn theo thời gian và cần phân trang. Nhúng vào sản phẩm sẽ làm tài liệu sản phẩm phình to.
 
-### 2.4 `settings`
+### 2.4 `videoplans`
+
+Kế hoạch làm video, mỗi tài liệu là một dòng "sản phẩm × người thực hiện". Xem [tài liệu 09](09-ke-hoach-video.md).
+
+| Trường | Kiểu | Ràng buộc | Ghi chú |
+|---|---|---|---|
+| `product` | ObjectId → products | bắt buộc | Xoá sản phẩm thì xoá luôn kế hoạch |
+| `target` | int | 1–999 | Mục tiêu số video |
+| `assignee` | ObjectId → users | bắt buộc | Người thực hiện |
+| `status` | string | `todo`, `partial`, `done` | Chưa thực hiện, Còn thiếu, Đã hoàn thành. Người thực hiện tự chọn, app không tự đếm |
+| `done` | int | 0–999 | Số video đã làm khi `partial`; `todo` luôn 0, `done` luôn bằng `target` |
+| `dueDate` | string | `"YYYY-MM-DD"` hoặc `""` | Ngày theo lịch, không lệch múi giờ |
+| `note` | string | tối đa 1000 | |
+| `createdBy` | ObjectId → users | bắt buộc | Người lập kế hoạch |
+| `createdAt`, `updatedAt` | date | tự động | |
+
+**Chỉ mục:** `{ assignee: 1, status: 1, dueDate: 1 }` cho "việc của tôi chưa xong"; `{ product: 1 }` cho lọc theo sản phẩm và xoá theo sản phẩm.
+
+### 2.5 `settings`
 
 Mỗi người dùng một tài liệu, tạo khi lần đầu lưu cài đặt.
 
