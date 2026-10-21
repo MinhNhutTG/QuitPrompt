@@ -67,4 +67,4 @@ Nếu không có ý kiến khác, app sẽ làm theo **mặc định** ở cột
 | Q4 | Có cần chọn công cụ video (Meta AI, Dola AI) để template tự đổi theo công cụ không? | Chưa; chỉ ghi tên công cụ khi lưu prompt |
 | Q5 | Số ảnh tối đa mỗi sản phẩm | 12 |
 | Q6 | Thời lượng video | 10, 15, 20 giây như hiện tại |
-| Q7 | Giữ nhận diện màu mận và font hiện tại? | Giữ |
+| Q7 | Giữ nhận diện màu mận và font hiện tại? | Giữ font; **màu chủ đạo đổi sang chàm tím** (tài liệu 05, mục 2) |

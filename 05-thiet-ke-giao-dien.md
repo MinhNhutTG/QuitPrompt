@@ -14,14 +14,14 @@ Giữ nhận diện của bản tĩnh để người dùng quen tay.
 
 | Token | Sáng | Tối | Dùng cho |
 |---|---|---|---|
-| `--bg` | `#F3F2F5` | `#141218` | Nền trang |
-| `--surface` | `#FFFFFF` | `#1D1A22` | Thẻ, khung |
-| `--sunk` | `#ECEAF0` | `#26222C` | Khung prompt, ô chọn |
-| `--line` | `#DAD6E0` | `#37323F` | Viền |
-| `--fg` | `#1B1820` | `#EEEAF2` | Chữ chính |
-| `--muted` | `#6B6475` | `#A49CAE` | Chữ phụ |
-| `--accent` | `#9C2A5C` | `#E27AA6` | Màu nhấn (mận), nút chính, mục đang chọn |
-| `--accent-soft` | `#F6E3EC` | `#3A2230` | Nền nhấn nhẹ, mốc thời gian |
+| `--bg` | `#F5F6FB` | `#0E1020` | Nền trang |
+| `--surface` | `#FFFFFF` | `#161A2E` | Thẻ, khung |
+| `--sunk` | `#EEF0F7` | `#1F2440` | Khung prompt, ô chọn |
+| `--line` | `#DDE1EC` | `#2D3352` | Viền |
+| `--fg` | `#161A2E` | `#E8EAF6` | Chữ chính |
+| `--muted` | `#5F6684` | `#9BA2C4` | Chữ phụ |
+| `--accent` | `#4F46E5` | `#8F88FF` | Màu nhấn (chàm tím, đổi từ màu mận), nút chính, mục đang chọn |
+| `--accent-soft` | `#EBEAFD` | `#252857` | Nền nhấn nhẹ, mốc thời gian |
 | `--ok` | `#1F7A4D` | `#5CC48F` | Thông báo thành công |
 | `--danger` | `#B3261E` | `#F2B8B5` | Xoá, lỗi |
 

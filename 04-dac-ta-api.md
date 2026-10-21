@@ -239,7 +239,7 @@ Kế hoạch dùng chung cho cả nhóm. Thành viên nào cũng lập, sửa m�
 - `category`: loại sản phẩm (`__none` là chưa phân loại). `q`: tên hoặc mã sản phẩm.
 - `dueFrom`, `dueTo`: ngày `YYYY-MM-DD`, tính cả hai đầu. `overdue=1`: hạn trước `today` và chưa hoàn thành.
 - `today`: ngày hôm nay theo máy người xem, dùng để tính quá hạn (thiếu thì lấy ngày UTC của máy chủ).
-- Sắp xếp: hạn gần nhất trước, kế hoạch không có hạn ở cuối. Mặc định 20 mỗi trang, tối đa 50.
+- Sắp xếp: chưa hoàn thành trước, `done` ở cuối; trong mỗi nhóm hạn gần nhất trước, không có hạn ở cuối. Mặc định 20 mỗi trang, tối đa 50.
 
 ```json
 200 {
@@ -256,9 +256,9 @@ Kế hoạch dùng chung cho cả nhóm. Thành viên nào cũng lập, sửa m�
 `summary` tính trên toàn bộ kết quả lọc, không chỉ trang đang xem.
 
 ### `POST /api/plans`
-Lập một hoặc nhiều kế hoạch cùng lúc, mỗi sản phẩm một dòng.
+Lập một hoặc nhiều kế hoạch cùng lúc, mỗi sản phẩm một dòng (giao diện gửi một sản phẩm mỗi lần). `status`, `done` không bắt buộc (mặc định `todo`, 0): người thêm dòng được chọn trạng thái ban đầu.
 ```json
-{ "products": ["671a...", "671b..."], "target": 5, "assignee": "6719...", "dueDate": "2026-10-31", "note": "" }
+{ "products": ["671a..."], "target": 5, "assignee": "6719...", "dueDate": "2026-10-31", "note": "", "status": "partial", "done": 2 }
 201 { "items": [ ... ] }
 ```
 Lỗi: sản phẩm hoặc người thực hiện không tồn tại → 404; mục tiêu ngoài 1–999 → 400.

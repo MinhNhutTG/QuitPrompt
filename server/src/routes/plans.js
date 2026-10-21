@@ -19,6 +19,9 @@ const createSchema = z.object({
   assignee: id("người thực hiện"),
   dueDate: day.optional().default(""),
   note: text("ghi chú", 1000).optional().default(""),
+  // Whoever adds the row may set the starting status; afterwards only the assignee changes it.
+  status: z.enum(PLAN_STATUSES, { errorMap: () => ({ message: "Trạng thái không hợp lệ." }) }).optional().default("todo"),
+  done: z.number().int().min(0).max(999).optional().default(0),
 });
 
 const patchSchema = z.object({
@@ -65,7 +68,7 @@ function settle(plan) {
 
 // Filters: assignee, status ("open" = todo + partial), category, q (product name or sku),
 // dueFrom/dueTo (inclusive days), overdue=1 with today (the viewer's local day, "YYYY-MM-DD").
-// Sorted by due day (none last), then newest. Returns one numbered page plus a summary of the whole filter.
+// Unfinished first, done last; within each, by due day (none last), then newest. Returns one numbered page plus a summary of the whole filter.
 router.get(
   "/",
   ah(async (req, res) => {
@@ -124,11 +127,11 @@ router.get(
     const page = Math.min(Math.max(Math.floor(Number(req.query.page)) || 1, 1), pages);
     const rows = await VideoPlan.aggregate([
       { $match: match },
-      { $addFields: { noDue: { $eq: ["$dueDate", ""] } } },
-      { $sort: { noDue: 1, dueDate: 1, _id: -1 } },
+      { $addFields: { isDone: { $eq: ["$status", "done"] }, noDue: { $eq: ["$dueDate", ""] } } },
+      { $sort: { isDone: 1, noDue: 1, dueDate: 1, _id: -1 } },
       { $skip: (page - 1) * limit },
       { $limit: limit },
-      { $project: { noDue: 0 } },
+      { $project: { isDone: 0, noDue: 0 } },
     ]);
     const { _id, plans, ...counts } = summary || { target: 0, done: 0, todo: 0, partial: 0, finished: 0, overdue: 0 };
     res.json({ items: await decorate(rows), total, page, pages, limit, today, summary: { plans: total, ...counts } });
@@ -143,14 +146,11 @@ router.post(
     const [found] = await Promise.all([Product.countDocuments({ _id: { $in: productIds } }), assertMember(data.assignee)]);
     if (found !== productIds.length) throw new HttpError(404, "Có sản phẩm không còn tồn tại. Tải lại trang rồi chọn lại.");
     const docs = await VideoPlan.insertMany(
-      productIds.map((product) => ({
-        product,
-        target: data.target,
-        assignee: data.assignee,
-        dueDate: data.dueDate,
-        note: data.note,
-        createdBy: req.userId,
-      }))
+      productIds.map((product) => {
+        const plan = { product, target: data.target, assignee: data.assignee, dueDate: data.dueDate, note: data.note, status: data.status, done: data.done, createdBy: req.userId };
+        settle(plan);
+        return plan;
+      })
     );
     res.status(201).json({ items: await decorate(docs.map((d) => d.toObject())) });
   })

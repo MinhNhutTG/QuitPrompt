@@ -1,20 +1,20 @@
 /* Tokens: tài liệu 05, mục 2 */
 :root {
-  --bg: #f3f2f5;
+  --bg: #f5f6fb;
   --surface: #ffffff;
-  --sunk: #eceaf0;
-  --line: #dad6e0;
-  --fg: #1b1820;
-  --muted: #6b6475;
-  --accent: #9c2a5c;
+  --sunk: #eef0f7;
+  --line: #dde1ec;
+  --fg: #161a2e;
+  --muted: #5f6684;
+  --accent: #4f46e5;
   --accent-fg: #ffffff;
-  --accent-soft: #f6e3ec;
+  --accent-soft: #ebeafd;
   --ok: #1f7a4d;
   --danger: #b3261e;
   --danger-soft: #fbe9e7;
   --warn: #8a5a00;
   --warn-soft: #fff3d6;
-  --shadow: 0 8px 28px rgba(27, 24, 32, 0.14);
+  --shadow: 0 8px 28px rgba(22, 26, 46, 0.12);
   --r: 8px;
   --r-lg: 14px;
   --font: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -28,15 +28,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #141218;
-    --surface: #1d1a22;
-    --sunk: #26222c;
-    --line: #37323f;
-    --fg: #eeeaf2;
-    --muted: #a49cae;
-    --accent: #e27aa6;
-    --accent-fg: #1b1820;
-    --accent-soft: #3a2230;
+    --bg: #0e1020;
+    --surface: #161a2e;
+    --sunk: #1f2440;
+    --line: #2d3352;
+    --fg: #e8eaf6;
+    --muted: #9ba2c4;
+    --accent: #8f88ff;
+    --accent-fg: #10132a;
+    --accent-soft: #252857;
     --ok: #5cc48f;
     --danger: #f2b8b5;
     --danger-soft: #3b1f1e;
@@ -1498,39 +1498,6 @@ select.input {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 4px 3px 10px;
-  border-radius: 99px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 13px;
-  font-weight: 600;
-}
-.chip button {
-  width: 22px;
-  height: 22px;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: inherit;
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-}
-.chip button:hover {
-  background: var(--surface);
-}
 .plan-sum {
   display: flex;
   flex-wrap: wrap;
@@ -1587,18 +1554,23 @@ select.input {
   align-items: center;
   gap: 6px;
 }
-select.status-select {
-  width: auto;
-  min-height: 32px;
-  padding-top: 2px;
-  padding-bottom: 2px;
-  font-size: 13px;
-  font-weight: 600;
+.ptable .status-edit {
+  flex-wrap: nowrap;
 }
-.status-done.input,
-.status-partial.input,
-.status-todo.input {
+select.status-select {
+  font-weight: 600;
   border-color: transparent;
+}
+.ptable select.status-select {
+  width: auto;
+  min-width: 150px;
+}
+.ptable td[data-label="Người thực hiện"] select {
+  min-width: 128px;
+}
+select.status-select:disabled {
+  opacity: 1;
+  cursor: not-allowed;
 }
 .status-count {
   display: inline-flex;
@@ -1606,46 +1578,27 @@ select.status-select {
   gap: 4px;
   color: var(--muted);
   font-size: 13px;
+  white-space: nowrap;
 }
 .status-count input {
-  width: 56px;
-  min-height: 32px;
-  padding: 2px 6px;
+  width: 52px;
+  padding-left: 6px;
+  padding-right: 6px;
+  text-align: center;
 }
 .plan-overdue {
   color: var(--danger);
   font-weight: 600;
+  font-size: 13px;
 }
-.plan-me {
-  font-weight: 600;
-  color: var(--accent);
-}
-.plan-prod {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  color: var(--fg);
-  text-decoration: none;
-}
-.plan-prod .img {
-  width: 40px;
-  flex: none;
-}
-.plan-prod > span {
+.plan-due {
   display: grid;
-  min-width: 0;
-}
-a.plan-prod:hover b {
-  color: var(--accent);
-}
-.plan-note {
-  color: var(--muted);
-  font-style: italic;
+  gap: 2px;
 }
 .ptable-wrap {
   padding: 0;
-  overflow-x: auto;
+  /* visible, not auto: the product picker's list must spill out of the table */
+  overflow: visible;
 }
 .ptable-wrap.is-stale {
   opacity: 0.55;
@@ -1660,34 +1613,60 @@ a.plan-prod:hover b {
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
-  padding: 10px 12px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
+.ptable th:first-child,
+.ptable td:first-child {
+  padding-left: 14px;
+}
 .ptable td {
-  padding: 10px 12px;
+  padding: 8px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
 }
 .ptable tbody tr:last-child td {
   border-bottom: 0;
 }
-.ptable tr.is-done td:not(.plan-actions) {
-  opacity: 0.7;
+.ptable .input {
+  min-height: 40px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 14px;
 }
-.ptable .num {
-  text-align: right;
-  white-space: nowrap;
+.ptable .picker-btn {
+  min-height: 40px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+.plan-product-cell {
+  min-width: 230px;
+  width: 30%;
+}
+.plan-target {
+  width: 72px;
+  text-align: center;
+}
+.ptable tr.is-draft td {
+  background: var(--accent-soft);
+}
+.ptable tr.is-dirty td {
+  background: color-mix(in srgb, var(--accent-soft) 55%, transparent);
+}
+.ptable tr.is-done td:not(.plan-actions) {
+  opacity: 0.6;
 }
 .plan-actions {
   white-space: nowrap;
   text-align: right;
+  padding-right: 14px !important;
 }
 .plan-actions .btn + .btn {
   margin-left: 4px;
 }
-/* Phones: each row becomes a card, cells stacked with their column name. */
-@media (max-width: 760px) {
+/* Phones and narrow windows: each row becomes a card, fields stacked under their column name. */
+@media (max-width: 980px) {
   .ptable-wrap {
     background: none;
     border: 0;
@@ -1703,19 +1682,30 @@ a.plan-prod:hover b {
   }
   .ptable tr {
     display: grid;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px 12px;
     padding: 14px;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--r-lg);
   }
-  .ptable td {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+  .ptable tr.is-draft {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .ptable tr.is-draft td,
+  .ptable tr.is-dirty td {
+    background: none;
+  }
+  .ptable td,
+  .ptable td:first-child {
+    display: grid;
+    gap: 4px;
+    align-content: start;
     padding: 0;
     border: 0;
+    width: auto;
+    min-width: 0;
   }
   .ptable td[data-label]::before {
     content: attr(data-label);
@@ -1723,19 +1713,28 @@ a.plan-prod:hover b {
     font-weight: 600;
     color: var(--muted);
   }
-  .ptable td:first-child {
-    display: block;
-    padding-bottom: 4px;
+  .plan-product-cell,
+  .ptable td[data-label="Trạng thái"],
+  .plan-actions {
+    grid-column: 1 / -1;
   }
-  .ptable td:first-child::before {
-    content: none;
-  }
-  .ptable .num {
+  .plan-target {
+    width: 100%;
     text-align: left;
   }
-  .plan-actions {
-    justify-content: flex-start !important;
+  .ptable .status-edit {
     flex-wrap: wrap;
-    padding-top: 6px !important;
+  }
+  .ptable select.status-select {
+    flex: 1;
+  }
+  .plan-actions {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0 0 !important;
+  }
+  .plan-actions .btn + .btn {
+    margin-left: 0;
   }
 }
