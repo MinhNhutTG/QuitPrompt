@@ -948,6 +948,10 @@ select.input {
   flex: 1 1 220px;
   max-width: 420px;
 }
+.toolbar > .toolbar-who {
+  flex: 0 1 auto;
+  width: auto;
+}
 .pgrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -1153,7 +1157,7 @@ select.input {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pc-prod:hover span {
+a.pc-prod:hover span {
   color: var(--accent);
 }
 .pc-meta {
@@ -1396,7 +1400,11 @@ select.input {
   .toast-host {
     bottom: calc(var(--tab-h) + var(--safe-b) + 76px);
   }
-  .pgrid {
+  .toolbar > .toolbar-who {
+  flex: 0 1 auto;
+  width: auto;
+}
+.pgrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }

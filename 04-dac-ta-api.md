@@ -127,7 +127,9 @@ Xoá sản phẩm, ảnh trên Cloudinary và mọi prompt của nó. `200 { "ok
 
 ## 4. Prompt tốt `/api/prompts`
 
-### `GET /api/prompts?product=&q=&cursor=&limit=`
+### `GET /api/prompts?product=&q=&mine=&cursor=&limit=`
+Trả prompt đã lưu của **mọi thành viên**, mới nhất trước.
+- `mine=1`: chỉ prompt của tài khoản đang đăng nhập.
 - `product`: lọc theo một sản phẩm.
 - `q`: tìm trong ghi chú, công cụ, tên hoặc mã sản phẩm.
 - `cursor`: `_id` của mục cuối trang trước (phân trang bằng con trỏ, ổn định khi có prompt mới chen vào).
@@ -138,14 +140,14 @@ Xoá sản phẩm, ảnh trên Cloudinary và mọi prompt của nó. `200 { "ok
   "items": [
     { "_id": "671b...", "prompt": "The woman from the reference image...", "negative": "wind, ...",
       "note": "Ra đẹp lần đầu", "tool": "Meta AI", "settings": { ... }, "createdAt": "...", "updatedAt": "...",
-      "savedBy": { "username": "nhut", "displayName": "nhut" },
+      "savedBy": { "username": "nhut", "displayName": "nhut" }, "mine": true,
       "product": { "_id": "671a0c...", "name": "Nón chống nắng vành rộng", "sku": "N12",
                    "images": [ { "url": "...", "width": 1500, "height": 2000 } ] } }
   ],
   "nextCursor": "671a9..."   // null nếu hết
 }
 ```
-Chỉ trả ảnh đại diện của sản phẩm để giảm dung lượng. `savedBy` là tài khoản đã lưu prompt (tra theo `owner` mỗi lần đọc, nên đổi tên hiển thị thì hiện tên mới); `createdAt` là lúc lưu, `updatedAt` là lần sửa gần nhất.
+Chỉ trả ảnh đại diện của sản phẩm để giảm dung lượng. `savedBy` là tài khoản đã lưu prompt (tra theo `owner` mỗi lần đọc, nên đổi tên hiển thị thì hiện tên mới); `createdAt` là lúc lưu, `updatedAt` là lần sửa gần nhất. `mine` cho biết người xem có phải người lưu không: chỉ người lưu mới sửa, xoá được (`PATCH`, `DELETE` với prompt của người khác trả 404). Sản phẩm của prompt người khác thuộc tài khoản họ, nên giao diện không mở trang sản phẩm đó và "Dùng lại và chỉnh" chỉ nạp lựa chọn, không nạp sản phẩm.
 
 ### `POST /api/prompts`
 Cần `product` (mã sản phẩm có sẵn) **hoặc** `productName` (tìm sản phẩm trùng tên không phân biệt hoa thường, chưa có thì tạo mới).

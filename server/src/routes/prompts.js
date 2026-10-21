@@ -39,23 +39,26 @@ async function savedByMap(prompts) {
 
 const GONE = { username: "", displayName: "(tài khoản đã xoá)" };
 
-// Attaches product { _id, name, sku, images: [cover] } and savedBy { username, displayName }; drops the raw owner id.
-async function decorate(owner, prompts) {
+// Attaches product { _id, name, sku, images: [cover] }, savedBy { username, displayName } and mine
+// (whether the viewer saved it, so may edit it); drops the raw owner id.
+// Prompts are shared between members, so their products may belong to another member.
+async function decorate(viewer, prompts) {
   const ids = [...new Set(prompts.map((p) => String(p.product)))];
-  const [products, savers] = await Promise.all([Product.find({ owner, _id: { $in: ids } }, PRODUCT_FIELDS).lean(), savedByMap(prompts)]);
+  const [products, savers] = await Promise.all([Product.find({ _id: { $in: ids } }, PRODUCT_FIELDS).lean(), savedByMap(prompts)]);
   const byId = new Map(products.map((p) => [String(p._id), p]));
   return prompts.map(({ owner: o, ...p }) => ({
     ...p,
     product: byId.get(String(p.product)) || { _id: p.product, name: "(sản phẩm đã xoá)", images: [] },
     savedBy: savers.get(String(o)) || GONE,
+    mine: String(o) === String(viewer),
   }));
 }
 
 router.get(
   "/",
   ah(async (req, res) => {
-    const owner = req.userId;
-    const filter = { owner };
+    // Every member sees every saved prompt; ?mine=1 narrows to the viewer's own.
+    const filter = req.query.mine === "1" ? { owner: req.userId } : {};
     const { product, cursor } = req.query;
     if (product) filter.product = assertId(String(product), "sản phẩm");
     if (cursor && isId(String(cursor))) filter._id = { $lt: cursor };
@@ -63,7 +66,7 @@ router.get(
     const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
     if (q) {
       const rx = new RegExp(escapeRegex(q), "i");
-      const matching = await Product.find({ owner, $or: [{ name: rx }, { sku: rx }] }, { _id: 1 }).lean();
+      const matching = await Product.find({ $or: [{ name: rx }, { sku: rx }] }, { _id: 1 }).lean();
       filter.$or = [{ note: rx }, { tool: rx }, { product: { $in: matching.map((p) => p._id) } }];
     }
 
@@ -71,7 +74,7 @@ router.get(
     const rows = await Prompt.find(filter).select("-__v").sort({ _id: -1 }).limit(limit + 1).lean();
     const page = rows.slice(0, limit);
     res.json({
-      items: await decorate(owner, page),
+      items: await decorate(req.userId, page),
       nextCursor: rows.length > limit ? String(page[page.length - 1]._id) : null,
     });
   })

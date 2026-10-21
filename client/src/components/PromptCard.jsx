@@ -78,6 +78,16 @@ function NoteEditor({ item, onDone }) {
   );
 }
 
+const ProductLabel = ({ product }) => (
+  <>
+    <LazyImage image={product.images?.[0]} width={36} ratio="1 / 1" />
+    <span>
+      {product.name}
+      {product.sku && <small className="hint"> · {product.sku}</small>}
+    </span>
+  </>
+);
+
 export default function PromptCard({ item, showProduct = false }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -97,7 +107,9 @@ export default function PromptCard({ item, showProduct = false }) {
     onError: (e) => toast(e.message, { tone: "danger" }),
   });
 
-  const reuse = () => navigate("/", { state: { reuse: { productId: product._id, settings: item.settings } } });
+  // Another member's prompt points at their product, which the viewer can't open: reuse only the choices.
+  const mine = item.mine !== false;
+  const reuse = () => navigate("/", { state: { reuse: { productId: mine ? product._id : null, settings: item.settings } } });
   // Pasted prompts (and some imported ones) have no builder choices to load back.
   const canReuse = item.source !== "external" && item.settings && Object.keys(item.settings).length > 0;
   const external = item.source === "external";
@@ -106,18 +118,19 @@ export default function PromptCard({ item, showProduct = false }) {
 
   return (
     <article className="card pc">
-      {showProduct && (
-        <Link to={`/products/${product._id}`} className="pc-prod">
-          <LazyImage image={product.images?.[0]} width={36} ratio="1 / 1" />
-          <span>
-            {product.name}
-            {product.sku && <small className="hint"> · {product.sku}</small>}
-          </span>
-        </Link>
-      )}
+      {showProduct &&
+        (mine ? (
+          <Link to={`/products/${product._id}`} className="pc-prod">
+            <ProductLabel product={product} />
+          </Link>
+        ) : (
+          <div className="pc-prod">
+            <ProductLabel product={product} />
+          </div>
+        ))}
       <div className="pc-meta">
         <span>
-          Lưu bởi <b className="pc-who">{item.savedBy?.displayName || "bạn"}</b> ·{" "}
+          Lưu bởi <b className="pc-who">{mine ? "bạn" : item.savedBy?.displayName}</b> ·{" "}
           <time dateTime={item.createdAt} title={fmtDateTimeFull(item.createdAt)}>
             {fmtDateTimeFull(item.createdAt)}
           </time>
@@ -164,14 +177,16 @@ export default function PromptCard({ item, showProduct = false }) {
             Dùng lại và chỉnh
           </button>
         )}
-        {!editing && (
+        {mine && !editing && (
           <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(true)}>
             {external ? "Sửa" : "Sửa ghi chú"}
           </button>
         )}
-        <ConfirmButton className="btn btn-sm btn-danger-ghost" onConfirm={() => remove.mutate()} disabled={remove.isPending}>
-          Xoá
-        </ConfirmButton>
+        {mine && (
+          <ConfirmButton className="btn btn-sm btn-danger-ghost" onConfirm={() => remove.mutate()} disabled={remove.isPending}>
+            Xoá
+          </ConfirmButton>
+        )}
       </div>
     </article>
   );

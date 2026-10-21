@@ -11,10 +11,15 @@ const CardSkeleton = () => <Skeleton h={150} r={14} />;
 export default function Saved() {
   const [q, setQ] = useState("");
   const [product, setProduct] = useState(null);
+  const [mine, setMine] = useState(false);
   const dq = useDebounce(q.trim(), 300);
-  const { data, isLoading, error, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } = usePrompts({ q: dq, product: product || undefined });
+  const { data, isLoading, error, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } = usePrompts({
+    q: dq,
+    product: product || undefined,
+    mine: mine ? 1 : undefined,
+  });
   const items = data?.pages.flatMap((p) => p.items) || [];
-  const filtered = Boolean(dq || product);
+  const filtered = Boolean(dq || product || mine);
 
   // Loads the next 20 when the end of the list comes into view.
   const sentinel = useRef(null);
@@ -31,12 +36,16 @@ export default function Saved() {
       <div className="page-head">
         <div>
           <h1>Prompt đã lưu</h1>
-          <p>Những prompt đã ra video đẹp, để copy lại hoặc dùng lại và chỉnh.</p>
+          <p>Những prompt đã ra video đẹp của cả nhóm, để copy lại hoặc dùng lại và chỉnh.</p>
         </div>
       </div>
 
       <div className="toolbar">
         <input className="input" type="search" aria-label="Tìm prompt" placeholder="Tìm trong ghi chú, công cụ, tên sản phẩm" value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className="input toolbar-who" aria-label="Người lưu" value={mine ? "mine" : "all"} onChange={(e) => setMine(e.target.value === "mine")}>
+          <option value="all">Của mọi người</option>
+          <option value="mine">Của tôi</option>
+        </select>
         <ProductPicker value={product} onChange={(p) => setProduct(p?._id || null)} allowClear clearLabel="Tất cả sản phẩm" placeholder="Tất cả sản phẩm" label="Lọc theo sản phẩm" />
       </div>
 
