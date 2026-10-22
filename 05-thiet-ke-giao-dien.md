@@ -10,28 +10,35 @@
 
 ## 2. Nhận diện hình ảnh
 
-Giữ nhận diện của bản tĩnh để người dùng quen tay.
+Phong cách Nhật "Washi & Sumi": nền giấy washi, chữ mực tàu, điểm nhấn đỏ son của con dấu hanko. Nhiều khoảng trống, viền mảnh, bo góc nhỏ.
 
 | Token | Sáng | Tối | Dùng cho |
 |---|---|---|---|
-| `--bg` | `#F5F6FB` | `#0E1020` | Nền trang |
-| `--surface` | `#FFFFFF` | `#161A2E` | Thẻ, khung |
-| `--sunk` | `#EEF0F7` | `#1F2440` | Khung prompt, ô chọn |
-| `--line` | `#DDE1EC` | `#2D3352` | Viền |
-| `--fg` | `#161A2E` | `#E8EAF6` | Chữ chính |
-| `--muted` | `#5F6684` | `#9BA2C4` | Chữ phụ |
-| `--accent` | `#4F46E5` | `#8F88FF` | Màu nhấn (chàm tím, đổi từ màu mận), nút chính, mục đang chọn |
-| `--accent-soft` | `#EBEAFD` | `#252857` | Nền nhấn nhẹ, mốc thời gian |
-| `--ok` | `#1F7A4D` | `#5CC48F` | Thông báo thành công |
-| `--danger` | `#B3261E` | `#F2B8B5` | Xoá, lỗi |
+| `--bg` | `#F3EEE4` | `#15130F` | Nền trang (giấy washi) |
+| `--surface` | `#FBF8F1` | `#1E1B17` | Thẻ, khung |
+| `--sunk` | `#F0EADF` | `#26221D` | Ô nhập, ô chọn |
+| `--line` | `#DCD3C3` | `#3A352D` | Viền |
+| `--fg` | `#1E1C19` | `#EDE6D8` | Chữ chính (mực) |
+| `--muted` | `#655F55` | `#A69F92` | Chữ phụ |
+| `--accent` | `#B33A28` | `#E0705C` | Đỏ son: nút chính, mục đang chọn, con dấu |
+| `--accent-soft` | `#F3E1DA` | `#3A231D` | Nền nhấn nhẹ, mốc đoạn kết |
+| `--ai` | `#2B3A55` | `#9DB0D4` | Chàm: đoạn mở đầu, avatar |
+| `--tan` | `#8C7F69` | `#8C7F69` | Đoạn giữa trên thanh thời gian, chữ Hán phụ |
+| `--ok` | `#2E6B45` | `#5CC48F` | Thông báo thành công |
+| `--danger` | `#8E2C1E` | `#F2B8B5` | Xoá, lỗi |
+
+Lớp `.ink` là khối nền mực, luôn tối ở cả hai chế độ: khung prompt bên phải bộ tạo và nửa trái trang đăng nhập.
 
 | Vai trò chữ | Font | Dùng cho |
 |---|---|---|
-| Tiêu đề | Bricolage Grotesque 600/800 | Tên trang, tên sản phẩm |
-| Nội dung | Be Vietnam Pro 400/500/600 | Toàn bộ giao diện (hỗ trợ tiếng Việt tốt) |
+| Tiêu đề | Noto Serif 600/700 | Tên trang, tiêu đề mục (hỗ trợ tiếng Việt) |
+| Chữ Hán | Noto Serif JP | Con dấu 作, chữ Hán trên điều hướng, số mục 一 二 三 四 |
+| Nội dung | Be Vietnam Pro 400/500/600 | Toàn bộ giao diện |
 | Prompt, mã | JetBrains Mono | Khung prompt, mốc giây |
 
-Bo góc: 8px cho nút và ô nhập, 14px cho khung lớn. Viền mảnh, bóng đổ chỉ dùng cho hộp thoại và thanh điều hướng.
+Điều hướng dùng một chữ Hán thay icon: 作 Tạo, 品 Sản phẩm, 蔵 Đã lưu, 計 Kế hoạch, 書 Thư viện, 設 Cài đặt, 他 Thêm. Chữ Hán chỉ để trang trí (`aria-hidden`), nhãn tiếng Việt luôn đi kèm.
+
+Bo góc: 3px cho nút và ô nhập, 4px cho khung lớn. Dưới thanh trên cùng có dải sóng seigaiha. Bóng đổ chỉ dùng cho hộp thoại và menu.
 
 ## 3. Bố cục và điều hướng
 

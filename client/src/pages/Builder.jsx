@@ -95,7 +95,9 @@ export default function Builder() {
       <div className="grid-2 builder">
         <div className="card">
           <div className="sec">
-            <div className="sec-h">Sản phẩm</div>
+            <h2 className="sec-h">
+              <span className="sec-n" aria-hidden="true">一</span>Sản phẩm
+            </h2>
             <ProductPicker
               value={state.productId}
               onChange={(p) => set(p ? fromProduct(p) : { productId: null })}
@@ -105,6 +107,9 @@ export default function Builder() {
           </div>
 
           <div className="sec">
+            <h2 className="sec-h">
+              <span className="sec-n" aria-hidden="true">二</span>Người mẫu và thời lượng
+            </h2>
             <div className="row">
               <span className="row-label">Người mẫu</span>
               <Seg
@@ -133,7 +138,9 @@ export default function Builder() {
           <Sequence state={state} set={set} index={index} result={result} />
 
           <div className="sec">
-            <div className="sec-h">Tuỳ chọn</div>
+            <h2 className="sec-h">
+              <span className="sec-n" aria-hidden="true">四</span>Tuỳ chọn
+            </h2>
             <div className="row">
               <label className="check">
                 <input type="checkbox" checked={state.closed} onChange={(e) => set({ closed: e.target.checked })} />
@@ -162,7 +169,7 @@ export default function Builder() {
           </div>
         </div>
 
-        <div className="card slate">
+        <div className="card slate ink">
           <PromptPanel product={product} result={result} onSave={() => setSaving(true)} />
         </div>
       </div>

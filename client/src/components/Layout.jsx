@@ -5,30 +5,23 @@ import { preload } from "../pages/index.js";
 import { useClickOutside } from "../lib/util.js";
 import { Skeleton } from "./ui.jsx";
 
-const ICONS = {
-  builder: "M12 3l2.2 5.6L20 9l-4.5 3.8L17 19l-5-3.2L7 19l1.5-6.2L4 9l5.8-.4z",
-  products: "M4 7l8-4 8 4v10l-8 4-8-4z M4 7l8 4 8-4 M12 11v10",
-  saved: "M6 3h12v18l-6-4-6 4z",
-  plans: "M9 3h6v3H9z M7 4.5H5V21h14V4.5h-2 M8.5 12.5l2 2 4.5-4.5 M8.5 17.5h7",
-  more: "M5 12h.01 M12 12h.01 M19 12h.01",
-};
-
+// Each page is marked by one kanji instead of an icon (tài liệu 05, mục 2).
 const NAV = [
-  { to: "/", label: "Tạo prompt", short: "Tạo", page: "builder", end: true },
-  { to: "/products", label: "Sản phẩm", short: "Sản phẩm", page: "products" },
-  { to: "/saved", label: "Đã lưu", short: "Đã lưu", page: "saved" },
-  { to: "/plans", label: "Kế hoạch", short: "Kế hoạch", page: "plans" },
-  { to: "/library", label: "Thư viện", page: "library" },
-  { to: "/settings", label: "Cài đặt", page: "settings" },
+  { to: "/", label: "Tạo prompt", short: "Tạo", kanji: "作", page: "builder", end: true },
+  { to: "/products", label: "Sản phẩm", short: "Sản phẩm", kanji: "品", page: "products" },
+  { to: "/saved", label: "Đã lưu", short: "Đã lưu", kanji: "蔵", page: "saved" },
+  { to: "/plans", label: "Kế hoạch", short: "Kế hoạch", kanji: "計", page: "plans" },
+  { to: "/library", label: "Thư viện", kanji: "書", page: "library" },
+  { to: "/settings", label: "Cài đặt", kanji: "設", page: "settings" },
 ];
 
 // Pages with their own tab on phones; the rest sit under "Thêm".
 const TABS = 4;
 
-const Icon = ({ d }) => (
-  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-    <path d={d} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
+const Kanji = ({ children }) => (
+  <span className="kanji" aria-hidden="true">
+    {children}
+  </span>
 );
 
 const warm = (page) => ({ onMouseEnter: () => preload(page), onTouchStart: () => preload(page), onFocus: () => preload(page) });
@@ -98,7 +91,7 @@ function MoreMenu() {
         onClick={() => menu.setOpen((o) => !o)}
         {...warm("library")}
       >
-        <Icon d={ICONS.more} />
+        <Kanji>他</Kanji>
         <span>Thêm</span>
       </button>
       {menu.open && (
@@ -125,6 +118,7 @@ export default function Layout() {
           <nav className="topnav" aria-label="Điều hướng chính">
             {NAV.map((n) => (
               <NavLink key={n.to} to={n.to} end={n.end} {...warm(n.page)}>
+                <Kanji>{n.kanji}</Kanji>
                 {n.label}
               </NavLink>
             ))}
@@ -142,7 +136,7 @@ export default function Layout() {
       <nav className="tabbar" aria-label="Điều hướng chính">
         {NAV.slice(0, TABS).map((n) => (
           <NavLink key={n.to} to={n.to} end={n.end} className="tab" {...warm(n.page)}>
-            <Icon d={ICONS[n.page]} />
+            <Kanji>{n.kanji}</Kanji>
             <span>{n.short}</span>
           </NavLink>
         ))}

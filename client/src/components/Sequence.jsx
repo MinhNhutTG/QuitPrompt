@@ -31,7 +31,7 @@ function Beat({ beat, children, controls }) {
   const conds = beat.action?.conds || [];
   return (
     <div className="beat">
-      <span className="tc">
+      <span className={`tc tc-${beat.role}`}>
         {fmtSec(beat.a)}–{fmtSec(beat.b)}s
       </span>
       <div className="beat-main">
@@ -59,12 +59,12 @@ export default function Sequence({ state, set, index, result }) {
 
   return (
     <div className="sec">
-      <div className="sec-h">
-        Chuỗi động tác
+      <h2 className="sec-h">
+        <span className="sec-n" aria-hidden="true">三</span>Chuỗi động tác
         <button type="button" className="btn btn-sm" onClick={() => set((s) => shuffleChain(s))}>
           Đổi ngẫu nhiên
         </button>
-      </div>
+      </h2>
       <Seg
         name="style"
         label="Kiểu đổi ngẫu nhiên"

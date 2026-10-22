@@ -43,82 +43,100 @@ export default function Login() {
 
   return (
     <div className="login">
-      <form className="card login-card" onSubmit={submit}>
+      <div className="login-art ink">
         <div className="brand brand-lg">
           Xưởng Prompt <span>Thời Trang</span>
         </div>
-        <p>Prompt video AI cho từng sản phẩm, lưu một lần dùng mãi.</p>
-
-        {cfg?.allowRegister && (
-          <Seg
-            name="mode"
-            label="Chế độ"
-            value={mode}
-            onChange={(m) => {
-              setMode(m);
-              setError("");
-            }}
-            options={[
-              { value: "login", label: "Đăng nhập" },
-              { value: "register", label: "Tạo tài khoản" },
-            ]}
+        <svg className="enso" viewBox="0 0 200 200" aria-hidden="true">
+          <path
+            d="M100 22C150 20 180 58 178 102C176 150 138 180 96 178C52 176 22 142 24 98C26 62 50 34 84 26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="11"
+            strokeLinecap="round"
           />
-        )}
-
-        <Field label="Tên đăng nhập" hint={isNew ? "3–30 ký tự: chữ không dấu, số, dấu chấm hoặc gạch dưới." : undefined}>
-          <input
-            ref={userRef}
-            className="input"
-            name="username"
-            autoComplete="username"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            required
-            maxLength={60}
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-        </Field>
-
-        <Field label="Mật khẩu" hint={isNew ? "Ít nhất 6 ký tự." : undefined}>
-          <div className="pw">
-            <input
-              ref={passRef}
-              className="input"
-              name="password"
-              type={show ? "text" : "password"}
-              autoComplete={isNew ? "new-password" : "current-password"}
-              required
-              minLength={isNew ? 6 : undefined}
-              maxLength={100}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+        </svg>
+        <div className="login-copy">
+          <span className="login-kanji" aria-hidden="true">
+            一品一作
+          </span>
+          <h1>Prompt video AI cho từng sản phẩm.</h1>
+          <p>Lưu một lần, dùng mãi.</p>
+        </div>
+      </div>
+      <div className="login-main">
+        <form className="login-card" onSubmit={submit}>
+          {cfg?.allowRegister && (
+            <Seg
+              name="mode"
+              label="Chế độ"
+              value={mode}
+              onChange={(m) => {
+                setMode(m);
+                setError("");
+              }}
+              options={[
+                { value: "login", label: "Đăng nhập" },
+                { value: "register", label: "Tạo tài khoản" },
+              ]}
             />
-            <button type="button" className="icon-btn" aria-label={show ? "Ẩn mật khẩu" : "Hiện mật khẩu"} aria-pressed={show} onClick={() => setShow((s) => !s)}>
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" strokeWidth="1.8" />
-                <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
-                {show && <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.8" />}
-              </svg>
-            </button>
-          </div>
-        </Field>
+          )}
 
-        <label className="check">
-          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-          Ghi nhớ đăng nhập 30 ngày
-        </label>
+          <Field label="Tên đăng nhập" hint={isNew ? "3–30 ký tự: chữ không dấu, số, dấu chấm hoặc gạch dưới." : undefined}>
+            <input
+              ref={userRef}
+              className="input"
+              name="username"
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              required
+              maxLength={60}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </Field>
 
-        <button type="submit" className="btn btn-primary" disabled={busy}>
-          {busy ? (isNew ? "Đang tạo tài khoản..." : "Đang đăng nhập...") : isNew ? "Tạo tài khoản" : "Đăng nhập"}
-        </button>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-      </form>
+          <Field label="Mật khẩu" hint={isNew ? "Ít nhất 6 ký tự." : undefined}>
+            <div className="pw">
+              <input
+                ref={passRef}
+                className="input"
+                name="password"
+                type={show ? "text" : "password"}
+                autoComplete={isNew ? "new-password" : "current-password"}
+                required
+                minLength={isNew ? 6 : undefined}
+                maxLength={100}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button type="button" className="icon-btn" aria-label={show ? "Ẩn mật khẩu" : "Hiện mật khẩu"} aria-pressed={show} onClick={() => setShow((s) => !s)}>
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                  <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                  {show && <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.8" />}
+                </svg>
+              </button>
+            </div>
+          </Field>
+
+          <label className="check">
+            <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+            Ghi nhớ đăng nhập 30 ngày
+          </label>
+
+          <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy ? (isNew ? "Đang tạo tài khoản..." : "Đang đăng nhập...") : isNew ? "Tạo tài khoản" : "Đăng nhập"}
+          </button>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+        </form>
+      </div>
     </div>
   );
 }

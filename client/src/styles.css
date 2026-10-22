@@ -1,49 +1,83 @@
-/* Tokens: tài liệu 05, mục 2 */
+/* Tokens: tài liệu 05, mục 2. Phong cách Washi & Sumi: giấy washi, mực tàu, đỏ son con dấu. */
 :root {
-  --bg: #f5f6fb;
-  --surface: #ffffff;
-  --sunk: #eef0f7;
-  --line: #dde1ec;
-  --fg: #161a2e;
-  --muted: #5f6684;
-  --accent: #4f46e5;
+  --bg: #f3eee4;
+  --surface: #fbf8f1;
+  --sunk: #f0eadf;
+  --line: #dcd3c3;
+  --fg: #1e1c19;
+  --muted: #655f55;
+  --accent: #b33a28;
   --accent-fg: #ffffff;
-  --accent-soft: #ebeafd;
-  --ok: #1f7a4d;
-  --danger: #b3261e;
-  --danger-soft: #fbe9e7;
+  --accent-soft: #f3e1da;
+  --ai: #2b3a55;
+  --ai-soft: #e3e6ee;
+  --tan: #8c7f69;
+  --tan-fg: #4e4639;
+  --tan-soft: #ece5d8;
+  --ok: #2e6b45;
+  --danger: #8e2c1e;
+  --danger-soft: #f6e3dd;
   --warn: #8a5a00;
-  --warn-soft: #fff3d6;
-  --shadow: 0 8px 28px rgba(22, 26, 46, 0.12);
-  --r: 8px;
-  --r-lg: 14px;
+  --warn-soft: #f7ebd3;
+  --shadow: 0 8px 28px rgba(30, 28, 25, 0.14);
+  --seigaiha: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='20'%3E%3Cg fill='%23F3EEE4' stroke='%23D3C8B4'%3E%3Ccircle cx='20' cy='0' r='19'/%3E%3Ccircle cx='20' cy='0' r='13'/%3E%3Ccircle cx='20' cy='0' r='7'/%3E%3Ccircle cx='0' cy='10' r='19'/%3E%3Ccircle cx='0' cy='10' r='13'/%3E%3Ccircle cx='0' cy='10' r='7'/%3E%3Ccircle cx='40' cy='10' r='19'/%3E%3Ccircle cx='40' cy='10' r='13'/%3E%3Ccircle cx='40' cy='10' r='7'/%3E%3Ccircle cx='20' cy='20' r='19'/%3E%3Ccircle cx='20' cy='20' r='13'/%3E%3Ccircle cx='20' cy='20' r='7'/%3E%3C/g%3E%3C/svg%3E");
+  --r: 3px;
+  --r-lg: 4px;
   --font: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-head: "Bricolage Grotesque", var(--font);
+  --font-head: "Noto Serif", Georgia, serif;
+  --font-jp: "Noto Serif JP", "Yu Mincho", serif;
   --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
-  --top-h: 60px;
-  --tab-h: 62px;
+  --top-h: 64px;
+  --band: 12px;
+  --tab-h: 64px;
   --safe-b: env(safe-area-inset-bottom, 0px);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0e1020;
-    --surface: #161a2e;
-    --sunk: #1f2440;
-    --line: #2d3352;
-    --fg: #e8eaf6;
-    --muted: #9ba2c4;
-    --accent: #8f88ff;
-    --accent-fg: #10132a;
-    --accent-soft: #252857;
+    --bg: #15130f;
+    --surface: #1e1b17;
+    --sunk: #26221d;
+    --line: #3a352d;
+    --fg: #ede6d8;
+    --muted: #a69f92;
+    --accent: #e0705c;
+    --accent-fg: #15130f;
+    --accent-soft: #3a231d;
+    --ai: #9db0d4;
+    --ai-soft: #252c3a;
+    --tan: #8c7f69;
+    --tan-fg: #d8cdb8;
+    --tan-soft: #332e26;
     --ok: #5cc48f;
     --danger: #f2b8b5;
     --danger-soft: #3b1f1e;
     --warn: #f0c46a;
     --warn-soft: #3a3020;
     --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+    --seigaiha: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='20'%3E%3Cg fill='%2315130F' stroke='%23332E27'%3E%3Ccircle cx='20' cy='0' r='19'/%3E%3Ccircle cx='20' cy='0' r='13'/%3E%3Ccircle cx='20' cy='0' r='7'/%3E%3Ccircle cx='0' cy='10' r='19'/%3E%3Ccircle cx='0' cy='10' r='13'/%3E%3Ccircle cx='0' cy='10' r='7'/%3E%3Ccircle cx='40' cy='10' r='19'/%3E%3Ccircle cx='40' cy='10' r='13'/%3E%3Ccircle cx='40' cy='10' r='7'/%3E%3Ccircle cx='20' cy='20' r='19'/%3E%3Ccircle cx='20' cy='20' r='13'/%3E%3Ccircle cx='20' cy='20' r='7'/%3E%3C/g%3E%3C/svg%3E");
     color-scheme: dark;
+  }
+}
+
+/* Khối nền mực: khung prompt, nửa trái trang đăng nhập. Luôn tối, ở cả hai chế độ. */
+.ink {
+  --surface: #1e1c19;
+  --sunk: #26231f;
+  --line: #3a362f;
+  --fg: #ede6d8;
+  --muted: #a69f92;
+  --accent-soft: #3a2420;
+  --ok: #5cc48f;
+  color: var(--fg);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  .ink {
+    --surface: #0f0e0c;
+    --sunk: #1a1815;
+    --line: #302c25;
   }
 }
 
@@ -139,20 +173,56 @@ textarea {
 }
 
 /* ---------- brand & boot */
+/* Con dấu 作 vẽ bằng CSS, nên mọi chỗ dùng .brand đều có nó. */
 .brand {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  justify-content: start;
   font-family: var(--font-head);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 18px;
+  line-height: 1.15;
   color: var(--fg);
   text-decoration: none;
-  letter-spacing: -0.01em;
   white-space: nowrap;
 }
+.brand::before {
+  content: "作";
+  grid-row: 1 / 3;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r);
+  background: #b33a28;
+  color: #fbf8f1;
+  box-shadow: inset 0 0 0 2px #b33a28, inset 0 0 0 3.5px #fbf8f1;
+  font: 700 21px/1 var(--font-jp);
+}
 .brand span {
-  color: var(--accent);
+  font-family: var(--font);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 .brand-lg {
-  font-size: 30px;
+  font-size: 26px;
+}
+.brand-lg::before {
+  width: 48px;
+  height: 48px;
+  font-size: 27px;
+}
+.brand-lg span {
+  font-size: 12px;
+}
+.boot .brand {
+  justify-self: center;
 }
 .boot {
   min-height: 100vh;
@@ -190,9 +260,16 @@ textarea {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(10px);
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
+}
+/* Dải sóng seigaiha dưới thanh trên cùng */
+.topbar::after {
+  content: "";
+  display: block;
+  height: var(--band);
+  border-top: 1px solid var(--line);
+  background: var(--seigaiha) 0 0 / 24px 12px repeat-x var(--bg);
 }
 .topbar-in {
   max-width: 1280px;
@@ -201,7 +278,7 @@ textarea {
   padding: 0 20px;
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 32px;
 }
 .topnav {
   display: flex;
@@ -209,24 +286,33 @@ textarea {
   flex: 1;
 }
 .topnav a {
-  padding: 8px 12px;
-  border-radius: var(--r);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 12px;
   color: var(--muted);
   text-decoration: none;
   font-weight: 500;
 }
 .topnav a:hover {
   color: var(--fg);
-  background: var(--sunk);
 }
 .topnav a.active {
+  color: var(--fg);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.kanji {
+  font: 500 13px/1 var(--font-jp);
+  color: var(--tan);
+}
+.active > .kanji {
   color: var(--accent);
-  background: var(--accent-soft);
 }
 .main {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 24px 20px 48px;
+  padding: 32px 20px 64px;
 }
 .page {
   display: grid;
@@ -279,13 +365,13 @@ textarea {
   position: relative;
 }
 .avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  border: 0;
-  background: var(--accent);
-  color: var(--accent-fg);
-  font-weight: 600;
+  border: 1px solid var(--ai);
+  background: var(--surface);
+  color: var(--ai);
+  font: 600 16px var(--font-head);
   cursor: pointer;
 }
 .menu {
@@ -316,7 +402,7 @@ textarea {
   display: block;
   text-align: left;
   padding: 9px 10px;
-  border-radius: 6px;
+  border-radius: var(--r);
   background: none;
   border: 0;
   color: var(--fg);
@@ -347,7 +433,7 @@ textarea {
   transition: background 0.15s, border-color 0.15s;
 }
 .btn:hover {
-  border-color: var(--muted);
+  border-color: var(--fg);
 }
 .btn:disabled {
   opacity: 0.55;
@@ -360,7 +446,7 @@ textarea {
 }
 .btn-primary:hover {
   border-color: var(--accent);
-  filter: brightness(1.08);
+  filter: brightness(0.92);
 }
 .btn-accent-soft {
   background: var(--accent-soft);
@@ -398,8 +484,9 @@ textarea {
 }
 .btn-dashed {
   border-style: dashed;
+  border-color: var(--tan);
   background: none;
-  color: var(--muted);
+  color: var(--fg);
   width: 100%;
 }
 .btn-dashed:hover {
@@ -450,6 +537,10 @@ textarea {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
   background: var(--surface);
+}
+.input::placeholder {
+  color: var(--muted);
+  opacity: 0.8;
 }
 textarea.input {
   resize: vertical;
@@ -509,29 +600,35 @@ select.input {
 .seg {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 3px;
-  background: var(--sunk);
+  border: 1px solid var(--fg);
   border-radius: var(--r);
+  overflow: hidden;
 }
 .seg label {
-  padding: 6px 14px;
-  border-radius: 6px;
+  padding: 0 18px;
   cursor: pointer;
-  color: var(--muted);
+  color: var(--fg);
   font-weight: 500;
   font-size: 14px;
-  min-height: 34px;
+  min-height: 42px;
+  min-width: 72px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+}
+.seg label + label {
+  border-left: 1px solid var(--line);
+}
+.seg label:hover:not(.is-on) {
+  background: var(--sunk);
 }
 .seg label.is-on {
-  background: var(--surface);
-  color: var(--accent);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  background: var(--fg);
+  color: var(--surface);
 }
 .seg label:focus-within {
   outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 .seg input {
   position: absolute;
@@ -541,7 +638,7 @@ select.input {
 .badge {
   display: inline-block;
   padding: 1px 7px;
-  border-radius: 99px;
+  border-radius: 2px;
   background: var(--accent-soft);
   color: var(--accent);
   font-size: 12px;
@@ -712,29 +809,46 @@ select.input {
 }
 .slate {
   position: sticky;
-  top: calc(var(--top-h) + 16px);
-  max-height: calc(100vh - var(--top-h) - 32px);
+  top: calc(var(--top-h) + var(--band) + 16px);
+  max-height: calc(100vh - var(--top-h) - var(--band) - 32px);
   overflow-y: auto;
+  padding: 24px;
+}
+.slate .btn-accent-soft {
+  background: none;
+  border-color: var(--line);
+  color: var(--fg);
+}
+.slate .btn:not(.btn-primary):hover {
+  border-color: var(--muted);
 }
 .sec {
   display: grid;
   gap: 12px;
 }
 .sec + .sec {
-  margin-top: 22px;
-  padding-top: 22px;
+  margin-top: 24px;
+  padding-top: 24px;
   border-top: 1px solid var(--line);
 }
 .sec-h {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  font: 600 18px/1.3 var(--font-head);
+  color: var(--fg);
+}
+.sec-h > .btn,
+.sec-h > .ok-text {
+  margin-left: auto;
+  font-family: var(--font);
+  align-self: center;
+}
+/* Số thứ tự kiểu Nhật: 一 二 三 四 */
+.sec-n {
+  font: 500 20px/1 var(--font-jp);
+  color: var(--accent);
 }
 .row {
   display: flex;
@@ -750,28 +864,30 @@ select.input {
 }
 .tl {
   display: flex;
-  gap: 2px;
-  height: 8px;
+  gap: 3px;
+  height: 12px;
 }
 .tl i {
-  border-radius: 3px;
-  background: var(--accent-soft);
+  border-radius: 1px;
+  background: var(--tan);
 }
 .tl i.tl-open {
-  background: var(--accent);
+  background: var(--ai);
 }
 .tl i.tl-end {
-  background: var(--muted);
+  background: var(--accent);
 }
 .beats {
   display: grid;
   gap: 8px;
 }
 .beats-h {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--muted);
-  margin-top: 6px;
+  margin-top: 8px;
 }
 .beat {
   display: grid;
@@ -781,12 +897,23 @@ select.input {
 }
 .tc {
   font: 500 12px var(--font-mono);
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--tan-soft);
+  color: var(--tan-fg);
   padding: 4px 6px;
-  border-radius: 6px;
+  border-radius: var(--r);
   text-align: center;
   white-space: nowrap;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+}
+.tc-open {
+  background: var(--ai-soft);
+  color: var(--ai);
+}
+.tc-end {
+  background: var(--accent-soft);
+  color: var(--danger);
 }
 .beat-main {
   display: grid;
@@ -794,21 +921,35 @@ select.input {
   min-width: 0;
 }
 .beat-cond {
+  justify-self: start;
   font-size: 12px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 2px;
+  background: var(--warn-soft);
   color: var(--warn);
 }
 .beat-ctl {
   display: flex;
 }
 .warnings {
+  position: relative;
   margin: 0;
-  padding: 12px 14px 12px 32px;
+  padding: 12px 14px 12px 44px;
   border-radius: var(--r);
   background: var(--warn-soft);
   color: var(--warn);
-  font-size: 13px;
+  font-size: 14px;
+  list-style: none;
   display: grid;
   gap: 4px;
+}
+.warnings::before {
+  content: "注";
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  font: 700 15px/1.5 var(--font-jp);
 }
 .slate-product {
   display: flex;
@@ -826,8 +967,9 @@ select.input {
 }
 .out {
   margin: 0;
-  padding: 14px;
+  padding: 16px 18px;
   border-radius: var(--r);
+  border: 1px solid var(--line);
   background: var(--sunk);
   font: 12.5px/1.6 var(--font-mono);
   white-space: pre-wrap;
@@ -841,7 +983,7 @@ select.input {
 .meta {
   display: flex;
   gap: 14px;
-  font-size: 13px;
+  font: 12px var(--font-mono);
   color: var(--muted);
 }
 .copybar {
@@ -863,7 +1005,7 @@ select.input {
   width: min(720px, calc(100vw - 24px));
 }
 .modal::backdrop {
-  background: rgba(20, 18, 24, 0.5);
+  background: rgba(30, 28, 25, 0.55);
 }
 .modal-body {
   padding: 20px;
@@ -917,24 +1059,65 @@ select.input {
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.login-art {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 32px;
+}
+.enso {
+  position: absolute;
+  right: -70px;
+  top: 50%;
+  width: 380px;
+  height: 380px;
+  transform: translateY(-50%);
+  color: var(--accent);
+}
+.login-copy {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  max-width: 380px;
+}
+.login-kanji {
+  font: 500 15px var(--font-jp);
+  letter-spacing: 0.5em;
+  color: var(--muted);
+}
+.login-copy h1 {
+  font-size: 34px;
+  line-height: 1.25;
+  text-wrap: pretty;
+}
+.login-copy p {
+  color: var(--muted);
+}
+.login-main {
+  display: grid;
   place-items: center;
-  padding: 24px 16px;
+  padding: 48px 24px;
 }
 .login-card {
-  width: min(400px, 100%);
+  width: min(380px, 100%);
   display: grid;
   gap: 20px;
 }
-.login-card > p {
-  color: var(--muted);
-  margin-top: -10px;
+.login-card .btn-primary {
+  min-height: 48px;
+  font-size: 16px;
 }
 .login .seg {
   display: flex;
 }
 .login .seg label {
   flex: 1;
-  justify-content: center;
 }
 
 /* ---------- products */
@@ -1315,6 +1498,36 @@ select.input {
     justify-content: space-between;
     padding: 0 16px;
   }
+  .brand::before {
+    width: 34px;
+    height: 34px;
+    font-size: 19px;
+  }
+  .brand span {
+    display: none;
+  }
+  .login {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .login-art {
+    padding: 28px 24px;
+    min-height: 260px;
+  }
+  .login-art .brand span {
+    display: block;
+  }
+  .enso {
+    width: 220px;
+    height: 220px;
+    right: -50px;
+  }
+  .login-copy h1 {
+    font-size: 26px;
+  }
+  .login-main {
+    place-items: start center;
+    padding: 32px 16px 48px;
+  }
   .main {
     padding: 16px 16px calc(var(--tab-h) + var(--safe-b) + 24px);
   }
@@ -1340,7 +1553,7 @@ select.input {
     max-height: none;
   }
   .builder .slate {
-    padding-bottom: 72px;
+    padding: 16px 16px 72px;
   }
   .tabbar {
     display: grid;
@@ -1354,7 +1567,6 @@ select.input {
     padding-bottom: var(--safe-b);
     background: var(--surface);
     border-top: 1px solid var(--line);
-    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
   }
   .tabbar .menu-wrap {
     display: grid;
@@ -1363,7 +1575,7 @@ select.input {
     display: grid;
     justify-items: center;
     align-content: center;
-    gap: 2px;
+    gap: 3px;
     font-size: 11.5px;
     font-weight: 500;
     color: var(--muted);
@@ -1372,7 +1584,16 @@ select.input {
     border: 0;
     cursor: pointer;
   }
+  .tab .kanji {
+    font-size: 19px;
+    color: inherit;
+  }
   .tab.active {
+    color: var(--fg);
+    font-weight: 600;
+    box-shadow: inset 0 2px 0 var(--accent);
+  }
+  .tab.active .kanji {
     color: var(--accent);
   }
   .tabbar .menu {
@@ -1387,8 +1608,7 @@ select.input {
     bottom: calc(var(--tab-h) + var(--safe-b));
     z-index: 25;
     padding: 10px 16px;
-    background: color-mix(in srgb, var(--surface) 94%, transparent);
-    backdrop-filter: blur(10px);
+    background: var(--surface);
     border-top: 1px solid var(--line);
   }
   .copybar .btn-primary {
