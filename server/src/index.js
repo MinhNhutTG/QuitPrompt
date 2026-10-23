@@ -18,6 +18,7 @@ import resourceRoutes from "./routes/resources.js";
 import settingsRoutes from "./routes/settings.js";
 import transferRoutes from "./routes/transfer.js";
 import adminRoutes from "./routes/admin.js";
+import { ActivityLog } from "./models/ActivityLog.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -108,4 +109,7 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(config.port, () => console.log(`Xưởng Prompt: http://localhost:${config.port}`));
-connectDb(config.mongoUri);
+// An existing TTL index keeps its old lifetime until rebuilt, so bring it in line with LOG_RETENTION_DAYS.
+connectDb(config.mongoUri)
+  .then(() => ActivityLog.syncIndexes())
+  .catch((err) => console.error("Không cập nhật được chỉ mục nhật ký:", err.message));

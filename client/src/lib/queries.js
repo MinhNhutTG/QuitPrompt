@@ -22,7 +22,7 @@ export const usePlans = (params) =>
 
 export const useResources = () => useQuery({ queryKey: ["resources"], queryFn: api.resources });
 
-export const useAdminStats = (days) => useQuery({ queryKey: ["admin", "stats", days], queryFn: () => api.adminStats({ days }), placeholderData: keepPreviousData });
+export const useAdminStats = () => useQuery({ queryKey: ["admin", "stats"], queryFn: () => api.adminStats() });
 export const useAdminUsers = () => useQuery({ queryKey: ["admin", "users"], queryFn: api.adminUsers });
 export const useAdminLogs = (params) => useQuery({ queryKey: ["admin", "logs", params], queryFn: () => api.adminLogs(params), placeholderData: keepPreviousData });
 

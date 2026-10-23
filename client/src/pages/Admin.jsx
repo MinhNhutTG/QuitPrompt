@@ -44,8 +44,8 @@ const FIELD_NAMES = {
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
 const ROLE_LABEL = { admin: "Quản trị viên", member: "Thành viên" };
 
-// "20/10" from "2026-10-20".
-const shortDay = (d) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+// "2 ngày", "1 ngày": how long the log keeps rows.
+const keepText = (days) => `${days} ngày`;
 
 function Tile({ label, value, sub, tone }) {
   return (
@@ -57,30 +57,30 @@ function Tile({ label, value, sub, tone }) {
   );
 }
 
-// One series (actions per day): one hue, no legend; the title names it. Hover or focus a bar for its value.
-function ActivityChart({ data }) {
+// One series (actions per hour or per day): one hue, no legend; the title names it. Hover or focus a bar for its value.
+function ActivityChart({ data, unit }) {
   const max = Math.max(...data.map((d) => d.count), 1);
   const total = data.reduce((s, d) => s + d.count, 0);
   const mid = Math.floor(data.length / 2);
   return (
     <figure className="chart">
-      <div className="chart-plot" role="list" aria-label={`Số thao tác mỗi ngày, tổng ${total}`}>
+      <div className="chart-plot" role="list" aria-label={`Số thao tác mỗi ${unit}, tổng ${total}`}>
         <span className="chart-max" aria-hidden="true">
           {max}
         </span>
         {data.map((d) => (
-          <div key={d.day} className="chart-col" role="listitem" tabIndex={0} aria-label={`${shortDay(d.day)}: ${d.count} thao tác`}>
+          <div key={d.key} className="chart-col" role="listitem" tabIndex={0} aria-label={`${d.label}: ${d.count} thao tác`}>
             <span className="chart-bar" style={{ height: `${(d.count / max) * 100}%` }} />
             <span className="chart-tip" aria-hidden="true">
-              <b>{d.count}</b> thao tác · {shortDay(d.day)}
+              <b>{d.count}</b> thao tác · {d.label}
             </span>
           </div>
         ))}
       </div>
       <div className="chart-x" aria-hidden="true">
-        <span>{shortDay(data[0].day)}</span>
-        <span>{shortDay(data[mid].day)}</span>
-        <span>{shortDay(data[data.length - 1].day)}</span>
+        <span>{data[0].label}</span>
+        <span>{data[mid].label}</span>
+        <span>{data[data.length - 1].label}</span>
       </div>
     </figure>
   );
@@ -105,8 +105,7 @@ function RankList({ rows, empty }) {
 }
 
 function Overview() {
-  const [days, setDays] = useState(14);
-  const { data, isLoading, error, refetch } = useAdminStats(days);
+  const { data, isLoading, error, refetch } = useAdminStats();
   if (isLoading)
     return (
       <div className="tiles" aria-busy="true">
@@ -116,11 +115,13 @@ function Overview() {
       </div>
     );
   if (error) return <ErrorState error={error} onRetry={refetch} />;
-  const { users, content, plans, security, activity, topActions, topUsers } = data;
+  const { users, content, plans, security, activity, topActions, topUsers, retentionDays } = data;
+  const keep = keepText(retentionDays);
+  const hourly = activity.bucket === "hour";
   return (
     <div className="stack">
       <div className="tiles">
-        <Tile label="Thành viên" value={users.total} sub={`${users.active7} hoạt động 7 ngày qua · ${users.admins} admin${users.disabled ? ` · ${users.disabled} bị khoá` : ""}`} />
+        <Tile label="Thành viên" value={users.total} sub={`${users.active7} đăng nhập 7 ngày qua · ${users.admins} admin${users.disabled ? ` · ${users.disabled} bị khoá` : ""}`} />
         <Tile label="Prompt đã lưu" value={content.prompts} sub={`+${content.prompts30} trong 30 ngày`} />
         <Tile label="Sản phẩm" value={content.products} sub={`${content.resources} tài nguyên trong kho`} />
         <Tile
@@ -129,38 +130,28 @@ function Overview() {
           sub={`${plans.done}/${plans.target} video · ${plans.finished}/${plans.plans} kế hoạch xong${plans.overdue ? ` · ${plans.overdue} quá hạn` : ""}`}
         />
         <Tile
-          label="Đăng nhập sai (7 ngày)"
-          value={security.failedLogins7}
-          sub={security.failedLogins7 ? "Xem chi tiết trong Nhật ký" : "Không có lần nào"}
-          tone={security.failedLogins7 >= 10 ? "warn" : undefined}
+          label={`Đăng nhập sai (${keep} qua)`}
+          value={security.failedLogins}
+          sub={security.failedLogins ? "Xem chi tiết trong Nhật ký" : "Không có lần nào"}
+          tone={security.failedLogins >= 10 ? "warn" : undefined}
         />
       </div>
 
       <section className="card stack">
         <div className="sec-row">
-          <h2>Thao tác mỗi ngày</h2>
-          <Seg
-            name="days"
-            label="Khoảng thời gian"
-            value={days}
-            onChange={setDays}
-            options={[
-              { value: 14, label: "14 ngày" },
-              { value: 30, label: "30 ngày" },
-              { value: 90, label: "90 ngày" },
-            ]}
-          />
+          <h2>{hourly ? `Thao tác theo giờ (${retentionDays * 24} giờ qua)` : `Thao tác mỗi ngày (${keep} qua)`}</h2>
+          <span className="hint">Nhật ký tự xoá sau {keep}</span>
         </div>
-        <ActivityChart data={activity} />
+        <ActivityChart data={activity.items} unit={hourly ? "giờ" : "ngày"} />
       </section>
 
       <div className="grid-2">
         <section className="card stack">
-          <h2>Tích cực nhất (30 ngày)</h2>
+          <h2>Tích cực nhất ({keep} qua)</h2>
           <RankList rows={topUsers.map((u) => ({ key: u.id, name: u.displayName, count: u.count }))} empty="Chưa có hoạt động nào." />
         </section>
         <section className="card stack">
-          <h2>Thao tác hay dùng (30 ngày)</h2>
+          <h2>Thao tác hay dùng ({keep} qua)</h2>
           <RankList rows={topActions.map((a) => ({ key: a.action, name: a.label, count: a.count }))} empty="Chưa có hoạt động nào." />
         </section>
       </div>
@@ -336,7 +327,7 @@ function Users({ onShowLogs }) {
             <tr>
               <th>Thành viên</th>
               <th>Đăng nhập gần nhất</th>
-              <th>Thao tác 30 ngày</th>
+              <th>Thao tác {keepText(data.retentionDays)} qua</th>
               <th>Prompt</th>
               <th>Kế hoạch được giao</th>
               {canManage && (
@@ -368,9 +359,9 @@ function Users({ onShowLogs }) {
                   <td data-label="Đăng nhập gần nhất">
                     {u.lastLoginAt ? <time title={fmtDateTimeFull(u.lastLoginAt)}>{fmtDateTime(u.lastLoginAt)}</time> : <span className="hint">Chưa đăng nhập</span>}
                   </td>
-                  <td data-label="Thao tác 30 ngày">
+                  <td data-label={`Thao tác ${keepText(data.retentionDays)} qua`}>
                     <button type="button" className="link-btn" onClick={() => onShowLogs(u.id)} title="Xem nhật ký của người này">
-                      {u.actions30}
+                      {u.actions}
                     </button>
                   </td>
                   <td data-label="Prompt">{u.prompts}</td>
@@ -479,6 +470,7 @@ function Logs({ params, set }) {
 
   return (
     <div className="stack" ref={top}>
+      {data && <p className="hint">Nhật ký chỉ giữ thao tác trong {keepText(data.retentionDays)} gần nhất; dòng cũ hơn tự xoá.</p>}
       <div className="filters">
         <input className="input filters-q" type="search" aria-label="Tìm theo đối tượng" placeholder="Tìm theo tên sản phẩm, tài nguyên, tài khoản..." value={q} onChange={(e) => setQ(e.target.value)} />
         <label className="filter">
@@ -535,7 +527,7 @@ function Logs({ params, set }) {
         <ErrorState error={error} onRetry={refetch} />
       ) : !data.items.length ? (
         <EmptyState title={filtered ? "Không có dòng nào khớp" : "Chưa có hoạt động nào"}>
-          {filtered ? "Thử bỏ bớt bộ lọc." : "Mỗi lần ai đó thêm, sửa, xoá hay đăng nhập sẽ hiện ở đây."}
+          {filtered ? "Thử bỏ bớt bộ lọc." : `Mỗi lần ai đó thêm, sửa, xoá hay đăng nhập sẽ hiện ở đây, giữ trong ${keepText(data.retentionDays)}.`}
         </EmptyState>
       ) : (
         <>

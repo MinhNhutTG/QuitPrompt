@@ -13,6 +13,8 @@ export const config = {
   jwtSecret: env.JWT_SECRET || "dev-only-secret-change-me",
   allowRegister: env.ALLOW_REGISTER !== "false",
   // Usernames that are always admins (comma separated); also see `npm run make-admin`.
+  // Activity log rows older than this are removed by MongoDB on its own (1–365 days).
+  logRetentionDays: Math.min(Math.max(Math.round(Number(env.LOG_RETENTION_DAYS)) || 2, 1), 365),
   adminUsernames: (env.ADMIN_USERNAMES || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean),
   cloudinaryUrl: env.CLOUDINARY_URL || "",
   clientOrigin: env.CLIENT_ORIGIN || "",

@@ -40,6 +40,7 @@
 | `CLOUDINARY_URL` | Có (để tải ảnh) | `cloudinary://KEY:SECRET@CLOUD_NAME` | Lấy ở Cloudinary → Settings → API Keys |
 | `ALLOW_REGISTER` | Không | `true` / `false` | Tạo xong tài khoản cho nhóm thì đặt `false` |
 | `ADMIN_USERNAMES` | Không | `minh,lan` | Tên đăng nhập luôn là quản trị viên (cách nhau dấu phẩy). Hoặc chạy `npm run make-admin -- <tên>` một lần |
+| `LOG_RETENTION_DAYS` | Không | `2` | Nhật ký thao tác tự xoá sau bấy nhiêu ngày (1–365, mặc định 2) |
 | `NODE_ENV` | Có khi deploy | `production` | Bật cookie Secure, phục vụ file build |
 | `PORT` | Không | `4000` | Render tự cấp |
 | `CLIENT_ORIGIN` | Không | `http://localhost:5173` | Chỉ khi frontend gọi thẳng API ở domain khác (không dùng khi đi qua rewrite của Vercel) |

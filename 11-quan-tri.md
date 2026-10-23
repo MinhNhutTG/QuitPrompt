@@ -15,7 +15,7 @@ Một người (hoặc vài người) quản lý tài khoản của team, xem ai
 | Khoá tài khoản | Người bị khoá bị đăng xuất ngay trên mọi thiết bị và không đăng nhập lại được. Dữ liệu giữ nguyên |
 | Đặt lại mật khẩu | Admin đặt mật khẩu mới; người đó bị đăng xuất mọi nơi |
 | Xoá tài khoản | Chỉ xoá tài khoản; sản phẩm, prompt, kế hoạch vẫn ở lại cho team, hiện "(tài khoản đã xoá)" |
-| Nhật ký | Máy chủ tự ghi mọi thao tác thành công làm thay đổi dữ liệu, đăng nhập, đăng nhập sai, đăng xuất, xuất/nhập dữ liệu. Không ghi lượt xem, không bao giờ ghi mật khẩu hay nội dung prompt. Giữ **180 ngày** rồi tự xoá |
+| Nhật ký | Máy chủ tự ghi mọi thao tác thành công làm thay đổi dữ liệu, đăng nhập, đăng nhập sai, đăng xuất, xuất/nhập dữ liệu. Không ghi lượt xem, không bao giờ ghi mật khẩu hay nội dung prompt. Giữ **2 ngày** rồi MongoDB tự xoá (đổi bằng biến `LOG_RETENTION_DAYS`, 1–365) |
 
 ## 3. Cách đăng xuất mọi nơi hoạt động
 
@@ -26,23 +26,23 @@ Mỗi tài khoản có `sessionVersion`, được ghi vào cookie đăng nhập.
 Ba tab, tab đang mở và bộ lọc nằm trên URL.
 
 - **Tổng quan:**
-  - Ô số liệu: thành viên (hoạt động 7 ngày, số admin, số bị khoá), prompt đã lưu (+30 ngày), sản phẩm và tài nguyên, % video đã làm theo kế hoạch (quá hạn), đăng nhập sai 7 ngày (viền vàng khi từ 10 lần).
-  - Biểu đồ cột số thao tác mỗi ngày (14/30/90 ngày, theo giờ Việt Nam). Rê chuột hoặc Tab vào cột để xem số.
-  - Tích cực nhất và thao tác hay dùng trong 30 ngày.
-- **Thành viên:** bảng tài khoản với lần đăng nhập gần nhất, số thao tác 30 ngày (bấm để xem nhật ký người đó), số prompt, kế hoạch được giao. Nút: Sửa (tên hiển thị, vai trò), Đặt mật khẩu, Đăng xuất mọi nơi, Khoá/Mở khoá (bấm hai lần), Xoá (hỏi Có/Không). Nút "+ Thêm thành viên" tạo tài khoản kể cả khi đã tắt đăng ký.
+  - Ô số liệu: thành viên (đăng nhập 7 ngày qua, số admin, số bị khoá), prompt đã lưu (+30 ngày), sản phẩm và tài nguyên, % video đã làm theo kế hoạch (quá hạn), đăng nhập sai trong thời gian nhật ký còn giữ (viền vàng khi từ 10 lần).
+  - Biểu đồ cột số thao tác: theo **giờ** khi nhật ký giữ từ 3 ngày trở xuống (mặc định 48 cột cho 2 ngày), theo ngày khi giữ lâu hơn. Giờ Việt Nam. Rê chuột hoặc Tab vào cột để xem số.
+  - Tích cực nhất và thao tác hay dùng, trong thời gian nhật ký còn giữ.
+- **Thành viên:** bảng tài khoản với lần đăng nhập gần nhất, số thao tác trong thời gian nhật ký còn giữ (bấm để xem nhật ký người đó), số prompt, kế hoạch được giao. Nút: Sửa (tên hiển thị, vai trò), Đặt mật khẩu, Đăng xuất mọi nơi, Khoá/Mở khoá (bấm hai lần), Xoá (hỏi Có/Không). Nút "+ Thêm thành viên" tạo tài khoản kể cả khi đã tắt đăng ký.
 - **Nhật ký:** lọc theo thành viên, nhóm thao tác, từ ngày đến ngày, tìm theo tên đối tượng. Mỗi dòng: thời gian, người, thao tác, đối tượng (kèm trường đã đổi, số mục), IP (rê chuột thấy trình duyệt). Đăng nhập sai có nền vàng. 50 dòng mỗi trang.
 
 ## 5. Dữ liệu
 
 - `users` thêm: `role` (`member`/`admin`), `disabled`, `sessionVersion`.
-- Collection `activitylogs`: `user`, `action` (vd. `product.update`), `targetId`, `label` (tên đối tượng, giữ lại cả khi đối tượng bị xoá), `meta` (trường đã đổi, số mục), `ip`, `ua`, `createdAt`. Chỉ mục TTL 180 ngày trên `createdAt`, thêm `{ user, createdAt }` và `{ action, createdAt }`.
+- Collection `activitylogs`: `user`, `action` (vd. `product.update`), `targetId`, `label` (tên đối tượng, giữ lại cả khi đối tượng bị xoá), `meta` (trường đã đổi, số mục), `ip`, `ua`, `createdAt`. Chỉ mục TTL `LOG_RETENTION_DAYS` ngày (mặc định 2) trên `createdAt`; mỗi lần khởi động, máy chủ chạy `syncIndexes()` để chỉ mục cũ nhận thời hạn mới, thêm `{ user, createdAt }` và `{ action, createdAt }`.
 - Danh sách thao tác và tên tiếng Việt nằm ở `server/src/lib/audit.js`. Thêm route mới làm đổi dữ liệu thì thêm một dòng vào đó.
 
 ## 6. API (`/api/admin`: GET cho mọi thành viên, còn lại chỉ admin)
 
 | Phương thức | Đường dẫn | Mô tả |
 |---|---|---|
-| GET | `/stats?days=14` | Số liệu tổng quan, thao tác theo ngày, xếp hạng |
+| GET | `/stats` | Số liệu tổng quan, thao tác theo giờ hoặc ngày (`activity.bucket`), xếp hạng, `retentionDays` |
 | GET | `/users` | Mọi tài khoản kèm số liệu từng người; `canManage` cho biết người xem có phải admin |
 | POST | `/users` | `{ username, displayName?, password, role? }` tạo tài khoản |
 | PATCH | `/users/:id` | `{ displayName?, role?, disabled? }` |

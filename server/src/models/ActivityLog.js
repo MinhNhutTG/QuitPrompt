@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { config } from "../config.js";
 
 // One row per user action; written by lib/audit.js, read by the admin pages.
 const schema = new mongoose.Schema(
@@ -18,8 +19,8 @@ const schema = new mongoose.Schema(
   { versionKey: false }
 );
 
-// Kept 180 days, then MongoDB removes them on its own.
-schema.index({ createdAt: 1 }, { expireAfterSeconds: 180 * 24 * 60 * 60 });
+// Kept LOG_RETENTION_DAYS (default 2), then MongoDB removes them on its own (its sweep runs about once a minute).
+schema.index({ createdAt: 1 }, { expireAfterSeconds: config.logRetentionDays * 24 * 60 * 60 });
 schema.index({ user: 1, createdAt: -1 });
 schema.index({ action: 1, createdAt: -1 });
 

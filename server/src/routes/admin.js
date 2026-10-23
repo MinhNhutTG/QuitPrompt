@@ -11,6 +11,7 @@ import { ActivityLog } from "../models/ActivityLog.js";
 import { ACTIONS, ACTION_GROUPS } from "../lib/audit.js";
 import { ah, parse, assertId, isId, escapeRegex, text, HttpError } from "../lib/http.js";
 import { requireAdmin } from "../middleware/auth.js";
+import { config } from "../config.js";
 
 const router = Router();
 
@@ -20,8 +21,25 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const oid = (id) => new mongoose.Types.ObjectId(String(id));
 const daysAgo = (n) => new Date(Date.now() - n * DAY_MS);
-// "YYYY-MM-DD" in TZ.
+// "YYYY-MM-DD" and "HH" in TZ.
 const tzDay = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
+const tzHour = (d) => new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", hourCycle: "h23" }).format(d);
+const HOUR_MS = 60 * 60 * 1000;
+
+// Every bucket in the log window, zero-filled, oldest first: hours while the log keeps 3 days or less, else days.
+function activityBuckets(perBucket, hourly, retention) {
+  const counts = new Map(perBucket.map((b) => [b._id, b.count]));
+  const out = [];
+  const n = hourly ? retention * 24 : Math.min(retention, 90);
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(Date.now() - i * (hourly ? HOUR_MS : DAY_MS));
+    const day = tzDay(d);
+    const key = hourly ? `${day} ${tzHour(d)}` : day;
+    const dm = `${day.slice(8, 10)}/${day.slice(5, 7)}`;
+    out.push({ key, label: hourly ? `${tzHour(d)}h ${dm}` : dm, count: counts.get(key) || 0 });
+  }
+  return out;
+}
 
 const username = z
   .string({ required_error: "Thiếu tên đăng nhập." })
@@ -64,17 +82,19 @@ async function assertKeepsAnAdmin(user, next) {
 router.get(
   "/stats",
   ah(async (req, res) => {
-    const days = Math.min(Math.max(Number(req.query.days) || 14, 7), 90);
-    // Midnight (team clock) of the first day in the window.
-    const since = new Date(`${tzDay(daysAgo(days - 1))}T00:00:00+07:00`);
+    // Everything from the log covers only what it still keeps.
+    const retention = config.logRetentionDays;
+    const hourly = retention <= 3;
+    const since = daysAgo(retention);
     const today = tzDay(new Date());
 
-    const [users, admins, disabled, active7, new30, products, prompts, prompts30, resources, planSum, perDay, topActions, topUsers, failed7] =
+    const [users, admins, disabled, active7, new30, products, prompts, prompts30, resources, planSum, perBucket, topActions, topUsers, failed] =
       await Promise.all([
         User.countDocuments({}),
         User.countDocuments({ role: "admin" }),
         User.countDocuments({ disabled: true }),
-        ActivityLog.distinct("user", { createdAt: { $gte: daysAgo(7) }, user: { $ne: null } }).then((ids) => ids.length),
+        // From sign-ins, which outlive the log.
+        User.countDocuments({ lastLoginAt: { $gte: daysAgo(7) } }),
         User.countDocuments({ createdAt: { $gte: daysAgo(30) } }),
         Product.estimatedDocumentCount(),
         Prompt.estimatedDocumentCount(),
@@ -94,30 +114,23 @@ router.get(
         ]),
         ActivityLog.aggregate([
           { $match: { createdAt: { $gte: since } } },
-          { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: TZ } }, count: { $sum: 1 } } },
+          { $group: { _id: { $dateToString: { format: hourly ? "%Y-%m-%d %H" : "%Y-%m-%d", date: "$createdAt", timezone: TZ } }, count: { $sum: 1 } } },
         ]),
         ActivityLog.aggregate([
-          { $match: { createdAt: { $gte: daysAgo(30) } } },
+          { $match: { createdAt: { $gte: since } } },
           { $group: { _id: "$action", count: { $sum: 1 } } },
           { $sort: { count: -1 } },
           { $limit: 8 },
         ]),
         ActivityLog.aggregate([
-          { $match: { createdAt: { $gte: daysAgo(30) }, user: { $ne: null }, action: { $ne: "auth.login_failed" } } },
+          { $match: { createdAt: { $gte: since }, user: { $ne: null }, action: { $ne: "auth.login_failed" } } },
           { $group: { _id: "$user", count: { $sum: 1 }, last: { $max: "$createdAt" } } },
           { $sort: { count: -1 } },
           { $limit: 6 },
         ]),
-        ActivityLog.countDocuments({ action: "auth.login_failed", createdAt: { $gte: daysAgo(7) } }),
+        ActivityLog.countDocuments({ action: "auth.login_failed", createdAt: { $gte: since } }),
       ]);
 
-    // Every day in the window, zero-filled, oldest first.
-    const counts = new Map(perDay.map((d) => [d._id, d.count]));
-    const activity = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const day = tzDay(daysAgo(i));
-      activity.push({ day, count: counts.get(day) || 0 });
-    }
     const names = await User.find({ _id: { $in: topUsers.map((u) => u._id) } }, { username: 1, displayName: 1 }).lean();
     const nameById = new Map(names.map((u) => [String(u._id), displayName(u)]));
     const { _id, ...plans } = planSum[0] || { plans: 0, target: 0, done: 0, finished: 0, overdue: 0 };
@@ -126,8 +139,9 @@ router.get(
       users: { total: users, admins, disabled, active7, new30 },
       content: { products, prompts, prompts30, resources },
       plans,
-      security: { failedLogins7: failed7 },
-      activity,
+      retentionDays: retention,
+      security: { failedLogins: failed },
+      activity: { bucket: hourly ? "hour" : "day", items: activityBuckets(perBucket, hourly, retention) },
       topActions: topActions.map((a) => ({ action: a._id, label: ACTIONS[a._id]?.label || a._id, count: a.count })),
       topUsers: topUsers.map((u) => ({ id: String(u._id), displayName: nameById.get(String(u._id)) || "(tài khoản đã xoá)", count: u.count, last: u.last })),
     });
@@ -156,13 +170,7 @@ router.get(
       ]),
       ActivityLog.aggregate([
         { $match: { user: { $ne: null }, action: { $ne: "auth.login_failed" } } },
-        {
-          $group: {
-            _id: "$user",
-            actions30: { $sum: { $cond: [{ $gte: ["$createdAt", daysAgo(30)] }, 1, 0] } },
-            lastActionAt: { $max: "$createdAt" },
-          },
-        },
+        { $group: { _id: "$user", actions: { $sum: 1 }, lastActionAt: { $max: "$createdAt" } } },
       ]),
     ]);
     const by = (rows) => new Map(rows.map((r) => [String(r._id), r]));
@@ -171,6 +179,7 @@ router.get(
       me: req.userId,
       // Members see everything here; only admins get the buttons that change accounts.
       canManage: req.role === "admin",
+      retentionDays: config.logRetentionDays,
       items: users.map((u) => {
         const id = String(u._id);
         const { _id, sessionVersion, ...rest } = u;
@@ -184,7 +193,8 @@ router.get(
           prompts: p.get(id)?.count || 0,
           products: pr.get(id)?.count || 0,
           plans: plan ? { total: plan.plans, open: plan.open, target: plan.target, done: plan.done } : { total: 0, open: 0, target: 0, done: 0 },
-          actions30: ac.get(id)?.actions30 || 0,
+          // Within the log window only.
+          actions: ac.get(id)?.actions || 0,
           lastActionAt: ac.get(id)?.lastActionAt || null,
         };
       }),
@@ -306,6 +316,7 @@ router.get(
       page,
       pages,
       limit,
+      retentionDays: config.logRetentionDays,
       groups: ACTION_GROUPS,
       actions: Object.entries(ACTIONS).map(([code, a]) => ({ code, ...a })),
     });
