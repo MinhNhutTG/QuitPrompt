@@ -1286,8 +1286,11 @@ select.input {
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
 }
+/* minmax(0, 1fr): a long no-wrap title must not widen the card (and its image) past the column. */
 .pcard {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
   gap: 8px;
   color: var(--fg);
   text-decoration: none;
