@@ -47,21 +47,14 @@ export default function Login() {
         <div className="brand brand-lg">
           Xưởng Prompt <span>Thời Trang</span>
         </div>
-        <svg className="enso" viewBox="0 0 200 200" aria-hidden="true">
-          <path
-            d="M100 22C150 20 180 58 178 102C176 150 138 180 96 178C52 176 22 142 24 98C26 62 50 34 84 26"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="11"
-            strokeLinecap="round"
-          />
-        </svg>
         <div className="login-copy">
-          <span className="login-kanji" aria-hidden="true">
-            一品一作
-          </span>
           <h1>Prompt video AI cho từng sản phẩm.</h1>
           <p>Lưu một lần, dùng mãi.</p>
+          <ul className="login-points">
+            <li>Chọn sản phẩm, ghép động tác, copy prompt</li>
+            <li>Lưu prompt ra video đẹp để cả team dùng lại</li>
+            <li>Giao kế hoạch video và theo dõi tiến độ</li>
+          </ul>
         </div>
       </div>
       <div className="login-main">

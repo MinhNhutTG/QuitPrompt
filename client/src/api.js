@@ -96,6 +96,13 @@ export const api = {
   createPlans: (body) => request("POST", "/plans", body),
   updatePlan: (id, body) => request("PATCH", `/plans/${id}`, body),
   deletePlan: (id) => request("DELETE", `/plans/${id}`),
+  deletePlans: (ids) => request("POST", "/plans/bulk-delete", { ids }),
+
+  resources: () => request("GET", "/resources"),
+  createResource: (body) => request("POST", "/resources", body),
+  updateResource: (id, body) => request("PATCH", `/resources/${id}`, body),
+  deleteResource: (id) => request("DELETE", `/resources/${id}`),
+
   createPrompt: (body) => request("POST", "/prompts", body),
   updatePrompt: (id, body) => request("PATCH", `/prompts/${id}`, body),
   deletePrompt: (id) => request("DELETE", `/prompts/${id}`),

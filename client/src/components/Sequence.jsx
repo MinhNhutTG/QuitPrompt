@@ -60,7 +60,7 @@ export default function Sequence({ state, set, index, result }) {
   return (
     <div className="sec">
       <h2 className="sec-h">
-        <span className="sec-n" aria-hidden="true">三</span>Chuỗi động tác
+        <span className="sec-n" aria-hidden="true">3</span>Chuỗi động tác
         <button type="button" className="btn btn-sm" onClick={() => set((s) => shuffleChain(s))}>
           Đổi ngẫu nhiên
         </button>

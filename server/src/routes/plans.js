@@ -176,6 +176,20 @@ router.patch(
   })
 );
 
+const bulkDeleteSchema = z.object({
+  ids: z.array(id("kế hoạch"), { required_error: "Chưa chọn kế hoạch nào." }).min(1, "Chưa chọn kế hoạch nào.").max(500, "Mỗi lần xoá tối đa 500 kế hoạch."),
+});
+
+// Deletes every chosen plan in one go; plans already gone are simply skipped.
+router.post(
+  "/bulk-delete",
+  ah(async (req, res) => {
+    const { ids } = parse(bulkDeleteSchema, req.body);
+    const { deletedCount } = await VideoPlan.deleteMany({ _id: { $in: [...new Set(ids)] } });
+    res.json({ ok: true, deleted: deletedCount });
+  })
+);
+
 router.delete(
   "/:id",
   ah(async (req, res) => {

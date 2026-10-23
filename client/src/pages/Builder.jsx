@@ -96,7 +96,7 @@ export default function Builder() {
         <div className="card">
           <div className="sec">
             <h2 className="sec-h">
-              <span className="sec-n" aria-hidden="true">一</span>Sản phẩm
+              <span className="sec-n" aria-hidden="true">1</span>Sản phẩm
             </h2>
             <ProductPicker
               value={state.productId}
@@ -108,7 +108,7 @@ export default function Builder() {
 
           <div className="sec">
             <h2 className="sec-h">
-              <span className="sec-n" aria-hidden="true">二</span>Người mẫu và thời lượng
+              <span className="sec-n" aria-hidden="true">2</span>Người mẫu và thời lượng
             </h2>
             <div className="row">
               <span className="row-label">Người mẫu</span>
@@ -139,7 +139,7 @@ export default function Builder() {
 
           <div className="sec">
             <h2 className="sec-h">
-              <span className="sec-n" aria-hidden="true">四</span>Tuỳ chọn
+              <span className="sec-n" aria-hidden="true">4</span>Tuỳ chọn
             </h2>
             <div className="row">
               <label className="check">

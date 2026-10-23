@@ -10,35 +10,33 @@
 
 ## 2. Nhận diện hình ảnh
 
-Phong cách Nhật "Washi & Sumi": nền giấy washi, chữ mực tàu, điểm nhấn đỏ son của con dấu hanko. Nhiều khoảng trống, viền mảnh, bo góc nhỏ.
+Phong cách gọn, trung tính, dễ đọc: nền xám rất nhạt, thẻ trắng viền mảnh, chữ gần đen, **một** màu nhấn xanh cobalt cho mục đang chọn, liên kết và viền focus. Không gradient, không hiệu ứng phát sáng, không emoji, không hoạ tiết trang trí.
 
 | Token | Sáng | Tối | Dùng cho |
 |---|---|---|---|
-| `--bg` | `#F3EEE4` | `#15130F` | Nền trang (giấy washi) |
-| `--surface` | `#FBF8F1` | `#1E1B17` | Thẻ, khung |
-| `--sunk` | `#F0EADF` | `#26221D` | Ô nhập, ô chọn |
-| `--line` | `#DCD3C3` | `#3A352D` | Viền |
-| `--fg` | `#1E1C19` | `#EDE6D8` | Chữ chính (mực) |
-| `--muted` | `#655F55` | `#A69F92` | Chữ phụ |
-| `--accent` | `#B33A28` | `#E0705C` | Đỏ son: nút chính, mục đang chọn, con dấu |
-| `--accent-soft` | `#F3E1DA` | `#3A231D` | Nền nhấn nhẹ, mốc đoạn kết |
-| `--ai` | `#2B3A55` | `#9DB0D4` | Chàm: đoạn mở đầu, avatar |
-| `--tan` | `#8C7F69` | `#8C7F69` | Đoạn giữa trên thanh thời gian, chữ Hán phụ |
-| `--ok` | `#2E6B45` | `#5CC48F` | Thông báo thành công |
-| `--danger` | `#8E2C1E` | `#F2B8B5` | Xoá, lỗi |
+| `--bg` | `#F6F6F4` | `#111113` | Nền trang |
+| `--surface` | `#FFFFFF` | `#18181B` | Thẻ, khung, ô nhập |
+| `--sunk` | `#F1F1EF` | `#202024` | Nền chìm: menu đang chọn, ô bị khoá, bộ chọn |
+| `--line` / `--line-strong` | `#E3E3DF` / `#CFCFCA` | `#2C2C31` / `#3D3D44` | Viền thẻ / viền nút và ô nhập |
+| `--fg` | `#18181B` | `#EDEDEF` | Chữ chính |
+| `--muted` | `#5F5F66` | `#A0A0A8` | Chữ phụ |
+| `--ink` | `#18181B` | `#EDEDEF` | Nút chính (nền đậm), logo |
+| `--accent` | `#2452D1` | `#7C9CFF` | Mục đang chọn, liên kết, focus, thanh tiến độ |
+| `--accent-soft` | `#E9EEFC` | `#1C2541` | Nền nhấn nhẹ, số thứ tự mục, avatar |
+| `--ok` | `#18794E` | `#4CC38A` | Thành công |
+| `--warn` | `#8A5300` | `#F1B94F` | Cảnh báo |
+| `--danger` | `#C22A2A` | `#FF8A8A` | Xoá, lỗi |
 
-Lớp `.ink` là khối nền mực, luôn tối ở cả hai chế độ: khung prompt bên phải bộ tạo và nửa trái trang đăng nhập.
+Lớp `.ink` là khối nền tối, luôn tối ở cả hai chế độ: khung prompt bên phải bộ tạo và nửa trái trang đăng nhập.
 
 | Vai trò chữ | Font | Dùng cho |
 |---|---|---|
-| Tiêu đề | Noto Serif 600/700 | Tên trang, tiêu đề mục (hỗ trợ tiếng Việt) |
-| Chữ Hán | Noto Serif JP | Con dấu 作, chữ Hán trên điều hướng, số mục 一 二 三 四 |
-| Nội dung | Be Vietnam Pro 400/500/600 | Toàn bộ giao diện |
+| Tiêu đề và nội dung | Be Vietnam Pro 400/500/600/700 | Toàn bộ giao diện; tiêu đề đậm 650, chữ hơi khít |
 | Prompt, mã | JetBrains Mono | Khung prompt, mốc giây |
 
-Điều hướng dùng một chữ Hán thay icon: 作 Tạo, 品 Sản phẩm, 蔵 Đã lưu, 計 Kế hoạch, 書 Thư viện, 設 Cài đặt, 他 Thêm. Chữ Hán chỉ để trang trí (`aria-hidden`), nhãn tiếng Việt luôn đi kèm.
+Điều hướng dùng icon nét mảnh (SVG, 1.8px) đi kèm nhãn tiếng Việt; mục đang chọn có nền xám nhạt và icon màu nhấn. Logo là ô vuông đậm chữ "P". Số mục trong bộ tạo là 1 2 3 4 trong vòng tròn nhấn nhẹ.
 
-Bo góc: 3px cho nút và ô nhập, 4px cho khung lớn. Dưới thanh trên cùng có dải sóng seigaiha. Bóng đổ chỉ dùng cho hộp thoại và menu.
+Bo góc: 8px cho nút và ô nhập, 12px cho thẻ và hộp thoại, nhãn trạng thái bo tròn hẳn. Thẻ có bóng rất nhẹ; bóng rõ chỉ dùng cho hộp thoại và menu. Ô nhập khi focus có viền màu nhấn và quầng mờ 3px.
 
 ## 3. Bố cục và điều hướng
 

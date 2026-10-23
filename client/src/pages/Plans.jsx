@@ -61,22 +61,23 @@ function MemberSelect({ value, onChange, members, me, emptyLabel, label }) {
   );
 }
 
-const formOf = (plan, me) =>
+// A new row starts due today; the user can change or clear it.
+const formOf = (plan, me, today) =>
   plan
     ? { product: plan.product._id, target: String(plan.target), assignee: plan.assignee.id, dueDate: plan.dueDate || "", status: plan.status, done: String(plan.done) }
-    : { product: null, target: "", assignee: me || "", dueDate: "", status: "todo", done: "0" };
+    : { product: null, target: "", assignee: me || "", dueDate: today || "", status: "todo", done: "0" };
 
 const FIELDS = ["product", "target", "assignee", "dueDate", "status", "done"];
 
 // One editable row. plan = null for a new, unsaved row.
 // Anyone fills in a new row (status included); on a saved row only the assignee changes the status.
-function PlanRow({ plan, members, me, today, onSaved, onDelete }) {
+function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSelect }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const [form, setForm] = useState(() => formOf(plan, me));
-  const base = formOf(plan, me);
+  const [form, setForm] = useState(() => formOf(plan, me, today));
+  const base = formOf(plan, me, today);
   const baseKey = plan ? `${plan._id}|${plan.updatedAt}` : "new";
-  useEffect(() => setForm(formOf(plan, me)), [baseKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => setForm(formOf(plan, me, today)), [baseKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
   const dirty = !plan || FIELDS.some((k) => form[k] !== base[k]);
   const canStatus = !plan || plan.assignee.id === me;
@@ -106,7 +107,15 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete }) {
 
   const overdue = form.status !== "done" && form.dueDate && form.dueDate < today;
   return (
-    <tr className={[!plan && "is-draft", plan?.status === "done" && "is-done", dirty && plan && "is-dirty"].filter(Boolean).join(" ")}>
+    <tr className={[!plan && "is-draft", plan?.status === "done" && "is-done", dirty && plan && "is-dirty", selected && "is-selected"].filter(Boolean).join(" ")}>
+      <td className="plan-check">
+        {plan && (
+          <label>
+            <input type="checkbox" checked={selected} onChange={(e) => onSelect(plan, e.target.checked)} aria-label={`Chọn kế hoạch ${plan.product.name}`} />
+            <span className="plan-check-text">Chọn</span>
+          </label>
+        )}
+      </td>
       <td data-label="Sản phẩm" className="plan-product-cell">
         {plan && plan.product.name.startsWith("(") ? (
           <span className="hint">{plan.product.name}</span>
@@ -250,10 +259,40 @@ export default function Plans() {
   const dropDraft = (key) => setDrafts((d) => d.filter((k) => k !== key));
 
   const [deleting, setDeleting] = useState(null);
+
+  // Chosen plans by id, kept across pages; a new filter starts over.
+  const [selected, setSelected] = useState(() => new Map());
+  const filterKey = [get("q"), assignee, status, due, cat].join("|");
+  useEffect(() => setSelected(new Map()), [filterKey]);
+  const select = (plan, on) =>
+    setSelected((old) => {
+      const next = new Map(old);
+      on ? next.set(plan._id, plan) : next.delete(plan._id);
+      return next;
+    });
+  const pageAllOn = items.length > 0 && items.every((p) => selected.has(p._id));
+  const selectPage = (on) =>
+    setSelected((old) => {
+      const next = new Map(old);
+      for (const p of items) on ? next.set(p._id, p) : next.delete(p._id);
+      return next;
+    });
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const removeMany = useMutation({
+    mutationFn: () => api.deletePlans([...selected.keys()]),
+    onSuccess: ({ deleted }) => {
+      qc.invalidateQueries({ queryKey: ["plans"] });
+      setSelected(new Map());
+      setBulkOpen(false);
+      toast(`Đã xoá ${deleted} kế hoạch`);
+    },
+    onError: (e) => toast(e.message, { tone: "danger" }),
+  });
   const remove = useMutation({
     mutationFn: (plan) => api.deletePlan(plan._id),
-    onSuccess: () => {
+    onSuccess: (_, plan) => {
       qc.invalidateQueries({ queryKey: ["plans"] });
+      select(plan, false);
       setDeleting(null);
       toast("Đã xoá kế hoạch");
     },
@@ -386,10 +425,33 @@ export default function Plans() {
         )
       ) : (
         <>
+          {selected.size > 0 && (
+            <div className="bulk-bar" role="region" aria-label="Kế hoạch đã chọn">
+              <span>
+                Đã chọn <b>{selected.size}</b> kế hoạch
+              </span>
+              <button type="button" className="btn btn-sm btn-danger" onClick={() => setBulkOpen(true)}>
+                Xoá {selected.size} kế hoạch
+              </button>
+              <button type="button" className="btn btn-sm btn-ghost" onClick={() => setSelected(new Map())}>
+                Bỏ chọn
+              </button>
+            </div>
+          )}
           <div className={`card ptable-wrap ${isPlaceholderData ? "is-stale" : ""}`} aria-busy={isFetching}>
             <table className="ptable">
               <thead>
                 <tr>
+                  <th className="plan-check">
+                    <input
+                      type="checkbox"
+                      aria-label="Chọn mọi kế hoạch trên trang này"
+                      checked={pageAllOn}
+                      ref={(el) => el && (el.indeterminate = !pageAllOn && items.some((p) => selected.has(p._id)))}
+                      onChange={(e) => selectPage(e.target.checked)}
+                      disabled={!items.length}
+                    />
+                  </th>
                   <th>Sản phẩm</th>
                   <th>Mục tiêu</th>
                   <th>Người thực hiện</th>
@@ -405,7 +467,7 @@ export default function Plans() {
                   <PlanRow key={key} plan={null} members={members} me={user?.id} today={today} onSaved={() => dropDraft(key)} onDelete={() => dropDraft(key)} />
                 ))}
                 {items.map((p) => (
-                  <PlanRow key={p._id} plan={p} members={members} me={user?.id} today={data.today || today} onDelete={setDeleting} />
+                  <PlanRow key={p._id} plan={p} members={members} me={user?.id} today={data.today || today} onDelete={setDeleting} selected={selected.has(p._id)} onSelect={select} />
                 ))}
               </tbody>
             </table>
@@ -413,6 +475,30 @@ export default function Plans() {
           {data && <Pager page={data.page} pages={data.pages} onPage={goPage} disabled={isPlaceholderData} />}
         </>
       )}
+
+      <Modal open={bulkOpen} onClose={() => setBulkOpen(false)} title={`Xoá ${selected.size} kế hoạch?`}>
+        {bulkOpen && (
+          <>
+            <p>Các kế hoạch sau sẽ bị xoá với cả team và không khôi phục được:</p>
+            <ul className="bulk-list">
+              {[...selected.values()].slice(0, 8).map((p) => (
+                <li key={p._id}>
+                  <b>{p.product.name}</b> · {p.target} video · {p.assignee.displayName}
+                </li>
+              ))}
+              {selected.size > 8 && <li className="hint">và {selected.size - 8} kế hoạch khác</li>}
+            </ul>
+            <div className="btns">
+              <button type="button" className="btn btn-danger" onClick={() => removeMany.mutate()} disabled={removeMany.isPending}>
+                {removeMany.isPending ? "Đang xoá..." : `Có, xoá ${selected.size} kế hoạch`}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => setBulkOpen(false)} autoFocus>
+                Không
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
 
       <Modal open={Boolean(deleting)} onClose={() => setDeleting(null)} title="Xoá kế hoạch này?">
         {deleting && (

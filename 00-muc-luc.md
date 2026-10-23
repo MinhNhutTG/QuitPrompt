@@ -13,6 +13,7 @@ Bộ tài liệu này mô tả việc nâng cấp **Xưởng Prompt Thời Trang
 | 07 | [Triển khai và vận hành](07-trien-khai-van-hanh.md) | Deploy miễn phí, biến môi trường, giới hạn gói free, sao lưu, chuyển dữ liệu cũ | Người vận hành |
 | 08 | [Kế hoạch thực hiện](08-ke-hoach-thuc-hien.md) | Các giai đoạn, kiểm thử, rủi ro, câu hỏi cần chốt | Mọi người |
 | 09 | [Kế hoạch tạo video](09-ke-hoach-video.md) | Bảng giao việc làm video theo sản phẩm, trạng thái do người thực hiện chọn | Mọi người |
+| 10 | [Kho tài nguyên](10-kho-tai-nguyen.md) | Kho chung skill AI và prompt tạo ảnh chất lượng | Mọi người |
 
 ## Tóm tắt một đoạn
 
