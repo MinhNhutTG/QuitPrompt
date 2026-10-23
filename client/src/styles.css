@@ -709,8 +709,10 @@ select.input {
 }
 
 /* ---------- images */
+/* Full width explicitly: a grid item with an aspect-ratio does not stretch, it sizes to its content. */
 .img {
   position: relative;
+  width: 100%;
   overflow: hidden;
   background: var(--sunk) center / cover no-repeat;
   border-radius: var(--r);
