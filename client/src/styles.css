@@ -1,35 +1,51 @@
-/* Tokens: tài liệu 05, mục 2. Phong cách gọn, trung tính: nền xám rất nhạt, chữ gần đen, một màu nhấn xanh cobalt. */
+/* Tokens: tài liệu 05, mục 2. Phong cách "bàn làm việc xanh": menu navy bên trái, nền xanh rất nhạt,
+   thẻ trắng bo tròn, tiêu đề navy, điểm nhấn xanh dương; bốn màu danh mục cho ô số liệu và nhãn loại. */
 :root {
-  --bg: #f6f6f4;
+  --bg: #e9f0fa;
   --surface: #ffffff;
-  --sunk: #f1f1ef;
-  --line: #e3e3df;
-  --line-strong: #cfcfca;
-  --fg: #18181b;
-  --muted: #5f5f66;
-  --accent: #2452d1;
+  --sunk: #f2f6fc;
+  --line: #e1e8f4;
+  --line-strong: #c9d5e8;
+  --fg: #1d2a44;
+  --heading: #14306b;
+  --muted: #6a7894;
+  --accent: #2563d8;
   --accent-fg: #ffffff;
-  --accent-soft: #e9eefc;
-  --ink: #18181b;
+  --accent-soft: #e3edfc;
+  --ink: #2563d8;
   --ink-fg: #ffffff;
-  --ai: #2452d1;
-  --ai-soft: #e9eefc;
-  --tan: #a1a1a8;
-  --tan-fg: #3f3f46;
-  --tan-soft: #efeff0;
-  --ok: #18794e;
-  --danger: #c22a2a;
-  --danger-soft: #fdecec;
-  --warn: #8a5300;
-  --warn-soft: #fdf3e1;
-  --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.05);
-  --shadow: 0 10px 30px rgba(24, 24, 27, 0.12), 0 2px 6px rgba(24, 24, 27, 0.06);
-  --r: 8px;
-  --r-lg: 12px;
+  --ai: #2563d8;
+  --ai-soft: #e3edfc;
+  --tan: #9aa8c2;
+  --tan-fg: #3a4a6b;
+  --tan-soft: #edf2fa;
+  --ok: #138a5a;
+  --danger: #d23b4a;
+  --danger-soft: #fde8ea;
+  --warn: #9a5b00;
+  --warn-soft: #fff3dc;
+  /* Danh mục: chữ trắng trên các nền này đạt tương phản ≥ 4.5:1. */
+  --c1: #5b52e6;
+  --c2: #0b7f91;
+  --c3: #c7447f;
+  --c4: #2259c9;
+  --c1-soft: #ebe9ff;
+  --c2-soft: #dcf2f5;
+  --c3-soft: #fbe6ef;
+  --c4-soft: #e3edfc;
+  --side-bg: #0e2f6e;
+  --side-fg: #c9d7f2;
+  --side-hover: #163a80;
+  --side-active: #0a2357;
+  --shadow-sm: 0 1px 2px rgba(20, 48, 107, 0.04);
+  --shadow: 0 12px 32px rgba(20, 48, 107, 0.16), 0 2px 6px rgba(20, 48, 107, 0.06);
+  --r: 10px;
+  --r-lg: 14px;
   --font: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-head: var(--font);
   --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
-  --top-h: 60px;
+  --side-w: 236px;
+  --top-h: 0px;
   --band: 0px;
   --tab-h: 64px;
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -38,28 +54,37 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111113;
-    --surface: #18181b;
-    --sunk: #202024;
-    --line: #2c2c31;
-    --line-strong: #3d3d44;
-    --fg: #ededef;
-    --muted: #a0a0a8;
-    --accent: #7c9cff;
-    --accent-fg: #0d1430;
-    --accent-soft: #1c2541;
-    --ink: #ededef;
-    --ink-fg: #18181b;
-    --ai: #7c9cff;
-    --ai-soft: #1c2541;
-    --tan: #5f5f68;
-    --tan-fg: #d4d4d8;
-    --tan-soft: #26262b;
-    --ok: #4cc38a;
-    --danger: #ff8a8a;
-    --danger-soft: #3a1d1f;
-    --warn: #f1b94f;
-    --warn-soft: #33281a;
+    --bg: #0b1830;
+    --surface: #12223f;
+    --sunk: #182b4d;
+    --line: #213660;
+    --line-strong: #2c4576;
+    --fg: #e3eaf7;
+    --heading: #f0f5ff;
+    --muted: #93a3c2;
+    --accent: #6d9cff;
+    --accent-fg: #0b1830;
+    --accent-soft: #1b3263;
+    --ink: #3b7bff;
+    --ink-fg: #ffffff;
+    --ai: #6d9cff;
+    --ai-soft: #1b3263;
+    --tan: #5b6f96;
+    --tan-fg: #c9d4ea;
+    --tan-soft: #1b2e52;
+    --ok: #45c98f;
+    --danger: #ff8593;
+    --danger-soft: #3d1c27;
+    --warn: #f3bb55;
+    --warn-soft: #36291a;
+    --c1-soft: #262556;
+    --c2-soft: #12384a;
+    --c3-soft: #3d1f37;
+    --c4-soft: #1b3263;
+    --side-bg: #071228;
+    --side-fg: #a9b9d8;
+    --side-hover: #10213f;
+    --side-active: #1a3263;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
     color-scheme: dark;
@@ -68,27 +93,28 @@
 
 /* Khối nền tối: khung prompt của bộ tạo và nửa trái trang đăng nhập. Luôn tối ở cả hai chế độ. */
 .ink {
-  --surface: #18181b;
-  --sunk: #222226;
-  --line: #313137;
-  --line-strong: #44444b;
-  --fg: #ededef;
-  --muted: #a0a0a8;
-  --accent: #8aa6ff;
-  --accent-fg: #0d1430;
-  --accent-soft: #1f2846;
-  --ink: #ededef;
-  --ink-fg: #18181b;
-  --tan: #6b6b74;
-  --ok: #4cc38a;
+  --surface: #0e2f6e;
+  --sunk: #0a2357;
+  --line: #24468a;
+  --line-strong: #2f55a0;
+  --fg: #eef3ff;
+  --heading: #ffffff;
+  --muted: #a9bce3;
+  --accent: #8fb3ff;
+  --accent-fg: #0a2357;
+  --accent-soft: #1b3f86;
+  --ink: #ffffff;
+  --ink-fg: #0e2f6e;
+  --tan: #6d86ba;
+  --ok: #5fd6a2;
   color: var(--fg);
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   .ink {
-    --surface: #0c0c0e;
-    --sunk: #18181b;
-    --line: #2a2a2f;
+    --surface: #071228;
+    --sunk: #0d1d3c;
+    --line: #1c3260;
   }
 }
 
@@ -115,6 +141,7 @@ body {
 h1,
 h2,
 h3 {
+  color: var(--heading);
   font-family: var(--font-head);
   font-weight: 650;
   line-height: 1.25;
@@ -286,43 +313,6 @@ textarea {
   display: flex;
   align-items: center;
   gap: 32px;
-}
-.topnav {
-  display: flex;
-  gap: 2px;
-  flex: 1;
-}
-.topnav a {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 36px;
-  padding: 0 11px;
-  border-radius: var(--r);
-  color: var(--muted);
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 14px;
-  white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
-}
-.topnav a:hover {
-  color: var(--fg);
-  background: var(--sunk);
-}
-.topnav a.active {
-  color: var(--fg);
-  background: var(--sunk);
-  font-weight: 600;
-}
-.nav-ico {
-  width: 18px;
-  height: 18px;
-  flex: none;
-  color: var(--tan);
-}
-.active > .nav-ico {
-  color: var(--accent);
 }
 .main {
   max-width: 1280px;
@@ -1644,9 +1634,6 @@ select.input {
   :root {
     --top-h: 54px;
   }
-  .topnav {
-    display: none;
-  }
   .topbar-in {
     justify-content: space-between;
     padding: 0 16px;
@@ -2123,10 +2110,6 @@ select.status-select:disabled {
 .res-head .badge {
   flex: none;
 }
-.res-kind-skill {
-  background: var(--sunk);
-  color: var(--fg);
-}
 .res-tags {
   display: flex;
   flex-wrap: wrap;
@@ -2147,11 +2130,6 @@ select.status-select:disabled {
 .res .out {
   max-height: 320px;
   overflow: auto;
-}
-@media (min-width: 900px) and (max-width: 1180px) {
-  .topnav a {
-    padding: 0 8px;
-  }
 }
 
 /* ---- plans: choose several, delete at once */
@@ -2241,6 +2219,8 @@ select.status-select:disabled {
   gap: 4px;
   border-bottom: 1px solid var(--line);
   overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
 }
 .tabs button {
   border: 0;
@@ -2536,24 +2516,6 @@ select.status-select:disabled {
   white-space: nowrap;
 }
 
-/* Eight menu items: drop icons, then tighten, before the phone layout takes over. */
-@media (min-width: 900px) and (max-width: 1240px) {
-  .topnav .nav-ico {
-    display: none;
-  }
-  .topbar-in {
-    gap: 20px;
-  }
-}
-@media (min-width: 900px) and (max-width: 1060px) {
-  .topbar .brand span {
-    display: none;
-  }
-  .topnav a {
-    padding: 0 7px;
-    font-size: 13.5px;
-  }
-}
 
 @media (max-width: 760px) {
   .atable thead {
@@ -2606,4 +2568,224 @@ select.status-select:disabled {
     min-width: 0;
     text-align: right;
   }
+}
+
+/* ---- blue workspace: sidebar on computers, coloured tiles and chips */
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.nav-ico {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.sidebar {
+  display: none;
+}
+@media (min-width: 900px) {
+  .app {
+    display: grid;
+    grid-template-columns: var(--side-w) minmax(0, 1fr);
+  }
+  .topbar {
+    display: none;
+  }
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 22px 0 18px;
+    background: var(--side-bg);
+    color: var(--side-fg);
+    overflow-y: auto;
+  }
+  .main {
+    width: 100%;
+    padding: 32px 32px 64px;
+  }
+}
+.sidebar .brand {
+  padding: 0 22px;
+  color: #fff;
+}
+.sidebar .brand::before {
+  background: #fff;
+  color: var(--side-bg);
+}
+.sidebar .brand span {
+  color: var(--side-fg);
+}
+.side-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 14px;
+  padding: 10px 8px;
+  border-radius: var(--r);
+  color: #fff;
+  text-decoration: none;
+  min-width: 0;
+}
+.side-user:hover {
+  background: var(--side-hover);
+}
+.side-user > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+.side-user b {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-user small {
+  font-size: 12px;
+  color: var(--side-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-avatar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: var(--side-bg);
+  font-weight: 700;
+  font-size: 18px;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
+}
+.side-nav {
+  display: grid;
+  gap: 2px;
+}
+.side-foot {
+  margin-top: auto;
+}
+.side-nav a,
+.side-nav button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 0;
+  background: none;
+  color: var(--side-fg);
+  font: 500 14.5px var(--font);
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.side-nav a:hover,
+.side-nav button:hover {
+  background: var(--side-hover);
+  color: #fff;
+}
+.side-nav a.active {
+  background: var(--side-active);
+  color: #fff;
+  font-weight: 600;
+}
+.side-nav a.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #fff;
+}
+.side-nav :focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -3px;
+}
+
+/* Cards: white on the pale blue page, soft edge instead of a hard border. */
+.card {
+  border-color: transparent;
+  box-shadow: 0 1px 3px rgba(20, 48, 107, 0.06);
+}
+.page-head h1 {
+  font-size: 26px;
+}
+.filters-q,
+.toolbar > .input[type="search"],
+.stack > .input[type="search"] {
+  min-height: 44px;
+  padding-left: 16px;
+  border-color: transparent;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(20, 48, 107, 0.06);
+}
+.btn {
+  font-weight: 600;
+}
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--ink) 88%, #000);
+}
+
+/* Admin overview: the first four tiles take the four category colours. */
+.tiles .tile:nth-child(-n + 4) {
+  border: 0;
+  color: #fff;
+}
+.tiles .tile:nth-child(1) {
+  background: var(--c1);
+}
+.tiles .tile:nth-child(2) {
+  background: var(--c2);
+}
+.tiles .tile:nth-child(3) {
+  background: var(--c3);
+}
+.tiles .tile:nth-child(4) {
+  background: var(--c4);
+}
+.tiles .tile:nth-child(-n + 4) .tile-label,
+.tiles .tile:nth-child(-n + 4) .tile-sub {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Resource kinds and plan statuses as soft coloured chips. */
+.res-kind-image {
+  background: var(--c1-soft);
+  color: var(--c1);
+}
+.res-kind-skill {
+  background: var(--c2-soft);
+  color: var(--c2);
+}
+@media (prefers-color-scheme: dark) {
+  .res-kind-image {
+    color: #b9b4ff;
+  }
+  .res-kind-skill {
+    color: #7fd6e3;
+  }
+}
+.status-todo {
+  background: var(--c4-soft);
+  color: var(--c4);
+}
+.chart-bar {
+  background: var(--c4);
+}
+.meter span {
+  background: var(--accent);
+}
+.tabs button.is-on {
+  color: var(--heading);
 }

@@ -17,6 +17,7 @@ const ICONS = {
   settings: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6",
   admin: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10ZM9 12l2 2 4-4",
   more: "M5 12h.01M12 12h.01M19 12h.01",
+  logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9",
 };
 
 const NAV = [
@@ -26,8 +27,8 @@ const NAV = [
   { to: "/plans", label: "Kế hoạch", short: "Kế hoạch", page: "plans" },
   { to: "/resources", label: "Tài nguyên", page: "resources" },
   { to: "/library", label: "Thư viện", page: "library" },
-  { to: "/settings", label: "Cài đặt", page: "settings" },
-  { to: "/admin", label: "Quản trị", page: "admin", admin: true },
+  { to: "/settings", label: "Cài đặt", page: "settings", foot: true },
+  { to: "/admin", label: "Quản trị", page: "admin", admin: true, foot: true },
 ];
 
 // Admin-only pages are hidden from members (the route refuses them too).
@@ -40,7 +41,7 @@ const useNav = () => {
 const TABS = 4;
 
 const Icon = ({ name }) => (
-  <svg className="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={name === "more" ? 3 : 1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg className="nav-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={name === "more" ? 3 : 1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d={ICONS[name]} />
   </svg>
 );
@@ -55,10 +56,20 @@ function useMenu() {
   return { open, setOpen, close, ref };
 }
 
-function AccountMenu() {
-  const { user, signOut } = useAuth();
+function useSignOut() {
+  const { signOut } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  return async () => {
+    await signOut();
+    toast("Đã đăng xuất");
+    navigate("/login", { replace: true });
+  };
+}
+
+function AccountMenu() {
+  const { user } = useAuth();
+  const leave = useSignOut();
   const menu = useMenu();
   const name = user.displayName || user.username;
   return (
@@ -85,11 +96,9 @@ function AccountMenu() {
           <button
             role="menuitem"
             type="button"
-            onClick={async () => {
+            onClick={() => {
               menu.close();
-              await signOut();
-              toast("Đã đăng xuất");
-              navigate("/login", { replace: true });
+              leave();
             }}
           >
             Đăng xuất
@@ -131,23 +140,66 @@ function MoreMenu() {
   );
 }
 
+const SideLink = ({ n }) => (
+  <NavLink to={n.to} end={n.end} {...warm(n.page)}>
+    <Icon name={n.page} />
+    {n.label}
+  </NavLink>
+);
+
+// Computers: a dark menu down the left side, account on top, settings and sign-out at the bottom.
+function Sidebar({ nav }) {
+  const { user } = useAuth();
+  const leave = useSignOut();
+  const name = user.displayName || user.username;
+  return (
+    <aside className="sidebar">
+      <Link to="/" className="brand" aria-label="Xưởng Prompt Thời Trang, về trang tạo prompt">
+        Xưởng Prompt <span>Thời Trang</span>
+      </Link>
+      <Link to="/settings#account" className="side-user" title="Tài khoản và mật khẩu">
+        <span className="side-avatar" aria-hidden="true">
+          {name.charAt(0).toUpperCase()}
+        </span>
+        <span>
+          <b>{name}</b>
+          <small>{user.role === "admin" ? "Quản trị viên" : `@${user.username}`}</small>
+        </span>
+      </Link>
+      <nav className="side-nav" aria-label="Điều hướng chính">
+        {nav
+          .filter((n) => !n.foot)
+          .map((n) => (
+            <SideLink key={n.to} n={n} />
+          ))}
+      </nav>
+      <nav className="side-nav side-foot" aria-label="Tài khoản">
+        {nav
+          .filter((n) => n.foot)
+          .map((n) => (
+            <SideLink key={n.to} n={n} />
+          ))}
+        <button type="button" onClick={leave}>
+          <Icon name="logout" />
+          Đăng xuất
+        </button>
+      </nav>
+    </aside>
+  );
+}
+
 export default function Layout() {
   const nav = useNav();
   return (
     <div className="app">
+      <Sidebar nav={nav} />
+
+      {/* Phones only: brand and account menu on top, tabs at the bottom. */}
       <header className="topbar">
         <div className="topbar-in">
           <Link to="/" className="brand" aria-label="Xưởng Prompt Thời Trang, về trang tạo prompt">
             Xưởng Prompt <span>Thời Trang</span>
           </Link>
-          <nav className="topnav" aria-label="Điều hướng chính">
-            {nav.map((n) => (
-              <NavLink key={n.to} to={n.to} end={n.end} {...warm(n.page)}>
-                <Icon name={n.page} />
-                {n.label}
-              </NavLink>
-            ))}
-          </nav>
           <AccountMenu />
         </div>
       </header>

@@ -10,50 +10,48 @@
 
 ## 2. Nhận diện hình ảnh
 
-Phong cách gọn, trung tính, dễ đọc: nền xám rất nhạt, thẻ trắng viền mảnh, chữ gần đen, **một** màu nhấn xanh cobalt cho mục đang chọn, liên kết và viền focus. Không gradient, không hiệu ứng phát sáng, không emoji, không hoạ tiết trang trí.
+Phong cách "bàn làm việc xanh": menu dọc màu navy bên trái, nền xanh rất nhạt, thẻ trắng bo tròn không viền, tiêu đề navy, nút và điểm nhấn xanh dương. Bốn màu danh mục (tím, xanh ngọc, hồng, xanh dương) tô các ô số liệu và nhãn loại. Không gradient, không emoji.
 
 | Token | Sáng | Tối | Dùng cho |
 |---|---|---|---|
-| `--bg` | `#F6F6F4` | `#111113` | Nền trang |
-| `--surface` | `#FFFFFF` | `#18181B` | Thẻ, khung, ô nhập |
-| `--sunk` | `#F1F1EF` | `#202024` | Nền chìm: menu đang chọn, ô bị khoá, bộ chọn |
-| `--line` / `--line-strong` | `#E3E3DF` / `#CFCFCA` | `#2C2C31` / `#3D3D44` | Viền thẻ / viền nút và ô nhập |
-| `--fg` | `#18181B` | `#EDEDEF` | Chữ chính |
-| `--muted` | `#5F5F66` | `#A0A0A8` | Chữ phụ |
-| `--ink` | `#18181B` | `#EDEDEF` | Nút chính (nền đậm), logo |
-| `--accent` | `#2452D1` | `#7C9CFF` | Mục đang chọn, liên kết, focus, thanh tiến độ |
-| `--accent-soft` | `#E9EEFC` | `#1C2541` | Nền nhấn nhẹ, số thứ tự mục, avatar |
-| `--ok` | `#18794E` | `#4CC38A` | Thành công |
-| `--warn` | `#8A5300` | `#F1B94F` | Cảnh báo |
-| `--danger` | `#C22A2A` | `#FF8A8A` | Xoá, lỗi |
+| `--bg` | `#E9F0FA` | `#0B1830` | Nền trang |
+| `--surface` | `#FFFFFF` | `#12223F` | Thẻ, khung, ô nhập |
+| `--sunk` | `#F2F6FC` | `#182B4D` | Nền chìm: bộ chọn, ô bị khoá |
+| `--line` / `--line-strong` | `#E1E8F4` / `#C9D5E8` | `#213660` / `#2C4576` | Viền nhạt / viền nút và ô nhập |
+| `--fg` / `--heading` | `#1D2A44` / `#14306B` | `#E3EAF7` / `#F0F5FF` | Chữ thường / tiêu đề navy |
+| `--muted` | `#6A7894` | `#93A3C2` | Chữ phụ |
+| `--accent` / `--ink` | `#2563D8` | `#6D9CFF` / `#3B7BFF` | Nút chính, liên kết, focus, mục đang chọn |
+| `--accent-soft` | `#E3EDFC` | `#1B3263` | Nền nhấn nhẹ |
+| `--side-bg` | `#0E2F6E` | `#071228` | Menu bên trái; mục đang chọn `--side-active` đậm hơn kèm vạch trắng |
+| `--c1`…`--c4` | `#5B52E6` `#0B7F91` `#C7447F` `#2259C9` | giữ nguyên | Ô số liệu tô màu (chữ trắng đạt ≥ 4.5:1), kèm bản nhạt `--c1-soft`… cho nhãn |
+| `--ok` / `--warn` / `--danger` | `#138A5A` / `#9A5B00` / `#D23B4A` | `#45C98F` / `#F3BB55` / `#FF8593` | Thành công / cảnh báo / lỗi |
 
-Lớp `.ink` là khối nền tối, luôn tối ở cả hai chế độ: khung prompt bên phải bộ tạo và nửa trái trang đăng nhập.
+Lớp `.ink` là khối navy, luôn tối ở cả hai chế độ: khung prompt bên phải bộ tạo và nửa trái trang đăng nhập.
 
 | Vai trò chữ | Font | Dùng cho |
 |---|---|---|
-| Tiêu đề và nội dung | Be Vietnam Pro 400/500/600/700 | Toàn bộ giao diện; tiêu đề đậm 650, chữ hơi khít |
+| Tiêu đề và nội dung | Be Vietnam Pro 400/500/600/700 | Toàn bộ giao diện; tiêu đề màu navy, đậm |
 | Prompt, mã | JetBrains Mono | Khung prompt, mốc giây |
 
-Điều hướng dùng icon nét mảnh (SVG, 1.8px) đi kèm nhãn tiếng Việt; mục đang chọn có nền xám nhạt và icon màu nhấn. Logo là ô vuông đậm chữ "P". Số mục trong bộ tạo là 1 2 3 4 trong vòng tròn nhấn nhẹ.
-
-Bo góc: 8px cho nút và ô nhập, 12px cho thẻ và hộp thoại, nhãn trạng thái bo tròn hẳn. Thẻ có bóng rất nhẹ; bóng rõ chỉ dùng cho hộp thoại và menu. Ô nhập khi focus có viền màu nhấn và quầng mờ 3px.
+Điều hướng dùng icon nét mảnh kèm nhãn tiếng Việt. Logo là ô vuông chữ "P". Bo góc: 10px cho nút và ô nhập, 14px cho thẻ và hộp thoại, ô tìm kiếm 12px không viền. Thẻ chỉ có bóng rất nhẹ; bóng rõ dùng cho hộp thoại, menu, thông báo.
 
 ## 3. Bố cục và điều hướng
 
 ```
 Máy tính (≥ 900px)                          Điện thoại (< 900px)
-┌──────────────────────────────────────┐    ┌────────────────────┐
-│ Xưởng Prompt   Tạo  Sản phẩm  Đã lưu │    │ Xưởng Prompt   (M) │
-│                Thư viện  Cài đặt (M) │    ├────────────────────┤
-├──────────────────────────────────────┤    │                    │
-│                                      │    │     nội dung       │
-│            nội dung trang            │    │                    │
-│                                      │    ├────────────────────┤
-└──────────────────────────────────────┘    │ Tạo  SP  Lưu  Thêm │
-                                            └────────────────────┘
+┌──────────┬───────────────────────────┐    ┌────────────────────┐
+│ P Xưởng  │                           │    │ Xưởng Prompt   (M) │
+│ (M) Minh │                           │    ├────────────────────┤
+│ Tạo      │                           │    │                    │
+│ Sản phẩm │      nội dung trang       │    │     nội dung       │
+│ Đã lưu   │                           │    │                    │
+│ ...      │                           │    ├────────────────────┤
+│ Cài đặt  │                           │    │ Tạo  SP  Lưu  Thêm │
+│ Đăng xuất│                           │    └────────────────────┘
+└──────────┴───────────────────────────┘
 ```
 
-- Máy tính: thanh trên cùng, cố định khi cuộn.
+- Máy tính: menu dọc navy bên trái, cố định khi cuộn. Trên cùng là logo và tài khoản (bấm để đổi mật khẩu); giữa là các trang; dưới cùng là Quản trị (chỉ admin), Cài đặt, Đăng xuất.
 - Điện thoại: thanh dưới cùng 4 mục (Tạo, Sản phẩm, Đã lưu, Thêm). "Thêm" mở Thư viện và Cài đặt. Thanh chừa khoảng an toàn của tai thỏ và thanh home.
 - Avatar chữ cái đầu (M) mở menu: tên tài khoản, Đổi mật khẩu, Đăng xuất.
 
