@@ -107,6 +107,15 @@ export const api = {
   updatePrompt: (id, body) => request("PATCH", `/prompts/${id}`, body),
   deletePrompt: (id) => request("DELETE", `/prompts/${id}`),
 
+  adminStats: (params) => request("GET", "/admin/stats" + qs(params)),
+  adminUsers: () => request("GET", "/admin/users"),
+  adminCreateUser: (body) => request("POST", "/admin/users", body),
+  adminUpdateUser: (id, body) => request("PATCH", `/admin/users/${id}`, body),
+  adminResetPassword: (id, password) => request("POST", `/admin/users/${id}/password`, { password }),
+  adminLogoutUser: (id) => request("POST", `/admin/users/${id}/logout`),
+  adminDeleteUser: (id) => request("DELETE", `/admin/users/${id}`),
+  adminLogs: (params) => request("GET", "/admin/logs" + qs(params)),
+
   settings: () => request("GET", "/settings"),
   saveSettings: (body) => request("PUT", "/settings", body),
 

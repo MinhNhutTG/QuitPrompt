@@ -8,7 +8,8 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import { connectDb, dbUp } from "./db.js";
 import { HttpError } from "./lib/http.js";
-import { requireAuth } from "./middleware/auth.js";
+import { requireAuth, requireAdmin } from "./middleware/auth.js";
+import { audit } from "./lib/audit.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
 import promptRoutes from "./routes/prompts.js";
@@ -16,6 +17,7 @@ import planRoutes from "./routes/plans.js";
 import resourceRoutes from "./routes/resources.js";
 import settingsRoutes from "./routes/settings.js";
 import transferRoutes from "./routes/transfer.js";
+import adminRoutes from "./routes/admin.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -62,6 +64,9 @@ app.use("/api", (req, res, next) =>
   dbUp() ? next() : next(new HttpError(503, "Máy chủ chưa kết nối được cơ sở dữ liệu. Chờ một chút rồi thử lại."))
 );
 
+// Writes the activity log for every action it knows, after the response is sent.
+app.use("/api", audit);
+
 app.use("/api/auth", authRoutes);
 app.use("/api/products", requireAuth, productRoutes);
 app.use("/api/prompts", requireAuth, promptRoutes);
@@ -69,6 +74,7 @@ app.use("/api/plans", requireAuth, planRoutes);
 app.use("/api/resources", requireAuth, resourceRoutes);
 app.use("/api/settings", requireAuth, settingsRoutes);
 app.use("/api/transfer", requireAuth, transferRoutes);
+app.use("/api/admin", requireAuth, requireAdmin, adminRoutes);
 app.use("/api", (req, res, next) => next(new HttpError(404, "Không có đường dẫn API này.")));
 
 // ---- React build (same origin, so the session cookie just works)

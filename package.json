@@ -8,7 +8,8 @@
     "dev": "concurrently -n server,client -c magenta,cyan \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "build": "npm install --prefix server --omit=dev && npm install --prefix client --include=dev && npm run build --prefix client",
     "start": "npm start --prefix server",
-    "reset-password": "npm run reset-password --prefix server --"
+    "reset-password": "npm run reset-password --prefix server --",
+    "make-admin": "npm run make-admin --prefix server --"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"

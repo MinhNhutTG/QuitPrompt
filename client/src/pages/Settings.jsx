@@ -228,7 +228,7 @@ function TransferBlock() {
         <button type="button" className="btn" disabled={run.isPending} onClick={() => fileRef.current?.click()}>
           {run.isPending ? "Đang nhập..." : "Nhập file .json"}
         </button>
-        <a className="btn btn-primary" href={api.exportUrl} download>
+        <a className="btn btn-primary" href={api.exportUrl} download onClick={() => toast("Đang tải file dữ liệu", { tone: "info", detail: "Trình duyệt sẽ lưu file .json vào thư mục Tải về." })}>
           Xuất toàn bộ dữ liệu
         </a>
       </div>

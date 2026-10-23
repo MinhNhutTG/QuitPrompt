@@ -196,6 +196,8 @@ router.delete(
     assertId(req.params.id, "kế hoạch");
     const plan = await VideoPlan.findByIdAndDelete(req.params.id);
     if (!plan) throw new HttpError(404, "Không tìm thấy kế hoạch.");
+    const product = await Product.findById(plan.product, { name: 1 }).lean();
+    res.locals.audit = { label: product?.name || "", meta: { target: plan.target } };
     res.json({ ok: true });
   })
 );

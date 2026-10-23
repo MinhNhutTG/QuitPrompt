@@ -186,7 +186,8 @@ router.delete(
     // Any member may delete any prompt (the app asks for confirmation); editing stays with the saver.
     const doc = await Prompt.findOneAndDelete({ _id: req.params.id });
     if (!doc) throw new HttpError(404, "Không tìm thấy prompt.");
-    await Product.updateOne({ _id: doc.product, promptCount: { $gt: 0 } }, { $inc: { promptCount: -1 } });
+    const product = await Product.findOneAndUpdate({ _id: doc.product, promptCount: { $gt: 0 } }, { $inc: { promptCount: -1 } }, { projection: { name: 1 } }).lean();
+    res.locals.audit = { label: product?.name || "" };
     res.json({ ok: true });
   })
 );

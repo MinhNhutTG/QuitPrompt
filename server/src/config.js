@@ -12,6 +12,8 @@ export const config = {
   mongoUri: env.MONGODB_URI || "mongodb://127.0.0.1:27017/prompt-studio",
   jwtSecret: env.JWT_SECRET || "dev-only-secret-change-me",
   allowRegister: env.ALLOW_REGISTER !== "false",
+  // Usernames that are always admins (comma separated); also see `npm run make-admin`.
+  adminUsernames: (env.ADMIN_USERNAMES || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean),
   cloudinaryUrl: env.CLOUDINARY_URL || "",
   clientOrigin: env.CLIENT_ORIGIN || "",
   // Proxy hops in front of Express: 1 = Render only, 2 = Vercel rewrite + Render.

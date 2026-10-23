@@ -179,7 +179,7 @@ Bốn khối:
 | `Uploader` | Kéo thả hoặc chọn ảnh, nén trên trình duyệt, thanh tiến độ từng ảnh |
 | `PromptCard` | Thẻ một prompt đã lưu với các nút thao tác |
 | `ConfirmButton` | Nút cần bấm hai lần cho thao tác xoá |
-| `Toast` | Thông báo nhỏ góc dưới, tự ẩn sau 2,5 giây |
+| `Toast` | Thông báo góc dưới bên phải (điện thoại: phía trên thanh tab), tối đa 3 cái xếp chồng. Có biểu tượng theo loại (✓ thành công, ! lỗi, i thông tin), dòng phụ, nút hành động và nút đóng. Tự ẩn sau 3 giây (có nút hành động 5 giây, lỗi 6 giây); dừng đếm khi rê chuột hoặc rời tab, vạch dưới cùng cho thấy thời gian còn lại |
 | `Skeleton` | Khung xám nhấp nháy nhẹ khi đang tải (tắt hiệu ứng nếu máy bật giảm chuyển động) |
 | `EmptyState` | Màn hình trống có hướng dẫn và nút hành động |
 
@@ -191,7 +191,7 @@ Bốn khối:
 | Trống | `EmptyState` với bước tiếp theo |
 | Lỗi mạng | Thông báo kèm nút "Thử lại" |
 | Đang gửi | Nút khoá lại, chữ đổi sang dạng "Đang lưu..." |
-| Thành công | Toast "Đã lưu", "Đã copy", "Đã xoá" |
+| Thành công | Mọi thao tác thành công đều có toast: lưu, xoá, copy, tải ảnh, đăng nhập, đăng xuất, xuất/nhập dữ liệu, thao tác quản trị |
 | Hết phiên | Đưa về đăng nhập, giữ nguyên bản nháp bộ tạo |
 
 ## 7. Khả năng truy cập

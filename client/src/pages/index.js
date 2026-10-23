@@ -11,6 +11,7 @@ const loaders = {
   resources: () => import("./Resources.jsx"),
   library: () => import("./Library.jsx"),
   settings: () => import("./Settings.jsx"),
+  admin: () => import("./Admin.jsx"),
   notFound: () => import("./NotFound.jsx"),
 };
 

@@ -14,6 +14,7 @@ Bộ tài liệu này mô tả việc nâng cấp **Xưởng Prompt Thời Trang
 | 08 | [Kế hoạch thực hiện](08-ke-hoach-thuc-hien.md) | Các giai đoạn, kiểm thử, rủi ro, câu hỏi cần chốt | Mọi người |
 | 09 | [Kế hoạch tạo video](09-ke-hoach-video.md) | Bảng giao việc làm video theo sản phẩm, trạng thái do người thực hiện chọn | Mọi người |
 | 10 | [Kho tài nguyên](10-kho-tai-nguyen.md) | Kho chung skill AI và prompt tạo ảnh chất lượng | Mọi người |
+| 11 | [Quản trị](11-quan-tri.md) | Quản lý tài khoản, nhật ký thao tác, số liệu tổng quát | Quản trị viên, lập trình viên |
 
 ## Tóm tắt một đoạn
 

@@ -10,7 +10,8 @@ const isImage = (f) => f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|hei
 
 // Compress then upload one file at a time: every response carries the full product,
 // so sequential uploads can never apply an older image list over a newer one.
-export function useUploads(onItem) {
+export function useUploads(onItem, { notify = true } = {}) {
+  const toast = useToast();
   const [jobs, setJobs] = useState([]);
   const onItemRef = useRef(onItem);
   onItemRef.current = onItem;
@@ -40,8 +41,11 @@ export function useUploads(onItem) {
         }
       }
     }
+    const ok = list.length - failed;
+    if (notify && ok) toast(`Đã tải lên ${ok} ảnh`, failed ? { detail: `${failed} ảnh lỗi, xem danh sách bên dưới.` } : undefined);
+    if (notify && !ok && failed) toast(`Chưa tải được ${failed} ảnh`, { tone: "danger", detail: "Xem lỗi trong danh sách bên dưới." });
     return failed;
-  }, []);
+  }, [notify, toast]);
 
   const dismiss = useCallback(() => setJobs((all) => all.filter((j) => j.status !== "error")), []);
   return { jobs, run, dismiss, busy: jobs.some((j) => j.status !== "error") };

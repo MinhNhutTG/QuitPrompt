@@ -77,6 +77,7 @@ router.delete(
     await Promise.all([Prompt.deleteMany({ product: item._id }), VideoPlan.deleteMany({ product: item._id })]);
     await item.deleteOne();
     await destroyImages(item.images.map((i) => i.publicId));
+    res.locals.audit = { label: item.name };
     res.json({ ok: true });
   })
 );

@@ -41,7 +41,8 @@ function NewProductForm({ onClose }) {
   const [external, setExternal] = useState(EMPTY_EXTERNAL);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const uploads = useUploads((item) => putProduct(qc, item));
+  // The create form reports the whole result in one notice.
+  const uploads = useUploads((item) => putProduct(qc, item), { notify: false });
 
   async function submit(e) {
     e.preventDefault();

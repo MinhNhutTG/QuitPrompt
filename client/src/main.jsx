@@ -26,6 +26,12 @@ function RequireAuth({ children }) {
   return children;
 }
 
+function RequireAdmin({ children }) {
+  const { user } = useAuth();
+  if (user?.role !== "admin") return <Navigate to="/" replace />;
+  return children;
+}
+
 function PublicOnly({ children }) {
   const { user } = useAuth();
   const location = useLocation();
@@ -33,7 +39,7 @@ function PublicOnly({ children }) {
   return children;
 }
 
-const { login: Login, builder: Builder, products: Products, productDetail: ProductDetail, saved: Saved, plans: Plans, resources: Resources, library: Library, settings: Settings, notFound: NotFound } = pages;
+const { login: Login, builder: Builder, products: Products, productDetail: ProductDetail, saved: Saved, plans: Plans, resources: Resources, library: Library, settings: Settings, admin: Admin, notFound: NotFound } = pages;
 
 function App() {
   return (
@@ -63,6 +69,14 @@ function App() {
         <Route path="resources" element={<Resources />} />
         <Route path="library" element={<Library />} />
         <Route path="settings" element={<Settings />} />
+        <Route
+          path="admin"
+          element={
+            <RequireAdmin>
+              <Admin />
+            </RequireAdmin>
+          }
+        />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

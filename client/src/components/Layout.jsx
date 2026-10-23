@@ -4,6 +4,7 @@ import { useAuth } from "../auth.jsx";
 import { preload } from "../pages/index.js";
 import { useClickOutside } from "../lib/util.js";
 import { Skeleton } from "./ui.jsx";
+import { useToast } from "./Toast.jsx";
 
 // Line icons, 24px grid, drawn with the text colour (tài liệu 05, mục 2).
 const ICONS = {
@@ -14,6 +15,7 @@ const ICONS = {
   resources: "M3 8h18v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1ZM2 3h20v5H2ZM10 12h4",
   library: "M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2ZM22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7Z",
   settings: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6",
+  admin: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10ZM9 12l2 2 4-4",
   more: "M5 12h.01M12 12h.01M19 12h.01",
 };
 
@@ -25,7 +27,14 @@ const NAV = [
   { to: "/resources", label: "Tài nguyên", page: "resources" },
   { to: "/library", label: "Thư viện", page: "library" },
   { to: "/settings", label: "Cài đặt", page: "settings" },
+  { to: "/admin", label: "Quản trị", page: "admin", admin: true },
 ];
+
+// Admin-only pages are hidden from members (the route refuses them too).
+const useNav = () => {
+  const { user } = useAuth();
+  return NAV.filter((n) => !n.admin || user?.role === "admin");
+};
 
 // Pages with their own tab on phones; the rest sit under "Thêm".
 const TABS = 4;
@@ -48,6 +57,7 @@ function useMenu() {
 
 function AccountMenu() {
   const { user, signOut } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const menu = useMenu();
   const name = user.displayName || user.username;
@@ -78,6 +88,7 @@ function AccountMenu() {
             onClick={async () => {
               menu.close();
               await signOut();
+              toast("Đã đăng xuất");
               navigate("/login", { replace: true });
             }}
           >
@@ -90,9 +101,10 @@ function AccountMenu() {
 }
 
 function MoreMenu() {
+  const nav = useNav();
   const menu = useMenu();
   const { pathname } = useLocation();
-  const active = NAV.slice(TABS).some((n) => pathname.startsWith(n.to));
+  const active = nav.slice(TABS).some((n) => pathname.startsWith(n.to));
   return (
     <div className="menu-wrap" ref={menu.ref}>
       <button
@@ -108,7 +120,7 @@ function MoreMenu() {
       </button>
       {menu.open && (
         <div className="menu menu-up" role="menu">
-          {NAV.slice(TABS).map((n) => (
+          {nav.slice(TABS).map((n) => (
             <Link key={n.to} role="menuitem" to={n.to} onClick={menu.close} {...warm(n.page)}>
               {n.label}
             </Link>
@@ -120,6 +132,7 @@ function MoreMenu() {
 }
 
 export default function Layout() {
+  const nav = useNav();
   return (
     <div className="app">
       <header className="topbar">
@@ -128,7 +141,7 @@ export default function Layout() {
             Xưởng Prompt <span>Thời Trang</span>
           </Link>
           <nav className="topnav" aria-label="Điều hướng chính">
-            {NAV.map((n) => (
+            {nav.map((n) => (
               <NavLink key={n.to} to={n.to} end={n.end} {...warm(n.page)}>
                 <Icon name={n.page} />
                 {n.label}
@@ -146,7 +159,7 @@ export default function Layout() {
       </main>
 
       <nav className="tabbar" aria-label="Điều hướng chính">
-        {NAV.slice(0, TABS).map((n) => (
+        {nav.slice(0, TABS).map((n) => (
           <NavLink key={n.to} to={n.to} end={n.end} className="tab" {...warm(n.page)}>
             <Icon name={n.page} />
             <span>{n.short}</span>

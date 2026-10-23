@@ -87,6 +87,7 @@ router.delete(
     assertId(req.params.id, "tài nguyên");
     const doc = await Resource.findByIdAndDelete(req.params.id);
     if (!doc) throw new HttpError(404, "Không tìm thấy tài nguyên.");
+    res.locals.audit = { label: doc.title };
     res.json({ ok: true });
   })
 );

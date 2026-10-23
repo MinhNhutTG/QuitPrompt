@@ -4,9 +4,11 @@ import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { store } from "../lib/util.js";
 import { Field, Seg } from "../components/ui.jsx";
+import { useToast } from "../components/Toast.jsx";
 
 export default function Login() {
   const { signIn } = useAuth();
+  const toast = useToast();
   const { data: cfg } = useQuery({ queryKey: ["authConfig"], queryFn: api.authConfig, staleTime: Infinity });
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState(() => store.get("lastUser", ""));
@@ -35,6 +37,7 @@ export default function Login() {
       const { user } = await (isNew ? api.register(body) : api.login(body));
       store.set("lastUser", user.username);
       signIn(user);
+      toast(isNew ? `Đã tạo tài khoản ${user.username}` : `Chào ${user.displayName}`, { detail: isNew ? "Bạn đã đăng nhập." : undefined });
     } catch (err) {
       setError(err.message);
       setBusy(false);

@@ -39,6 +39,7 @@
 | `JWT_SECRET` | Có | chuỗi ngẫu nhiên 64+ ký tự | Đổi chuỗi này là đăng xuất mọi người |
 | `CLOUDINARY_URL` | Có (để tải ảnh) | `cloudinary://KEY:SECRET@CLOUD_NAME` | Lấy ở Cloudinary → Settings → API Keys |
 | `ALLOW_REGISTER` | Không | `true` / `false` | Tạo xong tài khoản cho nhóm thì đặt `false` |
+| `ADMIN_USERNAMES` | Không | `minh,lan` | Tên đăng nhập luôn là quản trị viên (cách nhau dấu phẩy). Hoặc chạy `npm run make-admin -- <tên>` một lần |
 | `NODE_ENV` | Có khi deploy | `production` | Bật cookie Secure, phục vụ file build |
 | `PORT` | Không | `4000` | Render tự cấp |
 | `CLIENT_ORIGIN` | Không | `http://localhost:5173` | Chỉ khi frontend gọi thẳng API ở domain khác (không dùng khi đi qua rewrite của Vercel) |
@@ -87,7 +88,7 @@ Trên Render, phần giao diện vẫn chạy ở địa chỉ `onrender.com` l�
 
 ### Bước 5. Sau khi deploy
 1. Mở địa chỉ (Vercel nếu có, không thì Render), chọn **Tạo tài khoản**.
-2. Tạo đủ tài khoản cho nhóm, rồi đặt `ALLOW_REGISTER=false` trên Render.
+2. Tạo đủ tài khoản cho nhóm (hoặc để quản trị viên tạo ở trang Quản trị), rồi đặt `ALLOW_REGISTER=false` trên Render.
 3. Vào **Cài đặt → Chuyển dữ liệu**, nhập file sao lưu `.json` từ bản tĩnh cũ.
 
 ## 4. Chạy trên máy để phát triển
