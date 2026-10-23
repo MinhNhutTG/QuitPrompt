@@ -10,6 +10,7 @@ import { Resource } from "../models/Resource.js";
 import { ActivityLog } from "../models/ActivityLog.js";
 import { ACTIONS, ACTION_GROUPS } from "../lib/audit.js";
 import { ah, parse, assertId, isId, escapeRegex, text, HttpError } from "../lib/http.js";
+import { requireAdmin } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -168,6 +169,8 @@ router.get(
     const [p, pr, pl, ac] = [by(prompts), by(products), by(plans), by(actions)];
     res.json({
       me: req.userId,
+      // Members see everything here; only admins get the buttons that change accounts.
+      canManage: req.role === "admin",
       items: users.map((u) => {
         const id = String(u._id);
         const { _id, sessionVersion, ...rest } = u;
@@ -191,6 +194,7 @@ router.get(
 
 router.post(
   "/users",
+  requireAdmin,
   ah(async (req, res) => {
     const data = parse(createSchema, req.body);
     if (await User.exists({ username: data.username })) throw new HttpError(409, "Tên đăng nhập này đã có người dùng.");
@@ -202,6 +206,7 @@ router.post(
 
 router.patch(
   "/users/:id",
+  requireAdmin,
   ah(async (req, res) => {
     const data = parse(patchSchema, req.body);
     const user = await findUser(req.params.id);
@@ -222,6 +227,7 @@ router.patch(
 
 router.post(
   "/users/:id/password",
+  requireAdmin,
   ah(async (req, res) => {
     const { password: next } = parse(z.object({ password }), req.body);
     const user = await findUser(req.params.id);
@@ -236,6 +242,7 @@ router.post(
 
 router.post(
   "/users/:id/logout",
+  requireAdmin,
   ah(async (req, res) => {
     const user = await findUser(req.params.id);
     user.sessionVersion = (user.sessionVersion || 0) + 1;
@@ -248,6 +255,7 @@ router.post(
 // Their products, prompts and plans stay: everything is shared, and lists show "(tài khoản đã xoá)".
 router.delete(
   "/users/:id",
+  requireAdmin,
   ah(async (req, res) => {
     const user = await findUser(req.params.id);
     if (String(user._id) === String(req.userId)) throw new HttpError(400, "Không tự xoá tài khoản của chính mình được.");

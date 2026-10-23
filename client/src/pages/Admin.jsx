@@ -314,15 +314,21 @@ function Users({ onShowLogs }) {
   if (isLoading) return <Skeleton h={240} r={12} />;
   if (error) return <ErrorState error={error} onRetry={refetch} />;
   const me = data.me;
+  const canManage = data.canManage;
   const titles = { new: "Thêm thành viên", edit: "Sửa thành viên", password: "Đặt lại mật khẩu", delete: "Xoá tài khoản này?" };
 
   return (
     <div className="stack">
       <div className="sec-row">
-        <p className="muted">{data.items.length} tài khoản. Khoá tài khoản thì người đó bị đăng xuất ngay và không đăng nhập được nữa.</p>
-        <button type="button" className="btn btn-primary" onClick={() => setDialog({ mode: "new" })}>
-          + Thêm thành viên
-        </button>
+        <p className="muted">
+          {data.items.length} tài khoản.{" "}
+          {canManage ? "Khoá tài khoản thì người đó bị đăng xuất ngay và không đăng nhập được nữa." : "Chỉ quản trị viên mới thêm, sửa, khoá hay xoá được tài khoản."}
+        </p>
+        {canManage && (
+          <button type="button" className="btn btn-primary" onClick={() => setDialog({ mode: "new" })}>
+            + Thêm thành viên
+          </button>
+        )}
       </div>
       <div className="card atable-wrap">
         <table className="atable">
@@ -333,9 +339,11 @@ function Users({ onShowLogs }) {
               <th>Thao tác 30 ngày</th>
               <th>Prompt</th>
               <th>Kế hoạch được giao</th>
-              <th>
-                <span className="sr-only">Thao tác</span>
-              </th>
+              {canManage && (
+                <th>
+                  <span className="sr-only">Thao tác</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -376,32 +384,34 @@ function Users({ onShowLogs }) {
                       <span className="hint">Chưa có</span>
                     )}
                   </td>
-                  <td className="au-actions">
-                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => setDialog({ mode: "edit", u })}>
-                      Sửa
-                    </button>
-                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => setDialog({ mode: "password", u })}>
-                      Đặt mật khẩu
-                    </button>
-                    {!isMe && (
-                      <>
-                        <ConfirmButton className="btn btn-sm btn-ghost" confirmLabel="Bấm lần nữa" onConfirm={() => logout.mutate({ u })} disabled={logout.isPending}>
-                          Đăng xuất mọi nơi
-                        </ConfirmButton>
-                        <ConfirmButton
-                          className={`btn btn-sm ${u.disabled ? "btn-ghost" : "btn-danger-ghost"}`}
-                          confirmLabel={u.disabled ? "Bấm lần nữa để mở" : "Bấm lần nữa để khoá"}
-                          onConfirm={() => toggle.mutate({ u })}
-                          disabled={toggle.isPending}
-                        >
-                          {u.disabled ? "Mở khoá" : "Khoá"}
-                        </ConfirmButton>
-                        <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => setDialog({ mode: "delete", u })}>
-                          Xoá
-                        </button>
-                      </>
-                    )}
-                  </td>
+                  {canManage && (
+                    <td className="au-actions">
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setDialog({ mode: "edit", u })}>
+                        Sửa
+                      </button>
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setDialog({ mode: "password", u })}>
+                        Đặt mật khẩu
+                      </button>
+                      {!isMe && (
+                        <>
+                          <ConfirmButton className="btn btn-sm btn-ghost" confirmLabel="Bấm lần nữa" onConfirm={() => logout.mutate({ u })} disabled={logout.isPending}>
+                            Đăng xuất mọi nơi
+                          </ConfirmButton>
+                          <ConfirmButton
+                            className={`btn btn-sm ${u.disabled ? "btn-ghost" : "btn-danger-ghost"}`}
+                            confirmLabel={u.disabled ? "Bấm lần nữa để mở" : "Bấm lần nữa để khoá"}
+                            onConfirm={() => toggle.mutate({ u })}
+                            disabled={toggle.isPending}
+                          >
+                            {u.disabled ? "Mở khoá" : "Khoá"}
+                          </ConfirmButton>
+                          <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => setDialog({ mode: "delete", u })}>
+                            Xoá
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -606,7 +616,7 @@ export default function Admin() {
       <div className="page-head">
         <div>
           <h1>Quản trị</h1>
-          <p>Tài khoản của team, nhật ký thao tác và số liệu chung. Chỉ quản trị viên thấy trang này.</p>
+          <p>Tài khoản của team, nhật ký thao tác và số liệu chung. Cả team cùng xem; chỉ quản trị viên thay đổi được tài khoản.</p>
         </div>
       </div>
       <div className="tabs" role="tablist" aria-label="Mục quản trị">

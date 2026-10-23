@@ -26,12 +26,6 @@ function RequireAuth({ children }) {
   return children;
 }
 
-function RequireAdmin({ children }) {
-  const { user } = useAuth();
-  if (user?.role !== "admin") return <Navigate to="/" replace />;
-  return children;
-}
-
 function PublicOnly({ children }) {
   const { user } = useAuth();
   const location = useLocation();
@@ -69,14 +63,7 @@ function App() {
         <Route path="resources" element={<Resources />} />
         <Route path="library" element={<Library />} />
         <Route path="settings" element={<Settings />} />
-        <Route
-          path="admin"
-          element={
-            <RequireAdmin>
-              <Admin />
-            </RequireAdmin>
-          }
-        />
+        <Route path="admin" element={<Admin />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

@@ -28,14 +28,10 @@ const NAV = [
   { to: "/resources", label: "Tài nguyên", page: "resources" },
   { to: "/library", label: "Thư viện", page: "library" },
   { to: "/settings", label: "Cài đặt", page: "settings", foot: true },
-  { to: "/admin", label: "Quản trị", page: "admin", admin: true, foot: true },
+  { to: "/admin", label: "Quản trị", page: "admin", foot: true },
 ];
 
-// Admin-only pages are hidden from members (the route refuses them too).
-const useNav = () => {
-  const { user } = useAuth();
-  return NAV.filter((n) => !n.admin || user?.role === "admin");
-};
+const useNav = () => NAV;
 
 // Pages with their own tab on phones; the rest sit under "Thêm".
 const TABS = 4;

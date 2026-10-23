@@ -8,7 +8,7 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import { connectDb, dbUp } from "./db.js";
 import { HttpError } from "./lib/http.js";
-import { requireAuth, requireAdmin } from "./middleware/auth.js";
+import { requireAuth } from "./middleware/auth.js";
 import { audit } from "./lib/audit.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
@@ -74,7 +74,8 @@ app.use("/api/plans", requireAuth, planRoutes);
 app.use("/api/resources", requireAuth, resourceRoutes);
 app.use("/api/settings", requireAuth, settingsRoutes);
 app.use("/api/transfer", requireAuth, transferRoutes);
-app.use("/api/admin", requireAuth, requireAdmin, adminRoutes);
+// Every member may look; the routes that change accounts check for an admin themselves.
+app.use("/api/admin", requireAuth, adminRoutes);
 app.use("/api", (req, res, next) => next(new HttpError(404, "Không có đường dẫn API này.")));
 
 // ---- React build (same origin, so the session cookie just works)

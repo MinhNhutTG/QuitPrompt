@@ -8,7 +8,8 @@ Một người (hoặc vài người) quản lý tài khoản của team, xem ai
 
 | Vấn đề | Quyết định |
 |---|---|
-| Vai trò | Hai vai trò: `admin` (quản trị viên) và `member` (thành viên). Chỉ admin thấy mục **Quản trị** và gọi được `/api/admin` |
+| Ai xem được | **Mọi thành viên** đều thấy mục **Quản trị** và xem được cả ba tab (tổng quan, danh sách thành viên, nhật ký) |
+| Vai trò | Hai vai trò: `admin` (quản trị viên) và `member` (thành viên). Chỉ admin thấy và dùng được các nút thay đổi tài khoản: thêm, sửa, đặt mật khẩu, đăng xuất mọi nơi, khoá, xoá |
 | Admin đầu tiên | Tài khoản đầu tiên đăng ký là admin. Với hệ thống đã có người dùng: chạy `npm run make-admin -- <tên>` hoặc đặt `ADMIN_USERNAMES` (tài khoản trong danh sách thành admin ở lần mở app kế tiếp) |
 | Luôn còn admin | Không bỏ quyền, khoá hay xoá được admin cuối cùng còn hoạt động; không tự khoá, tự bỏ quyền, tự xoá chính mình |
 | Khoá tài khoản | Người bị khoá bị đăng xuất ngay trên mọi thiết bị và không đăng nhập lại được. Dữ liệu giữ nguyên |
@@ -37,12 +38,12 @@ Ba tab, tab đang mở và bộ lọc nằm trên URL.
 - Collection `activitylogs`: `user`, `action` (vd. `product.update`), `targetId`, `label` (tên đối tượng, giữ lại cả khi đối tượng bị xoá), `meta` (trường đã đổi, số mục), `ip`, `ua`, `createdAt`. Chỉ mục TTL 180 ngày trên `createdAt`, thêm `{ user, createdAt }` và `{ action, createdAt }`.
 - Danh sách thao tác và tên tiếng Việt nằm ở `server/src/lib/audit.js`. Thêm route mới làm đổi dữ liệu thì thêm một dòng vào đó.
 
-## 6. API (`/api/admin`, chỉ admin)
+## 6. API (`/api/admin`: GET cho mọi thành viên, còn lại chỉ admin)
 
 | Phương thức | Đường dẫn | Mô tả |
 |---|---|---|
 | GET | `/stats?days=14` | Số liệu tổng quan, thao tác theo ngày, xếp hạng |
-| GET | `/users` | Mọi tài khoản kèm số liệu từng người |
+| GET | `/users` | Mọi tài khoản kèm số liệu từng người; `canManage` cho biết người xem có phải admin |
 | POST | `/users` | `{ username, displayName?, password, role? }` tạo tài khoản |
 | PATCH | `/users/:id` | `{ displayName?, role?, disabled? }` |
 | POST | `/users/:id/password` | `{ password }` đặt mật khẩu mới, đăng xuất mọi nơi |
