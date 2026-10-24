@@ -1,0 +1,16 @@
+{
+  "name": "Xưởng Prompt Thời Trang",
+  "short_name": "Xưởng Prompt",
+  "description": "Tạo prompt video AI cho từng sản phẩm thời trang, lưu một lần dùng mãi.",
+  "lang": "vi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#030B1E",
+  "theme_color": "#030B1E",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
