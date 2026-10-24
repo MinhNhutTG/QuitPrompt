@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
+import { useCan } from "../auth.jsx";
 import { putProduct, useProducts } from "../lib/queries.js";
 import { norm, useDebounce } from "../lib/util.js";
 import { EmptyState, ErrorState, Field, Modal, Skeleton } from "../components/ui.jsx";
 import LazyImage from "../components/LazyImage.jsx";
-import { DropZone, JobList, MAX_IMAGES, useUploads } from "../components/Uploader.jsx";
+import { DropZone, JobList, useImageCap, useUploads } from "../components/Uploader.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { EMPTY_EXTERNAL, ExternalPromptFields, externalBody } from "../components/PromptFields.jsx";
 import { CategoryInput } from "../components/CategoryInput.jsx";
@@ -33,6 +34,8 @@ function NewProductForm({ onClose }) {
   const qc = useQueryClient();
   const toast = useToast();
   const navigate = useNavigate();
+  const can = useCan();
+  const cap = useImageCap();
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
   const [category, setCategory] = useState("");
@@ -99,7 +102,7 @@ function NewProductForm({ onClose }) {
         ) : (
           <>
             <Previews files={files} onRemove={(i) => setFiles((fs) => fs.filter((_, j) => j !== i))} />
-            <DropZone room={MAX_IMAGES - files.length} onFiles={(fs) => setFiles((old) => [...old, ...fs])} />
+            <DropZone room={cap - files.length} onFiles={(fs) => setFiles((old) => [...old, ...fs])} />
           </>
         )}
       </div>
@@ -114,9 +117,11 @@ function NewProductForm({ onClose }) {
           <ExternalPromptFields value={external} onChange={setExternal} />
         </fieldset>
       ) : (
-        <button type="button" className="btn btn-dashed" onClick={() => setWithPrompt(true)} disabled={busy}>
-          + Thêm prompt có sẵn
-        </button>
+        can("prompt.save") && (
+          <button type="button" className="btn btn-dashed" onClick={() => setWithPrompt(true)} disabled={busy}>
+            + Thêm prompt có sẵn
+          </button>
+        )
       )}
       {error && (
         <p className="error" role="alert">
@@ -151,6 +156,8 @@ function GridSkeleton() {
 
 export default function Products() {
   const { data, isLoading, error, refetch } = useProducts();
+  const can = useCan();
+  const canAdd = can("product.edit");
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
   const dq = useDebounce(q, 250);
@@ -168,9 +175,11 @@ export default function Products() {
           <h1>Sản phẩm</h1>
           <p>{data ? `${data.items.length} sản phẩm` : " "}</p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
-          + Sản phẩm mới
-        </button>
+        {canAdd && (
+          <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
+            + Sản phẩm mới
+          </button>
+        )}
       </div>
 
       {(data?.items.length > 0 || q) && (
@@ -187,12 +196,14 @@ export default function Products() {
         <EmptyState
           title="Chưa có sản phẩm nào"
           action={
-            <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
-              + Thêm sản phẩm đầu tiên
-            </button>
+            canAdd && (
+              <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
+                + Thêm sản phẩm đầu tiên
+              </button>
+            )
           }
         >
-          Thêm sản phẩm đầu tiên kèm ảnh để dễ nhận ra khi tạo prompt.
+          {canAdd ? "Thêm sản phẩm đầu tiên kèm ảnh để dễ nhận ra khi tạo prompt." : "Khi team thêm sản phẩm, chúng sẽ hiện ở đây."}
         </EmptyState>
       ) : !items.length ? (
         <EmptyState title="Không thấy sản phẩm nào khớp">Thử tìm bằng tên ngắn hơn hoặc bằng mã sản phẩm.</EmptyState>

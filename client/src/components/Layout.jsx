@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../auth.jsx";
+import { useAuth, useCan } from "../auth.jsx";
 import { preload } from "../pages/index.js";
 import { useClickOutside } from "../lib/util.js";
 import { Skeleton } from "./ui.jsx";
@@ -28,10 +28,13 @@ const NAV = [
   { to: "/resources", label: "Tài nguyên", page: "resources" },
   { to: "/library", label: "Thư viện", page: "library" },
   { to: "/settings", label: "Cài đặt", page: "settings", foot: true },
-  { to: "/admin", label: "Quản trị", page: "admin", foot: true },
+  { to: "/admin", label: "Quản trị", page: "admin", foot: true, perm: "admin.view" },
 ];
 
-const useNav = () => NAV;
+const useNav = () => {
+  const can = useCan();
+  return NAV.filter((n) => !n.perm || can(n.perm));
+};
 
 // Pages with their own tab on phones; the rest sit under "Thêm".
 const TABS = 4;
@@ -159,7 +162,10 @@ function Sidebar({ nav }) {
         </span>
         <span>
           <b>{name}</b>
-          <small>{user.role === "admin" ? "Quản trị viên" : `@${user.username}`}</small>
+          <small>
+            {user.roleName || `@${user.username}`}
+            {user.tier?.key === "premium" && " · Premium"}
+          </small>
         </span>
       </Link>
       <nav className="side-nav" aria-label="Điều hướng chính">

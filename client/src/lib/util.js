@@ -34,6 +34,13 @@ export const fmtDateTimeFull = (d) => {
   return `${pad(t.getDate())}/${pad(t.getMonth() + 1)}/${t.getFullYear()} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
 };
 export const fmtDate = (d) => (d ? dateOnly.format(new Date(d)) : "");
+// "YYYY-MM-DD" of a moment on the team's clock (Vietnam), as date inputs and the server expect.
+export const vnDay = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date(d));
+export const addDays = (day, n) => {
+  const t = new Date(`${day}T12:00:00Z`);
+  t.setUTCDate(t.getUTCDate() + n);
+  return t.toISOString().slice(0, 10);
+};
 
 // ---- localStorage that never throws (private mode, blocked storage)
 export const store = {

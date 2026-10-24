@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
+import { useCan } from "../auth.jsx";
 import { mapCachedPrompts } from "../lib/queries.js";
 import { fmtDateTime, fmtDateTimeFull } from "../lib/util.js";
 import { Field, Modal } from "./ui.jsx";
@@ -94,6 +95,7 @@ export default function PromptCard({ item, showProduct = false }) {
   const toast = useToast();
   const navigate = useNavigate();
   const { flash, copy } = useCopy();
+  const can = useCan();
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const product = item.product || {};
@@ -113,6 +115,8 @@ export default function PromptCard({ item, showProduct = false }) {
   });
 
   const mine = item.mine !== false;
+  const canEdit = mine && can("prompt.save");
+  const canDelete = can(mine ? "prompt.save" : "prompt.delete");
   const reuse = () => navigate("/", { state: { reuse: { productId: product._id, settings: item.settings } } });
   // Pasted prompts (and some imported ones) have no builder choices to load back.
   const canReuse = item.source !== "external" && item.settings && Object.keys(item.settings).length > 0;
@@ -176,14 +180,16 @@ export default function PromptCard({ item, showProduct = false }) {
             Dùng lại và chỉnh
           </button>
         )}
-        {mine && !editing && (
+        {canEdit && !editing && (
           <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(true)}>
             {external ? "Sửa" : "Sửa ghi chú"}
           </button>
         )}
-        <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => setConfirming(true)}>
-          Xoá
-        </button>
+        {canDelete && (
+          <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => setConfirming(true)}>
+            Xoá
+          </button>
+        )}
       </div>
       <Modal open={confirming} onClose={() => setConfirming(false)} title="Xoá prompt này?">
         <p>

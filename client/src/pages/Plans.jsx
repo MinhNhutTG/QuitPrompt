@@ -47,9 +47,9 @@ function dueRange(due, today) {
   return {};
 }
 
-function MemberSelect({ value, onChange, members, me, emptyLabel, label }) {
+function MemberSelect({ value, onChange, members, me, emptyLabel, label, disabled }) {
   return (
-    <select className="input" aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}>
+    <select className="input" aria-label={label} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
       {emptyLabel !== undefined && <option value="">{emptyLabel}</option>}
       {members.map((m) => (
         <option key={m.id} value={m.id}>
@@ -70,8 +70,9 @@ const formOf = (plan, me, today) =>
 const FIELDS = ["product", "target", "assignee", "dueDate", "status", "done"];
 
 // One editable row. plan = null for a new, unsaved row.
-// Anyone fills in a new row (status included); on a saved row only the assignee changes the status.
-function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSelect }) {
+// A new row is filled in by whoever may add plans (status included). On a saved row, roles with plan.edit change
+// the details and only the assignee changes the status; roles with plan.delete may delete or select it.
+function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSelect, canEdit, canDelete }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState(() => formOf(plan, me, today));
@@ -81,6 +82,7 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
   const dirty = !plan || FIELDS.some((k) => form[k] !== base[k]);
   const canStatus = !plan || plan.assignee.id === me;
+  const locked = Boolean(plan) && !canEdit;
   const target = Number(form.target);
 
   const save = useMutation({
@@ -99,7 +101,8 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
     if (!form.assignee) return toast("Chọn người thực hiện.", { tone: "danger" });
     const done = Number(form.done) || 0;
     if (form.status === "partial" && (done < 0 || done >= target)) return toast(`"Còn thiếu" thì số đã làm phải từ 0 đến ${target - 1}.`, { tone: "danger" });
-    const body = { target, assignee: form.assignee, dueDate: form.dueDate };
+    // Without plan.edit only the status may change, so the rest is not sent.
+    const body = locked ? {} : { target, assignee: form.assignee, dueDate: form.dueDate };
     // A saved row only sends the status when it changed: others may edit the rest but not the status.
     if (!plan || form.status !== base.status || form.done !== base.done) Object.assign(body, { status: form.status, done });
     save.mutate(body);
@@ -109,7 +112,7 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
   return (
     <tr className={[!plan && "is-draft", plan?.status === "done" && "is-done", dirty && plan && "is-dirty", selected && "is-selected"].filter(Boolean).join(" ")}>
       <td className="plan-check">
-        {plan && (
+        {plan && canDelete && (
           <label>
             <input type="checkbox" checked={selected} onChange={(e) => onSelect(plan, e.target.checked)} aria-label={`Chọn kế hoạch ${plan.product.name}`} />
             <span className="plan-check-text">Chọn</span>
@@ -119,6 +122,8 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
       <td data-label="Sản phẩm" className="plan-product-cell">
         {plan && plan.product.name.startsWith("(") ? (
           <span className="hint">{plan.product.name}</span>
+        ) : locked ? (
+          <span>{plan.product.name}</span>
         ) : (
           <ProductPicker value={form.product} onChange={(p) => set("product")(p?._id || null)} placeholder="Chọn sản phẩm" label="Sản phẩm" />
         )}
@@ -131,15 +136,16 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
           placeholder="10"
           maxLength={3}
           value={form.target}
+          disabled={locked}
           onChange={(e) => set("target")(e.target.value.replace(/\D/g, ""))}
         />
       </td>
       <td data-label="Người thực hiện">
-        <MemberSelect value={form.assignee} onChange={set("assignee")} members={members} me={me} emptyLabel={form.assignee ? undefined : "Chọn người"} label="Người thực hiện" />
+        <MemberSelect value={form.assignee} onChange={set("assignee")} members={members} me={me} emptyLabel={form.assignee ? undefined : "Chọn người"} label="Người thực hiện" disabled={locked} />
       </td>
       <td data-label="Hạn">
         <div className="plan-due">
-          <input className="input" type="date" aria-label="Hạn hoàn thành" value={form.dueDate} onChange={(e) => set("dueDate")(e.target.value)} />
+          <input className="input" type="date" aria-label="Hạn hoàn thành" value={form.dueDate} disabled={locked} onChange={(e) => set("dueDate")(e.target.value)} />
           {overdue && <span className="plan-overdue">Quá hạn</span>}
         </div>
       </td>
@@ -188,9 +194,11 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
             Huỷ sửa
           </button>
         )}
-        <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => onDelete(plan)}>
-          Xoá
-        </button>
+        {(!plan || canDelete) && (
+          <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => onDelete(plan)}>
+            Xoá
+          </button>
+        )}
         {plan && !dirty && (
           <Link className="btn btn-sm btn-ghost" to={`/?product=${plan.product._id}`}>
             Tạo prompt
@@ -203,7 +211,9 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
 
 // The whole team's plans, always. Filters only narrow the view and live in the URL.
 export default function Plans() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  const canEdit = can("plan.edit");
+  const canDelete = can("plan.delete");
   const qc = useQueryClient();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
@@ -314,9 +324,11 @@ export default function Plans() {
           <h1>Kế hoạch video</h1>
           <p>Kế hoạch của cả team: sản phẩm nào cần bao nhiêu video, ai làm, tới đâu rồi.</p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={addDraft} disabled={!members.length}>
-          + Thêm kế hoạch
-        </button>
+        {canEdit && (
+          <button type="button" className="btn btn-primary" onClick={addDraft} disabled={!members.length}>
+            + Thêm kế hoạch
+          </button>
+        )}
       </div>
 
       <div className="filters">
@@ -415,12 +427,14 @@ export default function Plans() {
           <EmptyState
             title="Chưa có kế hoạch nào"
             action={
-              <button type="button" className="btn btn-primary" onClick={addDraft}>
-                + Thêm kế hoạch
-              </button>
+              canEdit && (
+                <button type="button" className="btn btn-primary" onClick={addDraft}>
+                  + Thêm kế hoạch
+                </button>
+              )
             }
           >
-            Thêm một dòng, chọn sản phẩm, số video cần làm, người thực hiện và hạn rồi bấm Lưu.
+            {canEdit ? "Thêm một dòng, chọn sản phẩm, số video cần làm, người thực hiện và hạn rồi bấm Lưu." : "Khi có kế hoạch video, chúng sẽ hiện ở đây."}
           </EmptyState>
         )
       ) : (
@@ -443,14 +457,16 @@ export default function Plans() {
               <thead>
                 <tr>
                   <th className="plan-check">
-                    <input
-                      type="checkbox"
-                      aria-label="Chọn mọi kế hoạch trên trang này"
-                      checked={pageAllOn}
-                      ref={(el) => el && (el.indeterminate = !pageAllOn && items.some((p) => selected.has(p._id)))}
-                      onChange={(e) => selectPage(e.target.checked)}
-                      disabled={!items.length}
-                    />
+                    {canDelete && (
+                      <input
+                        type="checkbox"
+                        aria-label="Chọn mọi kế hoạch trên trang này"
+                        checked={pageAllOn}
+                        ref={(el) => el && (el.indeterminate = !pageAllOn && items.some((p) => selected.has(p._id)))}
+                        onChange={(e) => selectPage(e.target.checked)}
+                        disabled={!items.length}
+                      />
+                    )}
                   </th>
                   <th>Sản phẩm</th>
                   <th>Mục tiêu</th>
@@ -464,10 +480,10 @@ export default function Plans() {
               </thead>
               <tbody>
                 {drafts.map((key) => (
-                  <PlanRow key={key} plan={null} members={members} me={user?.id} today={today} onSaved={() => dropDraft(key)} onDelete={() => dropDraft(key)} />
+                  <PlanRow key={key} plan={null} members={members} me={user?.id} today={today} onSaved={() => dropDraft(key)} onDelete={() => dropDraft(key)} canEdit />
                 ))}
                 {items.map((p) => (
-                  <PlanRow key={p._id} plan={p} members={members} me={user?.id} today={data.today || today} onDelete={setDeleting} selected={selected.has(p._id)} onSelect={select} />
+                  <PlanRow key={p._id} plan={p} members={members} me={user?.id} today={data.today || today} onDelete={setDeleting} selected={selected.has(p._id)} onSelect={select} canEdit={canEdit} canDelete={canDelete} />
                 ))}
               </tbody>
             </table>

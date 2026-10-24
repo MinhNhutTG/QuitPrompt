@@ -30,6 +30,10 @@ const RULES = [
   ["POST", /^\/api\/admin\/users\/(\w+)\/password$/, "admin.user.password", "Admin: đặt lại mật khẩu", "admin"],
   ["POST", /^\/api\/admin\/users\/(\w+)\/logout$/, "admin.user.logout", "Admin: đăng xuất mọi nơi", "admin"],
   ["DELETE", /^\/api\/admin\/users\/(\w+)$/, "admin.user.delete", "Admin: xoá thành viên", "admin"],
+  ["POST", /^\/api\/admin\/roles$/, "admin.role.create", "Admin: tạo vai trò", "admin"],
+  ["PATCH", /^\/api\/admin\/roles\/(\w+)$/, "admin.role.update", "Admin: sửa vai trò", "admin"],
+  ["DELETE", /^\/api\/admin\/roles\/(\w+)$/, "admin.role.delete", "Admin: xoá vai trò", "admin"],
+  ["PATCH", /^\/api\/admin\/tiers\/(\w+)$/, "admin.tier.update", "Admin: sửa hạng tài khoản", "admin"],
 ];
 
 // Written directly by the auth routes, not matched from a path.

@@ -19,6 +19,8 @@ import settingsRoutes from "./routes/settings.js";
 import transferRoutes from "./routes/transfer.js";
 import adminRoutes from "./routes/admin.js";
 import { ActivityLog } from "./models/ActivityLog.js";
+import { ensureStarterRoles } from "./lib/permissions.js";
+import { ensureTiers } from "./lib/tiers.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -75,7 +77,7 @@ app.use("/api/plans", requireAuth, planRoutes);
 app.use("/api/resources", requireAuth, resourceRoutes);
 app.use("/api/settings", requireAuth, settingsRoutes);
 app.use("/api/transfer", requireAuth, transferRoutes);
-// Every member may look; the routes that change accounts check for an admin themselves.
+// Each route checks its own permission: admin.view to look, an admin to change accounts and roles.
 app.use("/api/admin", requireAuth, adminRoutes);
 app.use("/api", (req, res, next) => next(new HttpError(404, "Không có đường dẫn API này.")));
 
@@ -110,6 +112,10 @@ app.use((err, req, res, next) => {
 
 app.listen(config.port, () => console.log(`Xưởng Prompt: http://localhost:${config.port}`));
 // An existing TTL index keeps its old lifetime until rebuilt, so bring it in line with LOG_RETENTION_DAYS.
-connectDb(config.mongoUri)
-  .then(() => ActivityLog.syncIndexes())
-  .catch((err) => console.error("Không cập nhật được chỉ mục nhật ký:", err.message));
+connectDb(config.mongoUri).then(() =>
+  Promise.all([
+    ActivityLog.syncIndexes().catch((err) => console.error("Không cập nhật được chỉ mục nhật ký:", err.message)),
+    ensureStarterRoles().catch((err) => console.error("Không tạo được vai trò mặc định:", err.message)),
+    ensureTiers().catch((err) => console.error("Không tạo được hạng tài khoản:", err.message)),
+  ])
+);

@@ -24,6 +24,8 @@ export const useResources = () => useQuery({ queryKey: ["resources"], queryFn: a
 
 export const useAdminStats = () => useQuery({ queryKey: ["admin", "stats"], queryFn: () => api.adminStats() });
 export const useAdminUsers = () => useQuery({ queryKey: ["admin", "users"], queryFn: api.adminUsers });
+export const useAdminTiers = () => useQuery({ queryKey: ["admin", "tiers"], queryFn: api.adminTiers });
+export const useAdminRoles = () => useQuery({ queryKey: ["admin", "roles"], queryFn: api.adminRoles });
 export const useAdminLogs = (params) => useQuery({ queryKey: ["admin", "logs", params], queryFn: () => api.adminLogs(params), placeholderData: keepPreviousData });
 
 // Members and product categories for the saved-prompts filters (also the category suggestions).

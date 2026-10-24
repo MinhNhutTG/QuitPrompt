@@ -1,10 +1,17 @@
 import { useCallback, useRef, useState } from "react";
 import { api } from "../api.js";
+import { useAuth } from "../auth.jsx";
 import { compressImage } from "../lib/compress.js";
 import { uid } from "../lib/util.js";
 import { useToast } from "./Toast.jsx";
 
 export const MAX_IMAGES = 12;
+
+// Images per product the signed-in account may reach: its tier may allow fewer than the app-wide maximum.
+export function useImageCap() {
+  const { user } = useAuth();
+  return Math.min(MAX_IMAGES, user?.tier?.limits?.imagesPerProduct ?? MAX_IMAGES);
+}
 
 const isImage = (f) => f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|heic|heif|avif)$/i.test(f.name);
 
@@ -87,14 +94,16 @@ export function JobList({ jobs, onDismiss }) {
 }
 
 // Drop zone + file picker. On phones accept="image/*" also offers the camera.
-export function DropZone({ onFiles, room = MAX_IMAGES, disabled, label = "+ Ảnh" }) {
+export function DropZone({ onFiles, room, disabled, label = "+ Ảnh" }) {
   const toast = useToast();
+  const cap = useImageCap();
+  room ??= cap;
   const [over, setOver] = useState(false);
 
   function take(fileList) {
     const files = [...(fileList || [])].filter(isImage);
     if (!files.length) return toast("Chỉ nhận file ảnh (JPG, PNG, WEBP, HEIC...).", { tone: "danger" });
-    if (room <= 0) return toast(`Mỗi sản phẩm tối đa ${MAX_IMAGES} ảnh.`, { tone: "danger" });
+    if (room <= 0) return toast(`Mỗi sản phẩm tối đa ${cap} ảnh${cap < MAX_IMAGES ? " với hạng tài khoản của bạn" : ""}.`, { tone: "danger" });
     if (files.length > room) toast(`Chỉ thêm được ${room} ảnh nữa, đã bỏ bớt ${files.length - room} ảnh.`, { tone: "danger" });
     onFiles(files.slice(0, room));
   }

@@ -2,26 +2,28 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
+import { useCan } from "../auth.jsx";
 import { dropProduct, putProduct, usePrompts } from "../lib/queries.js";
 import { fmtDate } from "../lib/util.js";
 import { ConfirmButton, EmptyState, ErrorState, Field, Modal, Skeleton } from "../components/ui.jsx";
 import LazyImage from "../components/LazyImage.jsx";
 import PromptCard from "../components/PromptCard.jsx";
 import { EMPTY_EXTERNAL, ExternalPromptFields, externalBody } from "../components/PromptFields.jsx";
-import { DropZone, JobList, MAX_IMAGES, useUploads } from "../components/Uploader.jsx";
+import { DropZone, JobList, useImageCap, useUploads } from "../components/Uploader.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { CategoryInput } from "../components/CategoryInput.jsx";
 
 const FIELDS = ["name", "sku", "category", "closed", "extraNeg", "note"];
 const formOf = (p) => ({ name: p.name || "", sku: p.sku || "", category: p.category || "", closed: p.closed !== false, extraNeg: p.extraNeg || "", note: p.note || "" });
 
-function Gallery({ product }) {
+function Gallery({ product, editable }) {
   const qc = useQueryClient();
   const toast = useToast();
   const images = product.images || [];
   const [current, setCurrent] = useState(images[0]?.publicId);
   const shown = images.find((i) => i.publicId === current) || images[0];
   const uploads = useUploads((item) => putProduct(qc, item));
+  const cap = useImageCap();
 
   const act = useMutation({
     mutationFn: ({ kind, publicId }) => (kind === "cover" ? api.setCover(product._id, publicId) : api.deleteImage(product._id, publicId)),
@@ -35,7 +37,7 @@ function Gallery({ product }) {
   return (
     <div className="gallery">
       <LazyImage image={shown} width={380} ratio="3 / 4" eager fit="contain" className="gallery-main" alt={product.name} />
-      {shown && (
+      {shown && editable && (
         <div className="btns">
           {shown.publicId !== images[0]?.publicId && (
             <button type="button" className="btn btn-sm" disabled={act.isPending} onClick={() => act.mutate({ kind: "cover", publicId: shown.publicId })}>
@@ -64,13 +66,17 @@ function Gallery({ product }) {
           ))}
         </div>
       )}
-      <DropZone room={MAX_IMAGES - images.length - uploads.jobs.filter((j) => j.status !== "error").length} disabled={uploads.busy} onFiles={(files) => uploads.run(product._id, files)} />
-      <JobList jobs={uploads.jobs} onDismiss={uploads.dismiss} />
+      {editable && (
+        <>
+          <DropZone room={cap - images.length - uploads.jobs.filter((j) => j.status !== "error").length} disabled={uploads.busy} onFiles={(files) => uploads.run(product._id, files)} />
+          <JobList jobs={uploads.jobs} onDismiss={uploads.dismiss} />
+        </>
+      )}
     </div>
   );
 }
 
-function InfoForm({ product }) {
+function InfoForm({ product, editable }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState(() => formOf(product));
@@ -102,38 +108,42 @@ function InfoForm({ product }) {
         save.mutate();
       }}
     >
-      <Field label="Tên sản phẩm">
-        <input className="input" value={form.name} maxLength={160} onChange={setF("name")} />
-      </Field>
-      <div className="grid-2">
-        <Field label="Mã sản phẩm">
-          <input className="input" value={form.sku} maxLength={60} onChange={setF("sku")} />
+      <fieldset className="bare" disabled={!editable}>
+        <Field label="Tên sản phẩm">
+          <input className="input" value={form.name} maxLength={160} onChange={setF("name")} />
         </Field>
-        <Field label="Loại sản phẩm">
-          <CategoryInput value={form.category} onChange={(v) => setForm((f) => ({ ...f, category: v }))} />
+        <div className="grid-2">
+          <Field label="Mã sản phẩm">
+            <input className="input" value={form.sku} maxLength={60} onChange={setF("sku")} />
+          </Field>
+          <Field label="Loại sản phẩm">
+            <CategoryInput value={form.category} onChange={(v) => setForm((f) => ({ ...f, category: v }))} />
+          </Field>
+        </div>
+        <div className="sec-h">Thông tin dùng cho prompt</div>
+        <label className="check">
+          <input type="checkbox" checked={form.closed} onChange={setF("closed")} />
+          Áo luôn đóng
+        </label>
+        <Field label="Lỗi riêng cần chặn" hint="Tiếng Anh, cách nhau bằng dấu phẩy. Tự điền vào bộ tạo khi chọn sản phẩm này.">
+          <input className="input" value={form.extraNeg} maxLength={1000} placeholder="shrinking brim, missing drawstring" onChange={setF("extraNeg")} />
         </Field>
-      </div>
-      <div className="sec-h">Thông tin dùng cho prompt</div>
-      <label className="check">
-        <input type="checkbox" checked={form.closed} onChange={setF("closed")} />
-        Áo luôn đóng
-      </label>
-      <Field label="Lỗi riêng cần chặn" hint="Tiếng Anh, cách nhau bằng dấu phẩy. Tự điền vào bộ tạo khi chọn sản phẩm này.">
-        <input className="input" value={form.extraNeg} maxLength={1000} placeholder="shrinking brim, missing drawstring" onChange={setF("extraNeg")} />
-      </Field>
-      <Field label="Ghi chú">
-        <textarea className="input" rows={3} value={form.note} maxLength={2000} onChange={setF("note")} />
-      </Field>
-      <div className="btns btns-end">
-        {dirty && (
-          <button type="button" className="btn btn-ghost" onClick={() => setForm(base)}>
-            Bỏ thay đổi
+        <Field label="Ghi chú">
+          <textarea className="input" rows={3} value={form.note} maxLength={2000} onChange={setF("note")} />
+        </Field>
+      </fieldset>
+      {editable && (
+        <div className="btns btns-end">
+          {dirty && (
+            <button type="button" className="btn btn-ghost" onClick={() => setForm(base)}>
+              Bỏ thay đổi
+            </button>
+          )}
+          <button type="submit" className="btn btn-primary" disabled={!dirty || save.isPending}>
+            {save.isPending ? "Đang lưu..." : "Lưu thay đổi"}
           </button>
-        )}
-        <button type="submit" className="btn btn-primary" disabled={!dirty || save.isPending}>
-          {save.isPending ? "Đang lưu..." : "Lưu thay đổi"}
-        </button>
-      </div>
+        </div>
+      )}
     </form>
   );
 }
@@ -185,8 +195,9 @@ function AddPromptForm({ productId, onClose }) {
 function ProductPrompts({ productId }) {
   const { data, isLoading, error, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } = usePrompts({ product: productId });
   const [adding, setAdding] = useState(false);
+  const canSave = useCan()("prompt.save");
   const items = data?.pages.flatMap((p) => p.items) || [];
-  const addButton = (
+  const addButton = canSave && (
     <button type="button" className="btn" onClick={() => setAdding(true)}>
       + Thêm prompt
     </button>
@@ -239,6 +250,7 @@ export default function ProductDetail() {
   const qc = useQueryClient();
   const toast = useToast();
   const navigate = useNavigate();
+  const can = useCan();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["product", id],
     queryFn: () => api.product(id),
@@ -303,26 +315,28 @@ export default function ProductDetail() {
       </div>
 
       <div className="grid-2 detail">
-        <Gallery key={p._id} product={p} />
+        <Gallery key={p._id} product={p} editable={can("product.edit")} />
         <div className="card">
-          <InfoForm product={p} />
+          <InfoForm product={p} editable={can("product.edit")} />
         </div>
       </div>
 
       <ProductPrompts productId={p._id} />
 
-      <div className="card danger-zone">
-        <div>
-          <b>Xoá sản phẩm</b>
-          <p className="hint">
-            Sản phẩm dùng chung cả nhóm: xoá là mất với mọi người, cùng {nImages} ảnh, {nPrompts} prompt và các kế hoạch video của nó. Không khôi
-            phục được.
-          </p>
+      {can("product.delete") && (
+        <div className="card danger-zone">
+          <div>
+            <b>Xoá sản phẩm</b>
+            <p className="hint">
+              Sản phẩm dùng chung cả nhóm: xoá là mất với mọi người, cùng {nImages} ảnh, {nPrompts} prompt và các kế hoạch video của nó. Không khôi
+              phục được.
+            </p>
+          </div>
+          <ConfirmButton onConfirm={() => remove.mutate()} disabled={remove.isPending} confirmLabel="Bấm lần nữa để xoá hẳn">
+            Xoá sản phẩm
+          </ConfirmButton>
         </div>
-        <ConfirmButton onConfirm={() => remove.mutate()} disabled={remove.isPending} confirmLabel="Bấm lần nữa để xoá hẳn">
-          Xoá sản phẩm
-        </ConfirmButton>
-      </div>
+      )}
     </div>
   );
 }

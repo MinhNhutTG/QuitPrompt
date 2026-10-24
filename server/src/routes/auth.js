@@ -6,6 +6,7 @@ import { config } from "../config.js";
 import { User } from "../models/User.js";
 import { ah, parse, HttpError } from "../lib/http.js";
 import { writeLog } from "../lib/audit.js";
+import { publicUser } from "../lib/permissions.js";
 import { signSession, clearSession, requireAuth, refreshIfOld, sessionUserId } from "../middleware/auth.js";
 
 const router = Router();
@@ -75,7 +76,7 @@ router.post(
     }
     signSession(res, user._id, remember, user.sessionVersion);
     res.locals.audit = { userId: user._id, label: user.username };
-    res.status(201).json({ user: user.toPublic() });
+    res.status(201).json({ user: await publicUser(user) });
   })
 );
 
@@ -99,7 +100,7 @@ router.post(
     await promoteIfListed(user);
     signSession(res, user._id, remember, user.sessionVersion);
     res.locals.audit = { userId: user._id, label: user.username };
-    res.json({ user: user.toPublic() });
+    res.json({ user: await publicUser(user) });
   })
 );
 
@@ -120,7 +121,7 @@ router.get(
     }
     await promoteIfListed(user);
     refreshIfOld(req, res);
-    res.json({ user: user.toPublic() });
+    res.json({ user: await publicUser(user) });
   })
 );
 

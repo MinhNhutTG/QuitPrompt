@@ -6,6 +6,8 @@ import { Prompt } from "../models/Prompt.js";
 import { VideoPlan } from "../models/VideoPlan.js";
 import { ah, parse, assertId, escapeRegex, text, HttpError } from "../lib/http.js";
 import { requireCloudinary, uploadBuffer, destroyImages } from "../lib/cloudinary.js";
+import { can } from "../middleware/auth.js";
+import { assertDailyLimit } from "../lib/tiers.js";
 
 const router = Router();
 
@@ -19,7 +21,7 @@ const createSchema = z.object({
 });
 const patchSchema = createSchema.partial();
 
-// Products belong to the whole team: any member may read, change or delete any of them.
+// Products belong to the whole team: everyone may read them; changing or deleting needs the role's permission.
 // `owner` only records who created it.
 async function findProduct(req, id = req.params.id) {
   assertId(id, "sản phẩm");
@@ -45,8 +47,10 @@ router.get(
 
 router.post(
   "/",
+  can("product.edit"),
   ah(async (req, res) => {
     const data = parse(createSchema, req.body);
+    await assertDailyLimit(req, "productsPerDay", (since) => Product.countDocuments({ owner: req.userId, createdAt: { $gte: since } }));
     const item = await Product.create({ ...data, owner: req.userId });
     res.status(201).json({ item });
   })
@@ -61,6 +65,7 @@ router.get(
 
 router.patch(
   "/:id",
+  can("product.edit"),
   ah(async (req, res) => {
     const data = parse(patchSchema, req.body);
     const item = await findProduct(req);
@@ -72,6 +77,7 @@ router.patch(
 
 router.delete(
   "/:id",
+  can("product.delete"),
   ah(async (req, res) => {
     const item = await findProduct(req);
     await Promise.all([Prompt.deleteMany({ product: item._id }), VideoPlan.deleteMany({ product: item._id })]);
@@ -109,6 +115,7 @@ function receiveImages(req, res, next) {
 
 router.post(
   "/:id/images",
+  can("product.edit"),
   requireCloudinary,
   // The product is checked before the upload body is read.
   ah(async (req, res, next) => {
@@ -120,8 +127,10 @@ router.post(
     const files = req.files || [];
     if (!files.length) throw new HttpError(400, "Chưa chọn ảnh nào.");
     const product = req.product;
-    const room = MAX_IMAGES - product.images.length;
-    if (files.length > room) throw new HttpError(400, `Mỗi sản phẩm tối đa ${MAX_IMAGES} ảnh. Còn thêm được ${Math.max(0, room)} ảnh.`);
+    // The uploader's tier may allow fewer images than the app-wide maximum.
+    const cap = Math.min(MAX_IMAGES, req.limits?.imagesPerProduct ?? MAX_IMAGES);
+    const room = cap - product.images.length;
+    if (files.length > room) throw new HttpError(400, `Mỗi sản phẩm tối đa ${cap} ảnh${cap < MAX_IMAGES ? " với hạng tài khoản của bạn" : ""}. Còn thêm được ${Math.max(0, room)} ảnh.`);
 
     const folder = `prompt-studio/${req.userId}/${product._id}`;
     let uploaded;
@@ -135,13 +144,13 @@ router.post(
 
     // Atomic guard: the browser uploads several images in parallel.
     const item = await Product.findOneAndUpdate(
-      { _id: product._id, [`images.${MAX_IMAGES - images.length}`]: { $exists: false } },
+      { _id: product._id, [`images.${cap - images.length}`]: { $exists: false } },
       { $push: { images: { $each: images } } },
       { new: true }
     );
     if (!item) {
       await destroyImages(images.map((i) => i.publicId));
-      throw new HttpError(400, `Mỗi sản phẩm tối đa ${MAX_IMAGES} ảnh.`);
+      throw new HttpError(400, `Mỗi sản phẩm tối đa ${cap} ảnh.`);
     }
     res.status(201).json({ item });
   })
@@ -149,6 +158,7 @@ router.post(
 
 router.delete(
   "/:id/images",
+  can("product.edit"),
   ah(async (req, res) => {
     const publicId = String(req.query.publicId || "");
     const product = await findProduct(req);
@@ -161,6 +171,7 @@ router.delete(
 
 router.post(
   "/:id/cover",
+  can("product.edit"),
   ah(async (req, res) => {
     const { publicId } = parse(z.object({ publicId: z.string({ required_error: "Thiếu ảnh cần đặt." }) }), req.body);
     const item = await findProduct(req);
@@ -175,10 +186,13 @@ router.post(
 
 export default router;
 
-// Case-insensitive exact name match across the team; created (owned by `owner`) when missing.
+// Case-insensitive exact name match across the team; created (owned by `owner`) when missing,
+// unless `create` is false (then null). With req, creating counts toward that account's daily product limit.
 // Used when saving prompts.
-export async function findOrCreateProduct(owner, name) {
+export async function findOrCreateProduct(owner, name, create = true, req = null) {
   const clean = name.trim().slice(0, 160);
   const existing = await Product.findOne({ name: new RegExp(`^${escapeRegex(clean)}$`, "i") });
-  return existing || Product.create({ owner, name: clean });
+  if (existing || !create) return existing;
+  if (req) await assertDailyLimit(req, "productsPerDay", (since) => Product.countDocuments({ owner, createdAt: { $gte: since } }));
+  return Product.create({ owner, name: clean });
 }

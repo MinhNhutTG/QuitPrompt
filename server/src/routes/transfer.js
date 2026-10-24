@@ -5,6 +5,7 @@ import { Product } from "../models/Product.js";
 import { Prompt } from "../models/Prompt.js";
 import { Settings, MAX_CUSTOM_ACTIONS } from "../models/Settings.js";
 import { ah, HttpError } from "../lib/http.js";
+import { can } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -30,6 +31,7 @@ function toDate(v) {
 
 router.post(
   "/import",
+  can("data.import"),
   ah(async (req, res) => {
     const body = req.body;
     const owner = req.userId;
@@ -162,6 +164,7 @@ router.post(
 // Products and prompts are the whole team's; template and custom actions are the exporter's own.
 router.get(
   "/export",
+  can("data.export"),
   ah(async (req, res) => {
     const owner = req.userId;
     const [products, prompts, settings] = await Promise.all([

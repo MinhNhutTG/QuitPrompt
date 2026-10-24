@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
+import { useCan } from "../auth.jsx";
 import { snapshot } from "../lib/prompt.js";
 import { store } from "../lib/util.js";
 import { Field, Modal } from "./ui.jsx";
@@ -16,6 +17,7 @@ function SaveForm({ state, result, onClose, onSaved }) {
   const [tool, setTool] = useState(() => store.get("lastTool", "Meta AI"));
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
+  const canAddProduct = useCan()("product.edit");
 
   const save = useMutation({
     mutationFn: () =>
@@ -62,7 +64,7 @@ function SaveForm({ state, result, onClose, onSaved }) {
             setProductId(p?._id || null);
             setNewName("");
           }}
-          onCreate={createNow}
+          onCreate={canAddProduct ? createNow : undefined}
         />
       </Field>
       <Field label="Công cụ đã dùng">

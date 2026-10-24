@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
+import { useCan } from "../auth.jsx";
 import { buildIndex } from "../lib/actions.js";
 import { buildPrompt, DEFAULT_STATE, DURATIONS, normalizeSettings, sanitizeIds } from "../lib/prompt.js";
 import { putProduct, useProducts, useSettings } from "../lib/queries.js";
@@ -26,6 +27,7 @@ const fromProduct = (p) => ({ productId: p._id, closed: p.closed !== false, extr
 export default function Builder() {
   const qc = useQueryClient();
   const toast = useToast();
+  const can = useCan();
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
@@ -101,7 +103,7 @@ export default function Builder() {
             <ProductPicker
               value={state.productId}
               onChange={(p) => set(p ? fromProduct(p) : { productId: null })}
-              onCreate={createProduct}
+              onCreate={can("product.edit") ? createProduct : undefined}
               allowClear
             />
           </div>
@@ -170,7 +172,7 @@ export default function Builder() {
         </div>
 
         <div className="card slate ink">
-          <PromptPanel product={product} result={result} onSave={() => setSaving(true)} />
+          <PromptPanel product={product} result={result} onSave={can("prompt.save") ? () => setSaving(true) : undefined} />
         </div>
       </div>
 

@@ -9,6 +9,7 @@ const NETWORK = "Không kết nối được máy chủ. Kiểm tra mạng rồi
 const WAKING = "Máy chủ đang khởi động, chờ khoảng 1 phút rồi thử lại.";
 
 let unauthorized = null;
+let forbidden = null;
 // AuthProvider registers here: any 401 clears the cache and returns to the login screen.
 export function onUnauthorized(fn) {
   unauthorized = fn;
@@ -17,8 +18,17 @@ export function onUnauthorized(fn) {
   };
 }
 
+// AuthProvider registers here too: a 403 may mean an admin just changed this account's permissions.
+export function onForbidden(fn) {
+  forbidden = fn;
+  return () => {
+    if (forbidden === fn) forbidden = null;
+  };
+}
+
 function fail(status, data, notify401) {
   if (status === 401 && notify401) unauthorized?.();
+  if (status === 403 && notify401) forbidden?.();
   const msg = data?.error || (status >= 502 ? WAKING : `Có lỗi xảy ra (mã ${status}). Thử lại sau.`);
   return new ApiError(status, msg);
 }
@@ -115,6 +125,12 @@ export const api = {
   adminLogoutUser: (id) => request("POST", `/admin/users/${id}/logout`),
   adminDeleteUser: (id) => request("DELETE", `/admin/users/${id}`),
   adminLogs: (params) => request("GET", "/admin/logs" + qs(params)),
+  adminRoles: () => request("GET", "/admin/roles"),
+  adminCreateRole: (body) => request("POST", "/admin/roles", body),
+  adminUpdateRole: (key, body) => request("PATCH", `/admin/roles/${key}`, body),
+  adminDeleteRole: (key) => request("DELETE", `/admin/roles/${key}`),
+  adminTiers: () => request("GET", "/admin/tiers"),
+  adminUpdateTier: (key, body) => request("PATCH", `/admin/tiers/${key}`, body),
 
   settings: () => request("GET", "/settings"),
   saveSettings: (body) => request("PUT", "/settings", body),

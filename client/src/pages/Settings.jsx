@@ -5,6 +5,7 @@ import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { DEFAULT_NEGATIVE, DEFAULT_TEMPLATE, TEMPLATE_VARS } from "../lib/prompt.js";
 import { useSettings } from "../lib/queries.js";
+import { fmtDate } from "../lib/util.js";
 import { ConfirmButton, ErrorState, Field, Skeleton } from "../components/ui.jsx";
 import { useToast } from "../components/Toast.jsx";
 
@@ -106,6 +107,13 @@ function TemplateBlock() {
   );
 }
 
+const LIMIT_TEXT = { promptsPerDay: "prompt/ngày", productsPerDay: "sản phẩm/ngày", imagesPerProduct: "ảnh/sản phẩm" };
+const limitText = (limits = {}) =>
+  Object.entries(LIMIT_TEXT)
+    .filter(([k]) => limits[k] != null)
+    .map(([k, unit]) => `${limits[k]} ${unit}`)
+    .join(" · ") || "Không giới hạn";
+
 function AccountBlock() {
   const { user, signOut } = useAuth();
   const toast = useToast();
@@ -129,6 +137,15 @@ function AccountBlock() {
       <dl className="kv">
         <dt>Tên đăng nhập</dt>
         <dd>{user.username}</dd>
+        <dt>Vai trò</dt>
+        <dd>{user.roleName}</dd>
+        <dt>Hạng tài khoản</dt>
+        <dd>
+          {user.tier?.name}
+          {user.tier?.until && <span className="hint"> · đến hết {fmtDate(user.tier.until)}</span>}
+        </dd>
+        <dt>Giới hạn</dt>
+        <dd>{limitText(user.tier?.limits)}</dd>
       </dl>
       <form
         className="form"
@@ -177,7 +194,8 @@ function AccountBlock() {
   );
 }
 
-function TransferBlock() {
+// Shown only to roles with data.import or data.export; each button needs its own.
+function TransferBlock({ canImport, canExport }) {
   const qc = useQueryClient();
   const toast = useToast();
   const fileRef = useRef(null);
@@ -225,12 +243,16 @@ function TransferBlock() {
             if (f) run.mutate(f);
           }}
         />
-        <button type="button" className="btn" disabled={run.isPending} onClick={() => fileRef.current?.click()}>
-          {run.isPending ? "Đang nhập..." : "Nhập file .json"}
-        </button>
-        <a className="btn btn-primary" href={api.exportUrl} download onClick={() => toast("Đang tải file dữ liệu", { tone: "info", detail: "Trình duyệt sẽ lưu file .json vào thư mục Tải về." })}>
-          Xuất toàn bộ dữ liệu
-        </a>
+        {canImport && (
+          <button type="button" className="btn" disabled={run.isPending} onClick={() => fileRef.current?.click()}>
+            {run.isPending ? "Đang nhập..." : "Nhập file .json"}
+          </button>
+        )}
+        {canExport && (
+          <a className="btn btn-primary" href={api.exportUrl} download onClick={() => toast("Đang tải file dữ liệu", { tone: "info", detail: "Trình duyệt sẽ lưu file .json vào thư mục Tải về." })}>
+            Xuất toàn bộ dữ liệu
+          </a>
+        )}
       </div>
       {result && (
         <p className="ok-text" role="status">
@@ -267,6 +289,7 @@ function AboutBlock() {
 
 export default function Settings() {
   const { hash } = useLocation();
+  const { can } = useAuth();
   useEffect(() => {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
   }, [hash]);
@@ -276,7 +299,7 @@ export default function Settings() {
       <h1>Cài đặt</h1>
       <TemplateBlock />
       <AccountBlock />
-      <TransferBlock />
+      {(can("data.import") || can("data.export")) && <TransferBlock canImport={can("data.import")} canExport={can("data.export")} />}
       <AboutBlock />
     </div>
   );

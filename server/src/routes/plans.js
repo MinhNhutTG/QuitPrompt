@@ -5,6 +5,8 @@ import { VideoPlan, PLAN_STATUSES } from "../models/VideoPlan.js";
 import { Product } from "../models/Product.js";
 import { User } from "../models/User.js";
 import { ah, parse, assertId, isId, escapeRegex, text, HttpError } from "../lib/http.js";
+import { can } from "../middleware/auth.js";
+import { deniedMessage } from "../lib/permissions.js";
 
 const router = Router();
 
@@ -140,6 +142,7 @@ router.get(
 
 router.post(
   "/",
+  can("plan.edit"),
   ah(async (req, res) => {
     const data = parse(createSchema, req.body);
     const productIds = [...new Set(data.products)];
@@ -156,7 +159,7 @@ router.post(
   })
 );
 
-// Anyone may change target, assignee, due day and note; only the assignee picks the status.
+// Target, assignee, due day and note need plan.edit; the status is the assignee's alone, whatever their role.
 router.patch(
   "/:id",
   ah(async (req, res) => {
@@ -166,6 +169,9 @@ router.patch(
     if (!plan) throw new HttpError(404, "Không tìm thấy kế hoạch.");
     if ((data.status !== undefined || data.done !== undefined) && String(plan.assignee) !== String(req.userId)) {
       throw new HttpError(403, "Chỉ người thực hiện mới cập nhật được trạng thái.");
+    }
+    if (Object.keys(data).some((k) => k !== "status" && k !== "done") && !req.permissions.has("plan.edit")) {
+      throw new HttpError(403, deniedMessage("plan.edit"));
     }
     if (data.assignee) await assertMember(data.assignee);
     plan.set(data);
@@ -183,6 +189,7 @@ const bulkDeleteSchema = z.object({
 // Deletes every chosen plan in one go; plans already gone are simply skipped.
 router.post(
   "/bulk-delete",
+  can("plan.delete"),
   ah(async (req, res) => {
     const { ids } = parse(bulkDeleteSchema, req.body);
     const { deletedCount } = await VideoPlan.deleteMany({ _id: { $in: [...new Set(ids)] } });
@@ -192,6 +199,7 @@ router.post(
 
 router.delete(
   "/:id",
+  can("plan.delete"),
   ah(async (req, res) => {
     assertId(req.params.id, "kế hoạch");
     const plan = await VideoPlan.findByIdAndDelete(req.params.id);

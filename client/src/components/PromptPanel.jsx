@@ -52,9 +52,11 @@ export default function PromptPanel({ product, result, onSave }) {
           <button type="button" className="btn" onClick={() => copy(withNegative(result.prompt, result.negative), "all")}>
             Copy + negative
           </button>
-          <button type="button" className="btn btn-accent-soft" onClick={onSave}>
-            ★ Lưu prompt tốt
-          </button>
+          {onSave && (
+            <button type="button" className="btn btn-accent-soft" onClick={onSave}>
+              ★ Lưu prompt tốt
+            </button>
+          )}
         </div>
       </div>
       <div className="sec">
@@ -72,9 +74,11 @@ export default function PromptPanel({ product, result, onSave }) {
         <button type="button" className="btn btn-primary" onClick={() => copy(result.prompt, "p")}>
           Copy prompt
         </button>
-        <button type="button" className="btn" onClick={onSave} aria-label="Lưu prompt tốt">
-          ★ Lưu
-        </button>
+        {onSave && (
+          <button type="button" className="btn" onClick={onSave} aria-label="Lưu prompt tốt">
+            ★ Lưu
+          </button>
+        )}
       </div>
     </>
   );

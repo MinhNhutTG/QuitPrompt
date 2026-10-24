@@ -1,9 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { api, onUnauthorized } from "./api.js";
+import { api, onForbidden, onUnauthorized } from "./api.js";
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
+// can("product.edit"): whether the signed-in role may do it (the server checks again).
+export const useCan = () => useContext(AuthCtx).can;
 
 export function AuthProvider({ children }) {
   const qc = useQueryClient();
@@ -53,6 +55,16 @@ export function AuthProvider({ children }) {
     [qc]
   );
 
+  // Picks up permission changes an admin made while this screen was open.
+  useEffect(
+    () =>
+      onForbidden(() => {
+        api.me().then(({ user }) => setUser(user), () => {});
+      }),
+    []
+  );
+
+  const can = useCallback((perm) => Boolean(user && (user.role === "admin" || user.permissions?.includes(perm))), [user]);
   const signIn = useCallback((u) => setUser(u), []);
   const signOut = useCallback(async () => {
     try {
@@ -64,7 +76,7 @@ export function AuthProvider({ children }) {
   }, [qc]);
 
   if (booting) return <BootScreen waking={waking} />;
-  return <AuthCtx.Provider value={{ user, signIn, signOut }}>{children}</AuthCtx.Provider>;
+  return <AuthCtx.Provider value={{ user, can, signIn, signOut }}>{children}</AuthCtx.Provider>;
 }
 
 function BootScreen({ waking }) {

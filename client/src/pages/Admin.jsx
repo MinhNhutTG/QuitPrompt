@@ -3,14 +3,15 @@ import { useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
-import { useAdminLogs, useAdminStats, useAdminUsers } from "../lib/queries.js";
-import { fmtDateTime, fmtDateTimeFull, useDebounce } from "../lib/util.js";
-import { ConfirmButton, EmptyState, ErrorState, Field, Modal, Pager, Seg, Skeleton } from "../components/ui.jsx";
+import { useAdminLogs, useAdminRoles, useAdminStats, useAdminTiers, useAdminUsers } from "../lib/queries.js";
+import { addDays, fmtDate, fmtDateTime, fmtDateTimeFull, useDebounce, vnDay } from "../lib/util.js";
+import { ConfirmButton, EmptyState, ErrorState, Field, Modal, Pager, Skeleton } from "../components/ui.jsx";
 import { useToast } from "../components/Toast.jsx";
 
 const TABS = [
   { value: "overview", label: "Tổng quan" },
   { value: "users", label: "Thành viên" },
+  { value: "roles", label: "Phân quyền & hạng" },
   { value: "logs", label: "Nhật ký" },
 ];
 
@@ -38,11 +39,29 @@ const FIELD_NAMES = {
   role: "vai trò",
   disabled: "khoá",
   customActions: "động tác riêng",
+  permissions: "quyền",
   template: "mẫu prompt",
 };
 
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+// Older log rows hold the role key instead of its name.
 const ROLE_LABEL = { admin: "Quản trị viên", member: "Thành viên" };
+
+// Every role an account can be given, admin first.
+function RoleSelect({ value, onChange }) {
+  const { data } = useAdminRoles();
+  const roles = data?.items || [];
+  return (
+    <select className="input" value={value} onChange={(e) => onChange(e.target.value)} disabled={!roles.length}>
+      {!roles.some((r) => r.key === value) && <option value={value}>{roles.length ? "(vai trò đã xoá)" : "Đang tải..."}</option>}
+      {roles.map((r) => (
+        <option key={r.key} value={r.key}>
+          {r.name}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 // "2 ngày", "1 ngày": how long the log keeps rows.
 const keepText = (days) => `${days} ngày`;
@@ -121,7 +140,7 @@ function Overview() {
   return (
     <div className="stack">
       <div className="tiles">
-        <Tile label="Thành viên" value={users.total} sub={`${users.active7} đăng nhập 7 ngày qua · ${users.admins} admin${users.disabled ? ` · ${users.disabled} bị khoá` : ""}`} />
+        <Tile label="Thành viên" value={users.total} sub={`${users.active7} đăng nhập 7 ngày qua · ${users.admins} admin · ${users.premium} premium${users.disabled ? ` · ${users.disabled} bị khoá` : ""}`} />
         <Tile label="Prompt đã lưu" value={content.prompts} sub={`+${content.prompts30} trong 30 ngày`} />
         <Tile label="Sản phẩm" value={content.products} sub={`${content.resources} tài nguyên trong kho`} />
         <Tile
@@ -200,10 +219,9 @@ function NewUserForm({ onDone }) {
       <Field label="Mật khẩu ban đầu" hint="Ít nhất 6 ký tự. Gửi riêng cho người đó và nhắc họ đổi.">
         <input className="input" type="text" value={form.password} maxLength={100} autoComplete="new-password" onChange={set("password")} />
       </Field>
-      <div className="field">
-        <span className="field-label">Vai trò</span>
-        <Seg name="new-role" label="Vai trò" value={form.role} onChange={set("role")} options={Object.entries(ROLE_LABEL).map(([value, label]) => ({ value, label }))} />
-      </div>
+      <Field label="Vai trò" hint="Quyền của từng vai trò xem ở tab Phân quyền.">
+        <RoleSelect value={form.role} onChange={set("role")} />
+      </Field>
       <div className="btns">
         <button type="submit" className="btn btn-primary" disabled={create.isPending}>
           {create.isPending ? "Đang tạo..." : "Tạo tài khoản"}
@@ -220,6 +238,11 @@ function EditUserForm({ u, isMe, onDone }) {
   const toast = useToast();
   const [displayName, setDisplayName] = useState(u.displayName === u.username ? "" : u.displayName);
   const [role, setRole] = useState(u.role);
+  const [premium, setPremium] = useState(u.premium);
+  const [until, setUntil] = useState(u.premiumUntil ? vnDay(u.premiumUntil) : "");
+  const today = vnDay();
+  // Extends from the current end when it is still ahead, else from today.
+  const extend = (days) => setUntil(addDays(until && until > today ? until : today, days));
   const save = useUserMutation((body) => api.adminUpdateUser(u.id, body), () => {
     toast("Đã lưu");
     onDone();
@@ -229,19 +252,48 @@ function EditUserForm({ u, isMe, onDone }) {
       className="form"
       onSubmit={(e) => {
         e.preventDefault();
-        save.mutate({ displayName, role });
+        // An unchanged role is left out, so a role deleted meanwhile does not block renaming.
+        const body = role === u.role ? { displayName } : { displayName, role };
+        if (premium !== u.premium || until !== (u.premiumUntil ? vnDay(u.premiumUntil) : "")) Object.assign(body, { premium, premiumUntil: premium ? until : "" });
+        save.mutate(body);
       }}
     >
       <Field label="Tên hiển thị" hint={`Để trống thì dùng tên đăng nhập @${u.username}.`}>
         <input className="input" value={displayName} maxLength={60} onChange={(e) => setDisplayName(e.target.value)} autoFocus />
       </Field>
-      <div className="field">
-        <span className="field-label">Vai trò</span>
-        <Seg name="edit-role" label="Vai trò" value={role} onChange={setRole} options={Object.entries(ROLE_LABEL).map(([value, label]) => ({ value, label }))} />
-        {isMe && role === "member" && <span className="error">Không tự bỏ quyền admin của chính mình được.</span>}
-      </div>
+      <Field label="Vai trò">
+        <RoleSelect value={role} onChange={setRole} />
+      </Field>
+      {isMe && role !== "admin" && <span className="error">Không tự bỏ quyền admin của chính mình được.</span>}
+      <Field label="Hạng tài khoản">
+        <select
+          className="input"
+          value={premium ? "premium" : "normal"}
+          onChange={(e) => {
+            const on = e.target.value === "premium";
+            setPremium(on);
+            if (on && !until) setUntil(addDays(today, 30));
+          }}
+        >
+          <option value="normal">Thường</option>
+          <option value="premium">Premium</option>
+        </select>
+      </Field>
+      {premium && (
+        <Field label="Premium đến hết ngày" hint="Qua ngày này tài khoản tự về hạng Thường. Để trống thì không hết hạn.">
+          <div className="btns">
+            <input className="input" type="date" value={until} min={today} onChange={(e) => setUntil(e.target.value)} />
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => extend(30)}>
+              +30 ngày
+            </button>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => extend(365)}>
+              +1 năm
+            </button>
+          </div>
+        </Field>
+      )}
       <div className="btns">
-        <button type="submit" className="btn btn-primary" disabled={save.isPending || (isMe && role === "member")}>
+        <button type="submit" className="btn btn-primary" disabled={save.isPending || (isMe && role !== "admin")}>
           {save.isPending ? "Đang lưu..." : "Lưu"}
         </button>
         <button type="button" className="btn btn-ghost" onClick={onDone}>
@@ -351,7 +403,13 @@ function Users({ onShowLogs }) {
                       {isMe && <span className="hint"> (bạn)</span>}
                       <span className="au-sub">
                         @{u.username}
-                        {u.role === "admin" && <span className="badge">Admin</span>}
+                        <span className={`badge ${u.role === "admin" ? "" : "badge-soft"}`}>{u.roleName}</span>
+                        {u.tier === "premium" && (
+                          <span className="badge badge-premium" title={u.premiumUntil ? `Đến hết ${fmtDate(u.premiumUntil)}` : "Không hết hạn"}>
+                            Premium{u.premiumUntil ? ` · ${fmtDate(u.premiumUntil)}` : ""}
+                          </span>
+                        )}
+                        {u.premium && u.tier !== "premium" && <span className="badge badge-soft">Premium đã hết hạn</span>}
                         {u.disabled && <span className="badge badge-danger">Đã khoá</span>}
                       </span>
                     </span>
@@ -435,6 +493,295 @@ function Users({ onShowLogs }) {
   );
 }
 
+// ---- roles and permissions
+
+function RoleNameForm({ role, onDone }) {
+  const toast = useToast();
+  const [name, setName] = useState(role?.name || "");
+  const save = useUserMutation((body) => (role ? api.adminUpdateRole(role.key, body) : api.adminCreateRole(body)), () => {
+    toast(role ? "Đã đổi tên vai trò" : "Đã tạo vai trò. Tick các quyền cho nó trong bảng.");
+    onDone();
+  });
+  return (
+    <form
+      className="form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!name.trim()) return toast("Cần nhập tên vai trò.", { tone: "danger" });
+        save.mutate({ name: name.trim() });
+      }}
+    >
+      <Field label="Tên vai trò" hint={role ? undefined : "Ví dụ: Quay dựng, Cộng tác viên. Vai trò mới chưa có quyền nào."}>
+        <input className="input" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} autoFocus />
+      </Field>
+      <div className="btns">
+        <button type="submit" className="btn btn-primary" disabled={save.isPending}>
+          {save.isPending ? "Đang lưu..." : role ? "Lưu" : "Tạo vai trò"}
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={onDone}>
+          Huỷ
+        </button>
+      </div>
+    </form>
+  );
+}
+
+const ROLES_KEY = ["admin", "roles"];
+
+// Rows are permissions, columns are roles. Each tick saves at once; ticks run one after another so none is lost.
+function Roles() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const { data, isLoading, error, refetch } = useAdminRoles();
+  // { mode: "new" | "rename" | "delete", role }
+  const [dialog, setDialog] = useState(null);
+  const close = () => setDialog(null);
+  const toggle = useMutation({
+    scope: { id: "admin-roles" },
+    mutationFn: ({ role, permissions }) => api.adminUpdateRole(role.key, { permissions }),
+    onMutate: ({ role, permissions }) =>
+      qc.setQueryData(ROLES_KEY, (old) => old && { ...old, items: old.items.map((r) => (r.key === role.key ? { ...r, permissions } : r)) }),
+    onError: (e) => {
+      toast(e.message, { tone: "danger" });
+      qc.invalidateQueries({ queryKey: ROLES_KEY });
+    },
+  });
+  const remove = useUserMutation(({ role }) => api.adminDeleteRole(role.key), (_, { role }) => {
+    toast(`Đã xoá vai trò ${role.name}`);
+    close();
+  });
+
+  if (isLoading) return <Skeleton h={320} r={12} />;
+  if (error) return <ErrorState error={error} onRetry={refetch} />;
+  const { items: roles, permissions, canManage } = data;
+  const groups = [...new Set(permissions.map((p) => p.group))];
+  const flip = (role, perm, on) => {
+    const next = on ? [...role.permissions, perm] : role.permissions.filter((p) => p !== perm);
+    toggle.mutate({ role, permissions: permissions.map((p) => p.key).filter((k) => next.includes(k)) });
+  };
+  const titles = { new: "Vai trò mới", rename: "Đổi tên vai trò", delete: "Xoá vai trò này?" };
+
+  return (
+    <div className="stack">
+      <div className="sec-row">
+        <p className="muted">
+          Ai cũng xem được sản phẩm, prompt, kế hoạch và tài nguyên. Bảng dưới quyết định mỗi vai trò được thêm, sửa, xoá gì. Quản lý tài khoản và phân quyền
+          luôn chỉ dành cho quản trị viên.
+          {!canManage && " Chỉ quản trị viên thay đổi được bảng này."}
+        </p>
+        {canManage && (
+          <button type="button" className="btn btn-primary" onClick={() => setDialog({ mode: "new" })}>
+            + Vai trò mới
+          </button>
+        )}
+      </div>
+      <div className="card atable-wrap">
+        <table className="rtable">
+          <thead>
+            <tr>
+              <th scope="col">Quyền</th>
+              {roles.map((r) => (
+                <th key={r.key} scope="col">
+                  <span className="rt-role">{r.name}</span>
+                  <span className="hint">{r.users} tài khoản</span>
+                  {canManage && !r.locked && (
+                    <span className="rt-tools">
+                      <button type="button" className="link-btn" onClick={() => setDialog({ mode: "rename", role: r })}>
+                        Đổi tên
+                      </button>
+                      {!r.builtin && (
+                        <button type="button" className="link-btn rt-del" onClick={() => setDialog({ mode: "delete", role: r })}>
+                          Xoá
+                        </button>
+                      )}
+                    </span>
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          {groups.map((g) => (
+            <tbody key={g}>
+              <tr className="rt-group">
+                <th scope="rowgroup" colSpan={roles.length + 1}>
+                  {g}
+                </th>
+              </tr>
+              {permissions
+                .filter((p) => p.group === g)
+                .map((p) => (
+                  <tr key={p.key}>
+                    <th scope="row">{p.label}</th>
+                    {roles.map((r) => (
+                      <td key={r.key}>
+                        <input
+                          type="checkbox"
+                          checked={r.permissions.includes(p.key)}
+                          disabled={!canManage || r.locked}
+                          aria-label={`${r.name}: ${p.label}`}
+                          title={r.locked ? "Quản trị viên luôn có mọi quyền" : undefined}
+                          onChange={(e) => flip(r, p.key, e.target.checked)}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+            </tbody>
+          ))}
+        </table>
+      </div>
+      <p className="hint">Đổi quyền có hiệu lực ngay từ thao tác kế tiếp của người đó. Vai trò “Thành viên” dành cho tài khoản tự đăng ký nên không xoá được.</p>
+
+      <Tiers />
+
+      <Modal open={Boolean(dialog)} onClose={close} title={dialog ? titles[dialog.mode] : ""}>
+        {(dialog?.mode === "new" || dialog?.mode === "rename") && <RoleNameForm role={dialog.role} onDone={close} />}
+        {dialog?.mode === "delete" && (
+          <>
+            <p>
+              Vai trò <b>{dialog.role.name}</b> sẽ bị xoá.
+              {dialog.role.users > 0 && ` Còn ${dialog.role.users} tài khoản đang dùng nó: đổi vai trò cho họ ở tab Thành viên trước.`}
+            </p>
+            <div className="btns">
+              <button type="button" className="btn btn-danger" onClick={() => remove.mutate({ role: dialog.role })} disabled={remove.isPending || dialog.role.users > 0}>
+                {remove.isPending ? "Đang xoá..." : "Có, xoá"}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={close} autoFocus>
+                Không
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+// Number box for one tier limit: empty means no limit. Saves when it loses focus or on Enter.
+function LimitInput({ value, disabled, label, onSave }) {
+  const [text, setText] = useState(value == null ? "" : String(value));
+  useEffect(() => setText(value == null ? "" : String(value)), [value]);
+  const commit = () => {
+    const next = text.trim() === "" ? null : Number(text);
+    if (next !== value) onSave(next);
+  };
+  return (
+    <input
+      className="input rt-limit"
+      inputMode="numeric"
+      maxLength={6}
+      placeholder="Không giới hạn"
+      aria-label={label}
+      value={text}
+      disabled={disabled}
+      onChange={(e) => setText(e.target.value.replace(/\D/g, ""))}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+    />
+  );
+}
+
+const TIERS_KEY = ["admin", "tiers"];
+
+// Normal and Premium side by side: permissions added on top of the role, and usage limits.
+function Tiers() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const { data, isLoading, error, refetch } = useAdminTiers();
+  const save = useMutation({
+    scope: { id: "admin-tiers" },
+    mutationFn: ({ tier, body }) => api.adminUpdateTier(tier.key, body),
+    onMutate: ({ tier, body }) =>
+      qc.setQueryData(TIERS_KEY, (old) =>
+        old && { ...old, items: old.items.map((t) => (t.key === tier.key ? { ...t, ...body, limits: { ...t.limits, ...body.limits } } : t)) }
+      ),
+    onError: (e) => {
+      toast(e.message, { tone: "danger" });
+      qc.invalidateQueries({ queryKey: TIERS_KEY });
+    },
+  });
+
+  if (isLoading) return <Skeleton h={240} r={12} />;
+  if (error) return <ErrorState error={error} onRetry={refetch} />;
+  const { items: tiers, permissions, limits, canManage } = data;
+  const flip = (tier, perm, on) => {
+    const next = on ? [...tier.permissions, perm] : tier.permissions.filter((p) => p !== perm);
+    save.mutate({ tier, body: { permissions: permissions.map((p) => p.key).filter((k) => next.includes(k)) } });
+  };
+
+  return (
+    <section className="stack">
+      <div>
+        <h2>Hạng tài khoản</h2>
+        <p className="muted">
+          Mỗi tài khoản là Thường hoặc Premium (đặt ở tab Thành viên, kèm ngày hết hạn). Quyền của một người = quyền của vai trò + quyền cộng thêm của hạng. Ô
+          giới hạn để trống là không giới hạn; ngày tính theo giờ Việt Nam. Quản trị viên không bị giới hạn.
+        </p>
+      </div>
+      <div className="card atable-wrap">
+        <table className="rtable">
+          <thead>
+            <tr>
+              <th scope="col">Hạng</th>
+              {tiers.map((t) => (
+                <th key={t.key} scope="col">
+                  <span className="rt-role">{t.name}</span>
+                  <span className="hint">{t.users} tài khoản</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="rt-group">
+              <th scope="rowgroup" colSpan={tiers.length + 1}>
+                Giới hạn
+              </th>
+            </tr>
+            {limits.map((l) => (
+              <tr key={l.key}>
+                <th scope="row">{l.label}</th>
+                {tiers.map((t) => (
+                  <td key={t.key}>
+                    <LimitInput
+                      value={t.limits[l.key]}
+                      disabled={!canManage}
+                      label={`${t.name}: ${l.label}`}
+                      onSave={(v) => save.mutate({ tier: t, body: { limits: { [l.key]: v } } })}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+          <tbody>
+            <tr className="rt-group">
+              <th scope="rowgroup" colSpan={tiers.length + 1}>
+                Quyền cộng thêm
+              </th>
+            </tr>
+            {permissions.map((p) => (
+              <tr key={p.key}>
+                <th scope="row">{p.label}</th>
+                {tiers.map((t) => (
+                  <td key={t.key}>
+                    <input
+                      type="checkbox"
+                      checked={t.permissions.includes(p.key)}
+                      disabled={!canManage}
+                      aria-label={`${t.name}: ${p.label}`}
+                      onChange={(e) => flip(t, p.key, e.target.checked)}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 // ---- activity log
 
 function metaText(log) {
@@ -445,7 +792,8 @@ function metaText(log) {
   if (m.target) out.push(`${m.target} video`);
   if (m.disabled === true) out.push(log.action === "auth.login_failed" ? "tài khoản đang khoá" : "khoá");
   if (m.disabled === false) out.push("mở khoá");
-  if (m.role) out.push(ROLE_LABEL[m.role] || m.role);
+  if (m.role) out.push(`vai trò ${ROLE_LABEL[m.role] || m.role}`);
+  if (m.tier) out.push(`hạng ${m.tier}`);
   return out.join(" · ");
 }
 
@@ -588,6 +936,7 @@ function Logs({ params, set }) {
 }
 
 export default function Admin() {
+  const { can } = useAuth();
   const [params, setParams] = useSearchParams();
   const get = (k) => params.get(k) || "";
   const tab = TABS.some((t) => t.value === get("tab")) ? get("tab") : "overview";
@@ -603,12 +952,19 @@ export default function Admin() {
     );
   const logParams = { user: get("user"), group: get("group"), from: get("from"), to: get("to"), q: get("q"), page: Math.max(Number(get("page")) || 1, 1) };
 
+  if (!can("admin.view"))
+    return (
+      <div className="page">
+        <EmptyState title="Bạn chưa được xem trang Quản trị">Vai trò của bạn chưa có quyền này. Nhờ quản trị viên cấp quyền nếu cần.</EmptyState>
+      </div>
+    );
+
   return (
     <div className="page">
       <div className="page-head">
         <div>
           <h1>Quản trị</h1>
-          <p>Tài khoản của team, nhật ký thao tác và số liệu chung. Cả team cùng xem; chỉ quản trị viên thay đổi được tài khoản.</p>
+          <p>Tài khoản của team, phân quyền, nhật ký thao tác và số liệu chung. Chỉ quản trị viên thay đổi được tài khoản và quyền.</p>
         </div>
       </div>
       <div className="tabs" role="tablist" aria-label="Mục quản trị">
@@ -627,6 +983,7 @@ export default function Admin() {
       </div>
       {tab === "overview" && <Overview />}
       {tab === "users" && <Users onShowLogs={(user) => setParams({ tab: "logs", user })} />}
+      {tab === "roles" && <Roles />}
       {tab === "logs" && <Logs params={logParams} set={set} />}
     </div>
   );

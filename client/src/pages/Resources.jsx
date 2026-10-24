@@ -121,6 +121,7 @@ function ResourceForm({ initial, onDone }) {
   );
 }
 
+// onEdit, onCopyToTeam and onDelete are left out when the role may not use them.
 function ResourceCard({ r, me, onEdit, onCopyToTeam, onDelete, onTag }) {
   const { flash, copy } = useCopy();
   const builtin = r.builtin;
@@ -183,17 +184,23 @@ function ResourceCard({ r, me, onEdit, onCopyToTeam, onDelete, onTag }) {
           </a>
         )}
         {builtin ? (
-          <button type="button" className="btn btn-sm btn-ghost" onClick={() => onCopyToTeam(r)}>
-            Chép vào kho team để sửa
-          </button>
+          onCopyToTeam && (
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => onCopyToTeam(r)}>
+              Chép vào kho team để sửa
+            </button>
+          )
         ) : (
           <>
-            <button type="button" className="btn btn-sm btn-ghost" onClick={() => onEdit(r)}>
-              Sửa
-            </button>
-            <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => onDelete(r)}>
-              Xoá
-            </button>
+            {onEdit && (
+              <button type="button" className="btn btn-sm btn-ghost" onClick={() => onEdit(r)}>
+                Sửa
+              </button>
+            )}
+            {onDelete && (
+              <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => onDelete(r)}>
+                Xoá
+              </button>
+            )}
           </>
         )}
       </div>
@@ -203,7 +210,8 @@ function ResourceCard({ r, me, onEdit, onCopyToTeam, onDelete, onTag }) {
 
 // The team's store of AI skills and image prompts that worked, plus a few starters. Filters live in the URL.
 export default function Resources() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  const canEdit = can("resource.edit");
   const qc = useQueryClient();
   const toast = useToast();
   const { data, isLoading, error, refetch } = useResources();
@@ -269,9 +277,11 @@ export default function Resources() {
             {BUILTIN_RESOURCES.length} mục có sẵn.
           </p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={() => setEditing({ kind: kind || "image" })}>
-          + Thêm tài nguyên
-        </button>
+        {canEdit && (
+          <button type="button" className="btn btn-primary" onClick={() => setEditing({ kind: kind || "image" })}>
+            + Thêm tài nguyên
+          </button>
+        )}
       </div>
 
       <div className="filters">
@@ -333,7 +343,15 @@ export default function Resources() {
       ) : (
         <div className="res-grid">
           {items.map((r) => (
-            <ResourceCard key={r._id} r={r} me={user?.id} onEdit={setEditing} onCopyToTeam={copyToTeam} onDelete={setDeleting} onTag={(t) => set({ tag: t })} />
+            <ResourceCard
+              key={r._id}
+              r={r}
+              me={user?.id}
+              onEdit={canEdit ? setEditing : undefined}
+              onCopyToTeam={canEdit ? copyToTeam : undefined}
+              onDelete={can("resource.delete") ? setDeleting : undefined}
+              onTag={(t) => set({ tag: t })}
+            />
           ))}
         </div>
       )}

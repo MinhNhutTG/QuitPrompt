@@ -5,6 +5,9 @@ import { Product } from "../models/Product.js";
 import { User } from "../models/User.js";
 import { ah, parse, assertId, isId, escapeRegex, text, HttpError } from "../lib/http.js";
 import { findOrCreateProduct } from "./products.js";
+import { can } from "../middleware/auth.js";
+import { deniedMessage } from "../lib/permissions.js";
+import { assertDailyLimit } from "../lib/tiers.js";
 
 const router = Router();
 
@@ -132,16 +135,19 @@ router.get(
 
 router.post(
   "/",
+  can("prompt.save"),
   ah(async (req, res) => {
     const data = parse(createSchema, req.body);
     const owner = req.userId;
+    await assertDailyLimit(req, "promptsPerDay", (since) => Prompt.countDocuments({ owner, createdAt: { $gte: since } }));
     let product;
     if (data.product) {
       assertId(data.product, "sản phẩm");
       product = await Product.findById(data.product);
       if (!product) throw new HttpError(404, "Không tìm thấy sản phẩm.");
     } else {
-      product = await findOrCreateProduct(owner, data.productName);
+      product = await findOrCreateProduct(owner, data.productName, req.permissions.has("product.edit"), req);
+      if (!product) throw new HttpError(403, deniedMessage("product.edit"));
     }
 
     const doc = await Prompt.create({
@@ -167,6 +173,7 @@ router.post(
 
 router.patch(
   "/:id",
+  can("prompt.save"),
   ah(async (req, res) => {
     assertId(req.params.id, "prompt");
     const data = parse(patchSchema, req.body);
@@ -183,9 +190,14 @@ router.delete(
   "/:id",
   ah(async (req, res) => {
     assertId(req.params.id, "prompt");
-    // Any member may delete any prompt (the app asks for confirmation); editing stays with the saver.
-    const doc = await Prompt.findOneAndDelete({ _id: req.params.id });
+    // The saver deletes their own with prompt.save; anyone else's needs prompt.delete. Editing stays with the saver.
+    const doc = await Prompt.findById(req.params.id);
     if (!doc) throw new HttpError(404, "Không tìm thấy prompt.");
+    const perm = String(doc.owner) === String(req.userId) ? "prompt.save" : "prompt.delete";
+    if (!req.permissions.has(perm)) throw new HttpError(403, deniedMessage(perm));
+    // Counted so two clicks at once lower the product's prompt count only once.
+    const { deletedCount } = await Prompt.deleteOne({ _id: doc._id });
+    if (!deletedCount) throw new HttpError(404, "Không tìm thấy prompt.");
     const product = await Product.findOneAndUpdate({ _id: doc.product, promptCount: { $gt: 0 } }, { $inc: { promptCount: -1 } }, { projection: { name: 1 } }).lean();
     res.locals.audit = { label: product?.name || "" };
     res.json({ ok: true });

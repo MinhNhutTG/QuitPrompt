@@ -1452,6 +1452,14 @@ select.input {
   align-items: center;
   gap: 8px;
 }
+/* Groups fields only so `disabled` locks them all (read-only roles); no box of its own. */
+.bare {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: contents;
+}
 .danger-zone {
   border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
   display: flex;
@@ -2525,6 +2533,83 @@ select.status-select:disabled {
   white-space: nowrap;
 }
 
+/* Permission matrix: stays a grid on phones and scrolls sideways, the permission column pinned. */
+.rtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.rtable th,
+.rtable td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+  vertical-align: middle;
+}
+.rtable th[scope="row"],
+.rtable thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  text-align: left;
+  font-weight: 400;
+  min-width: 200px;
+}
+.rtable thead th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  vertical-align: bottom;
+  min-width: 110px;
+}
+.rtable thead th > span {
+  display: block;
+}
+.rt-role {
+  font-size: 14px;
+  color: var(--fg);
+}
+.rtable thead .rt-tools {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-weight: 400;
+}
+.rt-del {
+  color: var(--danger);
+}
+.rtable .rt-group th {
+  background: var(--sunk);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: left;
+  padding: 6px 12px;
+}
+.rtable input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.rtable input[type="checkbox"]:disabled {
+  cursor: default;
+}
+.badge-premium {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.rtable .rt-limit {
+  width: 120px;
+  margin: 0 auto;
+  text-align: center;
+}
+.badge-soft {
+  background: var(--sunk);
+  color: var(--muted);
+}
 
 @media (max-width: 760px) {
   .atable thead {

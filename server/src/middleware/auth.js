@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { config } from "../config.js";
 import { HttpError } from "../lib/http.js";
 import { User } from "../models/User.js";
+import { ADMIN_ROLE, accessOf, deniedMessage } from "../lib/permissions.js";
 
 export const COOKIE = "ps_session";
 const DAY = 24 * 60 * 60 * 1000;
@@ -41,7 +42,7 @@ export async function requireAuth(req, res, next) {
     return next(new HttpError(401, "Phiên đăng nhập đã hết hạn, hãy đăng nhập lại."));
   }
   try {
-    const user = await User.findById(session.sub, { role: 1, disabled: 1, sessionVersion: 1 }).lean();
+    const user = await User.findById(session.sub, { role: 1, disabled: 1, sessionVersion: 1, premium: 1, premiumUntil: 1 }).lean();
     if (!user || user.disabled || (user.sessionVersion || 0) !== (session.v || 0)) {
       clearSession(res);
       const msg = !user ? "Tài khoản không còn tồn tại." : user.disabled ? "Tài khoản của bạn đã bị khoá. Liên hệ quản trị viên." : "Phiên đăng nhập đã hết hạn, hãy đăng nhập lại.";
@@ -50,6 +51,10 @@ export async function requireAuth(req, res, next) {
     req.session = session;
     req.userId = session.sub;
     req.role = user.role || "member";
+    const access = await accessOf(user);
+    req.permissions = new Set(access.permissions);
+    req.tier = access.tier.key;
+    req.limits = access.limits;
     next();
   } catch (err) {
     next(err);
@@ -57,9 +62,12 @@ export async function requireAuth(req, res, next) {
 }
 
 export function requireAdmin(req, res, next) {
-  if (req.role !== "admin") return next(new HttpError(403, "Chỉ quản trị viên mới vào được mục này."));
+  if (req.role !== ADMIN_ROLE) return next(new HttpError(403, "Chỉ quản trị viên mới làm được việc này."));
   next();
 }
+
+// Route guard for one permission from lib/permissions.js; admins have them all.
+export const can = (perm) => (req, res, next) => (req.permissions?.has(perm) ? next() : next(new HttpError(403, deniedMessage(perm))));
 
 // Sliding 30-day window: a remembered session that is used keeps renewing itself.
 export function refreshIfOld(req, res) {

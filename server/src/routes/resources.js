@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Resource, RESOURCE_KINDS } from "../models/Resource.js";
 import { User } from "../models/User.js";
 import { ah, parse, assertId, text, HttpError } from "../lib/http.js";
+import { can } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -58,6 +59,7 @@ router.get(
 
 router.post(
   "/",
+  can("resource.edit"),
   ah(async (req, res) => {
     const data = parse(createSchema, req.body);
     const doc = await Resource.create({ ...data, createdBy: req.userId });
@@ -66,9 +68,10 @@ router.post(
   })
 );
 
-// Shared like products and plans: any member may edit or delete.
+// Shared like products and plans: anyone whose role allows it may edit or delete.
 router.patch(
   "/:id",
+  can("resource.edit"),
   ah(async (req, res) => {
     assertId(req.params.id, "tài nguyên");
     const data = parse(patchSchema, req.body);
@@ -83,6 +86,7 @@ router.patch(
 
 router.delete(
   "/:id",
+  can("resource.delete"),
   ah(async (req, res) => {
     assertId(req.params.id, "tài nguyên");
     const doc = await Resource.findByIdAndDelete(req.params.id);
