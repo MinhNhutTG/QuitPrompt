@@ -6,6 +6,7 @@ import express from "express";
 import helmet from "helmet";
 import compression from "compression";
 import cookieParser from "cookie-parser";
+import rateLimit from "express-rate-limit";
 import { connectDb, dbUp } from "./db.js";
 import { HttpError } from "./lib/http.js";
 import { requireAuth } from "./middleware/auth.js";
@@ -50,7 +51,7 @@ if (config.clientOrigin) {
   app.use("/api", (req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", config.clientOrigin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Requested-With");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
     if (req.method === "OPTIONS") return res.sendStatus(204);
     next();
@@ -61,6 +62,31 @@ app.get("/api/health", (req, res) => {
   const up = dbUp();
   res.status(up ? 200 : 503).json({ ok: up, db: up ? "up" : "down" });
 });
+
+// API answers hold private data: browsers and proxies must not keep them.
+app.use("/api", (req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
+
+// CSRF: every change must carry this header. A page on another site can submit a form with the user's cookie,
+// but cannot add a custom header without passing CORS, which only CLIENT_ORIGIN does.
+app.use("/api", (req, res, next) => {
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method) || req.get("x-requested-with") === "fetch") return next();
+  next(new HttpError(403, "Yêu cầu không hợp lệ. Tải lại trang rồi thử lại."));
+});
+
+// A ceiling per IP for the whole API, well above normal use; logins have their own stricter limit.
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 60 * 1000,
+    limit: 300,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "Bạn thao tác quá nhanh. Chờ một phút rồi thử lại." },
+  })
+);
 
 // Without this, Mongoose buffers queries until they time out and the user sees a vague 500.
 app.use("/api", (req, res, next) =>
@@ -101,6 +127,7 @@ if (fs.existsSync(dist)) {
 app.use((err, req, res, next) => {
   if (err.type === "entity.too.large") return res.status(413).json({ error: "Dữ liệu gửi lên quá lớn (tối đa 5 MB)." });
   if (err.type === "entity.parse.failed") return res.status(400).json({ error: "Dữ liệu gửi lên không phải JSON hợp lệ." });
+  if (err.name === "CastError") return res.status(400).json({ error: "Dữ liệu gửi lên không hợp lệ." });
   if (err.name === "ValidationError") {
     const first = Object.values(err.errors || {})[0];
     return res.status(400).json({ error: first?.message || "Dữ liệu không hợp lệ." });

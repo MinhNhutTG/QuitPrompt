@@ -47,7 +47,8 @@ async function request(method, path, body, { notify401 = true } = {}) {
     res = await fetch("/api" + path, {
       method,
       credentials: "include",
-      headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+      // The server refuses changes without X-Requested-With (CSRF guard).
+      headers: { "X-Requested-With": "fetch", ...(body !== undefined && { "Content-Type": "application/json" }) },
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
@@ -69,6 +70,7 @@ function uploadImage(productId, file, onProgress) {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `/api/products/${productId}/images`);
     xhr.withCredentials = true;
+    xhr.setRequestHeader("X-Requested-With", "fetch");
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
     xhr.onload = () => {
       const data = parseJson(xhr.responseText);

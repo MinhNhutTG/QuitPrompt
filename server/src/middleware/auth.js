@@ -7,10 +7,13 @@ import { ADMIN_ROLE, accessOf, deniedMessage } from "../lib/permissions.js";
 export const COOKIE = "ps_session";
 const DAY = 24 * 60 * 60 * 1000;
 const cookieBase = () => ({ httpOnly: true, sameSite: "lax", secure: config.isProd, path: "/" });
+// Only the algorithm the server signs with is accepted, so a token cannot pick a weaker one.
+const VERIFY = { algorithms: ["HS256"] };
 
 // v = the user's sessionVersion: bumping it on the account voids every cookie signed before.
 export function signSession(res, userId, remember, version = 0) {
   const token = jwt.sign({ sub: String(userId), rem: remember ? 1 : 0, v: version }, config.jwtSecret, {
+    algorithm: "HS256",
     expiresIn: remember ? "30d" : "1d",
   });
   // Without maxAge the cookie is a session cookie: closing the browser logs out.
@@ -24,7 +27,7 @@ export function clearSession(res) {
 // The signed-in user's id from the cookie, or null; no account lookup (used to attribute a logout).
 export function sessionUserId(req) {
   try {
-    return jwt.verify(req.cookies?.[COOKIE] || "", config.jwtSecret).sub;
+    return jwt.verify(req.cookies?.[COOKIE] || "", config.jwtSecret, VERIFY).sub;
   } catch {
     return null;
   }
@@ -36,7 +39,7 @@ export async function requireAuth(req, res, next) {
   if (!token) return next(new HttpError(401, "Bạn chưa đăng nhập."));
   let session;
   try {
-    session = jwt.verify(token, config.jwtSecret);
+    session = jwt.verify(token, config.jwtSecret, VERIFY);
   } catch {
     clearSession(res);
     return next(new HttpError(401, "Phiên đăng nhập đã hết hạn, hãy đăng nhập lại."));

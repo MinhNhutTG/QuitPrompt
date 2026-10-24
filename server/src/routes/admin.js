@@ -69,7 +69,12 @@ const patchSchema = z.object({
   disabled: z.boolean().optional(),
   premium: z.boolean({ invalid_type_error: "Hạng tài khoản không hợp lệ." }).optional(),
   // Last day of Premium ("YYYY-MM-DD"); "" = no end.
-  premiumUntil: z.string().regex(DAY, "Ngày hết hạn không hợp lệ.").or(z.literal("")).optional(),
+  premiumUntil: z
+    .string()
+    .regex(DAY, "Ngày hết hạn không hợp lệ.")
+    .refine((d) => !Number.isNaN(endOfDay(d).getTime()) && endOfDay(d).toISOString().slice(0, 10) === d, "Ngày hết hạn không hợp lệ.")
+    .or(z.literal(""))
+    .optional(),
 });
 
 const displayName = (u) => u?.displayName || u?.username || "(tài khoản đã xoá)";
@@ -106,11 +111,12 @@ router.get(
     const since = daysAgo(retention);
     const today = tzDay(new Date());
 
-    const [users, admins, disabled, premium, active7, new30, products, prompts, prompts30, resources, planSum, perBucket, topActions, topUsers, failed] =
+    const [users, admins, disabled, pending, premium, active7, new30, products, prompts, prompts30, resources, planSum, perBucket, topActions, topUsers, failed] =
       await Promise.all([
         User.countDocuments({}),
         User.countDocuments({ role: ADMIN_ROLE }),
         User.countDocuments({ disabled: true }),
+        User.countDocuments({ pending: true }),
         User.countDocuments(premiumNow()),
         // From sign-ins, which outlive the log.
         User.countDocuments({ lastLoginAt: { $gte: daysAgo(7) } }),
@@ -155,7 +161,7 @@ router.get(
     const { _id, ...plans } = planSum[0] || { plans: 0, target: 0, done: 0, finished: 0, overdue: 0 };
 
     res.json({
-      users: { total: users, admins, disabled, premium, active7, new30 },
+      users: { total: users, admins, disabled, pending, premium, active7, new30 },
       content: { products, prompts, prompts30, resources },
       plans,
       retentionDays: retention,
@@ -214,6 +220,7 @@ router.get(
           premium: Boolean(u.premium),
           premiumUntil: u.premiumUntil || null,
           disabled: Boolean(u.disabled),
+          pending: Boolean(u.pending),
           displayName: displayName(u),
           prompts: p.get(id)?.count || 0,
           products: pr.get(id)?.count || 0,
@@ -255,6 +262,8 @@ router.patch(
     if (data.role) user.role = data.role;
     if (data.premium !== undefined) user.premium = data.premium;
     if (data.premiumUntil !== undefined) user.premiumUntil = data.premiumUntil ? endOfDay(data.premiumUntil) : null;
+    // Opening an account is also how a self-registered one gets approved.
+    if (data.disabled === false) user.pending = false;
     if (data.disabled !== undefined && data.disabled !== Boolean(user.disabled)) {
       user.disabled = data.disabled;
       if (data.disabled) user.sessionVersion = (user.sessionVersion || 0) + 1;

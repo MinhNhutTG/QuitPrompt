@@ -7,7 +7,7 @@ import { VideoPlan } from "../models/VideoPlan.js";
 import { ah, parse, assertId, escapeRegex, text, HttpError } from "../lib/http.js";
 import { requireCloudinary, uploadBuffer, destroyImages } from "../lib/cloudinary.js";
 import { can } from "../middleware/auth.js";
-import { assertDailyLimit } from "../lib/tiers.js";
+import { useDaily } from "../lib/tiers.js";
 
 const router = Router();
 
@@ -50,8 +50,14 @@ router.post(
   can("product.edit"),
   ah(async (req, res) => {
     const data = parse(createSchema, req.body);
-    await assertDailyLimit(req, "productsPerDay", (since) => Product.countDocuments({ owner: req.userId, createdAt: { $gte: since } }));
-    const item = await Product.create({ ...data, owner: req.userId });
+    const refund = await useDaily(req, "productsPerDay");
+    let item;
+    try {
+      item = await Product.create({ ...data, owner: req.userId });
+    } catch (err) {
+      await refund();
+      throw err;
+    }
     res.status(201).json({ item });
   })
 );
@@ -193,6 +199,11 @@ export async function findOrCreateProduct(owner, name, create = true, req = null
   const clean = name.trim().slice(0, 160);
   const existing = await Product.findOne({ name: new RegExp(`^${escapeRegex(clean)}$`, "i") });
   if (existing || !create) return existing;
-  if (req) await assertDailyLimit(req, "productsPerDay", (since) => Product.countDocuments({ owner, createdAt: { $gte: since } }));
-  return Product.create({ owner, name: clean });
+  const refund = req ? await useDaily(req, "productsPerDay") : async () => {};
+  try {
+    return await Product.create({ owner, name: clean });
+  } catch (err) {
+    await refund();
+    throw err;
+  }
 }

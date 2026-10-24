@@ -11,7 +11,7 @@ if (!username) {
 }
 
 await mongoose.connect(config.mongoUri);
-const user = await User.findOneAndUpdate({ username: username.toLowerCase() }, { $set: { role: "admin", disabled: false } }, { new: true });
+const user = await User.findOneAndUpdate({ username: username.toLowerCase() }, { $set: { role: "admin", disabled: false, pending: false } }, { new: true });
 if (!user) {
   console.error(`Không có tài khoản "${username}".`);
   process.exitCode = 1;

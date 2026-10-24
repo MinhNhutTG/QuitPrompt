@@ -140,7 +140,7 @@ function Overview() {
   return (
     <div className="stack">
       <div className="tiles">
-        <Tile label="Thành viên" value={users.total} sub={`${users.active7} đăng nhập 7 ngày qua · ${users.admins} admin · ${users.premium} premium${users.disabled ? ` · ${users.disabled} bị khoá` : ""}`} />
+        <Tile label="Thành viên" value={users.total} sub={`${users.active7} đăng nhập 7 ngày qua · ${users.admins} admin · ${users.premium} premium${users.pending ? ` · ${users.pending} chờ duyệt` : ""}${users.disabled - users.pending ? ` · ${users.disabled - users.pending} bị khoá` : ""}`} />
         <Tile label="Prompt đã lưu" value={content.prompts} sub={`+${content.prompts30} trong 30 ngày`} />
         <Tile label="Sản phẩm" value={content.products} sub={`${content.resources} tài nguyên trong kho`} />
         <Tile
@@ -347,7 +347,10 @@ function Users({ onShowLogs }) {
   // { mode: "new" | "edit" | "password" | "delete", u }
   const [dialog, setDialog] = useState(null);
   const close = () => setDialog(null);
-  const toggle = useUserMutation(({ u }) => api.adminUpdateUser(u.id, { disabled: !u.disabled }), (_, { u }) => toast(u.disabled ? `Đã mở khoá ${u.displayName}` : `Đã khoá ${u.displayName}`));
+  const toggle = useUserMutation(
+    ({ u }) => api.adminUpdateUser(u.id, { disabled: !u.disabled }),
+    (_, { u }) => toast(u.pending ? `Đã duyệt ${u.displayName}` : u.disabled ? `Đã mở khoá ${u.displayName}` : `Đã khoá ${u.displayName}`)
+  );
   const logout = useUserMutation(({ u }) => api.adminLogoutUser(u.id), (_, { u }) => toast(`${u.displayName} đã bị đăng xuất trên mọi thiết bị`));
   const remove = useUserMutation(({ u }) => api.adminDeleteUser(u.id), (_, { u }) => {
     toast(`Đã xoá tài khoản ${u.username}`);
@@ -410,7 +413,7 @@ function Users({ onShowLogs }) {
                           </span>
                         )}
                         {u.premium && u.tier !== "premium" && <span className="badge badge-soft">Premium đã hết hạn</span>}
-                        {u.disabled && <span className="badge badge-danger">Đã khoá</span>}
+                        {u.pending ? <span className="badge badge-premium">Chờ duyệt</span> : u.disabled && <span className="badge badge-danger">Đã khoá</span>}
                       </span>
                     </span>
                   </td>
@@ -448,11 +451,11 @@ function Users({ onShowLogs }) {
                           </ConfirmButton>
                           <ConfirmButton
                             className={`btn btn-sm ${u.disabled ? "btn-ghost" : "btn-danger-ghost"}`}
-                            confirmLabel={u.disabled ? "Bấm lần nữa để mở" : "Bấm lần nữa để khoá"}
+                            confirmLabel={u.pending ? "Bấm lần nữa để duyệt" : u.disabled ? "Bấm lần nữa để mở" : "Bấm lần nữa để khoá"}
                             onConfirm={() => toggle.mutate({ u })}
                             disabled={toggle.isPending}
                           >
-                            {u.disabled ? "Mở khoá" : "Khoá"}
+                            {u.pending ? "Duyệt" : u.disabled ? "Mở khoá" : "Khoá"}
                           </ConfirmButton>
                           <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => setDialog({ mode: "delete", u })}>
                             Xoá
@@ -790,6 +793,7 @@ function metaText(log) {
   if (m.fields?.length) out.push("đổi " + m.fields.map((f) => FIELD_NAMES[f] || f).join(", "));
   if (typeof m.count === "number") out.push(`${m.count} mục`);
   if (m.target) out.push(`${m.target} video`);
+  if (m.pending) out.push(log.action === "auth.login_failed" ? "chờ duyệt" : "chờ admin duyệt");
   if (m.disabled === true) out.push(log.action === "auth.login_failed" ? "tài khoản đang khoá" : "khoá");
   if (m.disabled === false) out.push("mở khoá");
   if (m.role) out.push(`vai trò ${ROLE_LABEL[m.role] || m.role}`);

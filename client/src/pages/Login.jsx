@@ -34,7 +34,17 @@ export default function Login() {
     setBusy(true);
     try {
       const body = { username: username.trim(), password, remember };
-      const { user } = await (isNew ? api.register(body) : api.login(body));
+      const res = await (isNew ? api.register(body) : api.login(body));
+      if (res.pending) {
+        // Self-registered accounts wait for an admin; nothing to sign in to yet.
+        store.set("lastUser", res.username);
+        setMode("login");
+        setPassword("");
+        setBusy(false);
+        toast("Đã gửi yêu cầu tạo tài khoản", { detail: "Chờ quản trị viên duyệt rồi đăng nhập bằng tài khoản vừa tạo." });
+        return;
+      }
+      const { user } = res;
       store.set("lastUser", user.username);
       signIn(user);
       toast(isNew ? `Đã tạo tài khoản ${user.username}` : `Chào ${user.displayName}`, { detail: isNew ? "Bạn đã đăng nhập." : undefined });
@@ -78,6 +88,7 @@ export default function Login() {
             />
           )}
 
+          {isNew && <p className="hint">Tài khoản mới cần quản trị viên duyệt trước khi đăng nhập được.</p>}
           <Field label="Tên đăng nhập" hint={isNew ? "3–30 ký tự: chữ không dấu, số, dấu chấm hoặc gạch dưới." : undefined}>
             <input
               ref={userRef}

@@ -10,6 +10,7 @@ Một người (hoặc vài người) quản lý tài khoản của team, xem ai
 |---|---|
 | Ai xem được | Vai trò có quyền **Xem trang Quản trị** thấy mục **Quản trị** và cả bốn tab (tổng quan, thành viên, phân quyền, nhật ký). Vai trò khác không thấy mục này |
 | Vai trò | `admin` (Quản trị viên) luôn có mọi quyền, không sửa được. Các vai trò khác do admin tạo và tick quyền ở tab **Phân quyền** (mục 3). Chỉ admin thêm, sửa, đặt mật khẩu, đăng xuất mọi nơi, khoá, xoá tài khoản và sửa vai trò |
+| Tự đăng ký | Khi `ALLOW_REGISTER` bật, tài khoản tự tạo ở màn hình đăng nhập **chờ admin duyệt**: bị khoá, nhãn "Chờ duyệt" ở tab Thành viên, admin bấm **Duyệt** (bấm hai lần) mới đăng nhập được. Trừ tài khoản đầu tiên |
 | Admin đầu tiên | Tài khoản đầu tiên đăng ký là admin. Với hệ thống đã có người dùng: chạy `npm run make-admin -- <tên>` hoặc đặt `ADMIN_USERNAMES` (tài khoản trong danh sách thành admin ở lần mở app kế tiếp) |
 | Luôn còn admin | Không bỏ quyền, khoá hay xoá được admin cuối cùng còn hoạt động; không tự khoá, tự bỏ quyền, tự xoá chính mình |
 | Khoá tài khoản | Người bị khoá bị đăng xuất ngay trên mọi thiết bị và không đăng nhập lại được. Dữ liệu giữ nguyên |
@@ -56,6 +57,15 @@ Hạng nằm cạnh vai trò, không thay vai trò. Quyền của một người
 - Số trên là mặc định lúc tạo; admin sửa ở tab **Phân quyền & hạng**. Ngày tính theo giờ Việt Nam.
 - Admin đặt Premium cho từng người ở tab Thành viên (Sửa), kèm ngày hết hạn (+30 ngày, +1 năm, hoặc để trống là không hết hạn). Qua hết ngày đó, tài khoản tự về Thường; không cần chạy gì thêm.
 - Người dùng xem hạng, ngày hết hạn và giới hạn của mình ở **Cài đặt → Tài khoản**.
+
+### Bảo mật
+
+- **Máy chủ quyết định mọi quyền**; giao diện chỉ ẩn nút. Quyền thiếu thì API trả 403, không có quyền nào mặc định được cho.
+- **Giới hạn mỗi ngày** đếm bằng collection `usages` (một dòng cho mỗi người, ngày, loại), tăng nguyên tử: gửi nhiều request cùng lúc cũng không vượt được. Xoá prompt hay sản phẩm không trả lại lượt. Nhập dữ liệu từ file (quyền `data.import`) không tính vào giới hạn.
+- **Chống CSRF:** mọi request thay đổi dữ liệu phải có header `X-Requested-With: fetch` (app tự gửi); trang web khác không gửi được header này. Cookie đăng nhập là `httpOnly`, `SameSite=Lax`, `Secure` khi chạy thật.
+- **Phiên đăng nhập:** JWT chỉ nhận thuật toán HS256. Đổi mật khẩu thì đăng xuất mọi thiết bị khác.
+- **Chặn dò:** đăng nhập sai và đăng ký tối đa 30 lần mỗi 15 phút; đổi mật khẩu sai tối đa 10 lần; toàn bộ API tối đa 300 request mỗi phút cho mỗi IP.
+- Câu trả lời API có `Cache-Control: no-store`; dữ liệu gửi lên được kiểm tra bằng zod và bỏ trường lạ.
 
 ## 4. Cách đăng xuất mọi nơi hoạt động
 

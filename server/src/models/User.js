@@ -9,6 +9,8 @@ const schema = new mongoose.Schema(
     role: { type: String, default: "member", maxlength: 40 },
     // A disabled account cannot log in and its open sessions stop working.
     disabled: { type: Boolean, default: false },
+    // Registered by themselves and not yet let in by an admin (also disabled until then).
+    pending: { type: Boolean, default: false },
     // Bumped to sign the user out everywhere (disable, password reset by an admin).
     sessionVersion: { type: Number, default: 0 },
     lastLoginAt: Date,

@@ -1,4 +1,5 @@
 import { Tier } from "../models/Tier.js";
+import { Usage } from "../models/Usage.js";
 import { HttpError } from "./http.js";
 
 // Account tiers sit beside roles: a tier adds permissions to the role and sets usage limits.
@@ -61,7 +62,6 @@ export const premiumNow = () => ({ premium: true, $or: [{ premiumUntil: null }, 
 // Days are counted on the team's clock.
 const TZ = "Asia/Ho_Chi_Minh";
 export const vnDay = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
-export const startOfToday = () => new Date(`${vnDay()}T00:00:00+07:00`);
 // "2026-12-31" → the last moment of that day in Vietnam.
 export const endOfDay = (day) => new Date(`${day}T23:59:59.999+07:00`);
 
@@ -70,11 +70,30 @@ const OVER = {
   productsPerDay: (max) => `tạo tối đa ${max} sản phẩm mỗi ngày`,
 };
 
-// Throws when the signed-in account already used its daily allowance; count(since) returns today's usage.
-export async function assertDailyLimit(req, key, count) {
-  const max = req.limits?.[key];
-  if (max == null) return;
-  if ((await count(startOfToday())) < max) return;
+function overLimit(req, key, max) {
   const upgrade = req.tier === "normal" ? " Mai làm tiếp được, hoặc nhờ quản trị viên nâng lên Premium." : " Mai làm tiếp được.";
-  throw new HttpError(403, `Hạng ${TIER_NAMES[req.tier] || ""} ${OVER[key](max)}.${upgrade}`);
+  return new HttpError(403, `Hạng ${TIER_NAMES[req.tier] || ""} ${OVER[key](max)}.${upgrade}`);
+}
+
+const NOOP = async () => {};
+
+// Takes one unit of today's allowance for the signed-in account, or throws when it is used up.
+// Atomic: requests sent at the same moment cannot pass the limit together. Deleting what was made does not
+// give the unit back. Returns a function that does, for when the action fails after this call.
+export async function useDaily(req, key) {
+  const max = req.limits?.[key];
+  if (max == null) return NOOP;
+  if (max <= 0) throw overLimit(req, key, max);
+  const id = { user: req.userId, day: vnDay(), key };
+  const take = (upsert) => Usage.updateOne({ ...id, count: { $lt: max } }, { $inc: { count: 1 } }, { upsert });
+  try {
+    // No row yet: the upsert creates it at 1. A full row does not match, so the upsert hits the unique index.
+    await take(true);
+  } catch (err) {
+    if (err.code !== 11000) throw err;
+    // Either the row is full, or another request created it a moment ago: try once more without creating.
+    const { modifiedCount } = await take(false);
+    if (!modifiedCount) throw overLimit(req, key, max);
+  }
+  return () => Usage.updateOne({ ...id, count: { $gt: 0 } }, { $inc: { count: -1 } }).catch(() => {});
 }

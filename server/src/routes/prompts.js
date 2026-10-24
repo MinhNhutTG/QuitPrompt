@@ -7,7 +7,7 @@ import { ah, parse, assertId, isId, escapeRegex, text, HttpError } from "../lib/
 import { findOrCreateProduct } from "./products.js";
 import { can } from "../middleware/auth.js";
 import { deniedMessage } from "../lib/permissions.js";
-import { assertDailyLimit } from "../lib/tiers.js";
+import { useDaily } from "../lib/tiers.js";
 
 const router = Router();
 
@@ -123,7 +123,7 @@ router.get(
       return res.json({ items: await decorate(req.userId, rows), total, page, pages, limit });
     }
 
-    if (cursor && isId(String(cursor))) filter._id = { $lt: cursor };
+    if (cursor && isId(String(cursor))) filter._id = { $lt: String(cursor) };
     const rows = await Prompt.find(filter).select("-__v").sort({ _id: -1 }).limit(limit + 1).lean();
     const page = rows.slice(0, limit);
     res.json({
@@ -139,27 +139,32 @@ router.post(
   ah(async (req, res) => {
     const data = parse(createSchema, req.body);
     const owner = req.userId;
-    await assertDailyLimit(req, "promptsPerDay", (since) => Prompt.countDocuments({ owner, createdAt: { $gte: since } }));
+    if (data.product) assertId(data.product, "sản phẩm");
+    const refund = await useDaily(req, "promptsPerDay");
     let product;
-    if (data.product) {
-      assertId(data.product, "sản phẩm");
-      product = await Product.findById(data.product);
-      if (!product) throw new HttpError(404, "Không tìm thấy sản phẩm.");
-    } else {
-      product = await findOrCreateProduct(owner, data.productName, req.permissions.has("product.edit"), req);
-      if (!product) throw new HttpError(403, deniedMessage("product.edit"));
+    let doc;
+    try {
+      if (data.product) {
+        product = await Product.findById(data.product);
+        if (!product) throw new HttpError(404, "Không tìm thấy sản phẩm.");
+      } else {
+        product = await findOrCreateProduct(owner, data.productName, req.permissions.has("product.edit"), req);
+        if (!product) throw new HttpError(403, deniedMessage("product.edit"));
+      }
+      doc = await Prompt.create({
+        owner,
+        product: product._id,
+        prompt: data.prompt,
+        negative: data.negative,
+        note: data.note,
+        tool: data.tool,
+        source: data.source,
+        settings: data.source === "external" ? {} : data.settings,
+      });
+    } catch (err) {
+      await refund();
+      throw err;
     }
-
-    const doc = await Prompt.create({
-      owner,
-      product: product._id,
-      prompt: data.prompt,
-      negative: data.negative,
-      note: data.note,
-      tool: data.tool,
-      source: data.source,
-      settings: data.source === "external" ? {} : data.settings,
-    });
     const updated = await Product.findByIdAndUpdate(
       product._id,
       { $inc: { promptCount: 1 }, $set: { lastPromptAt: new Date() } },

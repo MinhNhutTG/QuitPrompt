@@ -21,6 +21,7 @@ const limitOptions = {
 // Login only counts failures, so someone typing the right password is never locked out by their own logins.
 const loginLimiter = rateLimit({ ...limitOptions, skipSuccessfulRequests: true });
 const registerLimiter = rateLimit(limitOptions);
+const passwordLimiter = rateLimit({ ...limitOptions, limit: 10, skipSuccessfulRequests: true });
 
 const password = z
   .string({ required_error: "Thiếu mật khẩu.", invalid_type_error: "Mật khẩu phải là chữ." })
@@ -66,16 +67,18 @@ router.post(
     if (await User.exists({ username })) throw new HttpError(409, TAKEN);
     const passwordHash = await bcrypt.hash(password, 10);
     let user;
+    let first;
     try {
-      // The very first account runs the team, so it starts as admin.
-      const first = !(await User.exists({}));
-      user = await User.create({ username, passwordHash, lastLoginAt: new Date(), role: first ? "admin" : "member" });
+      // The very first account runs the team, so it starts as admin. Everyone after waits for an admin to let them in.
+      first = !(await User.exists({}));
+      user = await User.create({ username, passwordHash, role: first ? "admin" : "member", disabled: !first, pending: !first, ...(first && { lastLoginAt: new Date() }) });
     } catch (err) {
       if (err.code === 11000) throw new HttpError(409, TAKEN);
       throw err;
     }
+    res.locals.audit = { userId: user._id, label: user.username, meta: first ? undefined : { pending: true } };
+    if (!first) return res.status(202).json({ pending: true, username: user.username });
     signSession(res, user._id, remember, user.sessionVersion);
-    res.locals.audit = { userId: user._id, label: user.username };
     res.status(201).json({ user: await publicUser(user) });
   })
 );
@@ -92,8 +95,8 @@ router.post(
       throw new HttpError(401, "Sai tên đăng nhập hoặc mật khẩu.");
     }
     if (user.disabled) {
-      writeLog(req, { user: user._id, action: "auth.login_failed", label: username, meta: { disabled: true } });
-      throw new HttpError(403, "Tài khoản này đã bị khoá. Liên hệ quản trị viên.");
+      writeLog(req, { user: user._id, action: "auth.login_failed", label: username, meta: user.pending ? { pending: true } : { disabled: true } });
+      throw new HttpError(403, user.pending ? "Tài khoản đang chờ quản trị viên duyệt. Nhờ admin mở trong mục Quản trị." : "Tài khoản này đã bị khoá. Liên hệ quản trị viên.");
     }
     user.lastLoginAt = new Date();
     await user.save();
@@ -133,13 +136,19 @@ const passwordSchema = z.object({
 router.post(
   "/password",
   requireAuth,
+  // Same window as logins, so a stolen session cannot guess the current password quickly.
+  passwordLimiter,
   ah(async (req, res) => {
     const { current, next } = parse(passwordSchema, req.body);
     const user = await User.findById(req.userId);
     if (!user) throw new HttpError(401, "Tài khoản không còn tồn tại.");
     if (!(await bcrypt.compare(current, user.passwordHash))) throw new HttpError(400, "Mật khẩu hiện tại không đúng.");
+    if (current === next) throw new HttpError(400, "Mật khẩu mới phải khác mật khẩu hiện tại.");
     user.passwordHash = await bcrypt.hash(next, 10);
+    // Signs out every other device; this one gets a fresh cookie.
+    user.sessionVersion = (user.sessionVersion || 0) + 1;
     await user.save();
+    signSession(res, user._id, Boolean(req.session.rem), user.sessionVersion);
     res.json({ ok: true });
   })
 );
