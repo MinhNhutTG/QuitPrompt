@@ -22,6 +22,11 @@ const RULES = [
   ["POST", /^\/api\/resources$/, "resource.create", "Thêm tài nguyên", "resource"],
   ["PATCH", /^\/api\/resources\/(\w+)$/, "resource.update", "Sửa tài nguyên", "resource"],
   ["DELETE", /^\/api\/resources\/(\w+)$/, "resource.delete", "Xoá tài nguyên", "resource"],
+  ["POST", /^\/api\/drive\/folders$/, "drive.folder", "Drive: tạo thư mục", "drive"],
+  ["POST", /^\/api\/drive\/uploads$/, "drive.upload", "Drive: tải file lên", "drive"],
+  ["PATCH", /^\/api\/drive\/files\/([\w-]+)$/, "drive.rename", "Drive: đổi tên", "drive"],
+  ["DELETE", /^\/api\/drive\/files\/([\w-]+)$/, "drive.delete", "Drive: xoá vào thùng rác", "drive"],
+  ["POST", /^\/api\/drive\/disconnect$/, "drive.disconnect", "Drive: ngắt kết nối", "drive"],
   ["PUT", /^\/api\/settings$/, "settings.update", "Đổi cài đặt", "settings"],
   ["POST", /^\/api\/transfer\/import$/, "data.import", "Nhập dữ liệu", "data"],
   ["GET", /^\/api\/transfer\/export$/, "data.export", "Xuất dữ liệu", "data"],
@@ -37,7 +42,10 @@ const RULES = [
 ];
 
 // Written directly by the auth routes, not matched from a path.
-const EXTRA = [["auth.login_failed", "Đăng nhập sai", "auth"]];
+const EXTRA = [
+  ["auth.login_failed", "Đăng nhập sai", "auth"],
+  ["drive.connect", "Drive: kết nối", "drive"],
+];
 
 export const ACTIONS = Object.fromEntries([
   ...RULES.map(([, , code, label, group]) => [code, { label, group }]),
@@ -50,6 +58,7 @@ export const ACTION_GROUPS = {
   prompt: "Prompt",
   plan: "Kế hoạch",
   resource: "Tài nguyên",
+  drive: "Google Drive",
   settings: "Cài đặt",
   data: "Dữ liệu",
   admin: "Quản trị",

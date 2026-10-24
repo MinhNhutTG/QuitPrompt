@@ -18,6 +18,13 @@ export const config = {
   adminUsernames: (env.ADMIN_USERNAMES || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean),
   cloudinaryUrl: env.CLOUDINARY_URL || "",
   clientOrigin: env.CLIENT_ORIGIN || "",
+  // Google Drive for the team (Google Cloud Console → OAuth client "Web application").
+  // The redirect URI is the address people open the app at + /api/drive/callback.
+  googleClientId: env.GOOGLE_CLIENT_ID || "",
+  googleClientSecret: env.GOOGLE_CLIENT_SECRET || "",
+  googleRedirectUri: env.GOOGLE_REDIRECT_URI || "",
+  driveFolderName: env.DRIVE_FOLDER_NAME || "Xưởng Prompt",
+  driveMaxUploadMb: Math.min(Math.max(Math.round(Number(env.DRIVE_MAX_UPLOAD_MB)) || 500, 1), 5000),
   // Proxy hops in front of Express: 1 = Render only, 2 = Vercel rewrite + Render.
   trustProxy: Number(env.TRUST_PROXY) || 1,
 };

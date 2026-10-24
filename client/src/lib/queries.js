@@ -22,6 +22,18 @@ export const usePlans = (params) =>
 
 export const useResources = () => useQuery({ queryKey: ["resources"], queryFn: api.resources });
 
+export const useDriveStatus = () => useQuery({ queryKey: ["drive", "status"], queryFn: api.driveStatus, staleTime: 60 * 1000 });
+
+// One folder (or a search), 100 entries per page.
+export const useDriveFiles = (params, enabled) =>
+  useInfiniteQuery({
+    queryKey: ["drive", "files", params],
+    queryFn: ({ pageParam }) => api.driveFiles({ ...params, pageToken: pageParam }),
+    initialPageParam: undefined,
+    getNextPageParam: (last) => last.nextPageToken || undefined,
+    enabled,
+  });
+
 export const useAdminStats = () => useQuery({ queryKey: ["admin", "stats"], queryFn: () => api.adminStats() });
 export const useAdminUsers = () => useQuery({ queryKey: ["admin", "users"], queryFn: api.adminUsers });
 export const useAdminTiers = () => useQuery({ queryKey: ["admin", "tiers"], queryFn: api.adminTiers });

@@ -19,6 +19,7 @@ import resourceRoutes from "./routes/resources.js";
 import settingsRoutes from "./routes/settings.js";
 import transferRoutes from "./routes/transfer.js";
 import adminRoutes from "./routes/admin.js";
+import driveRoutes from "./routes/drive.js";
 import { ActivityLog } from "./models/ActivityLog.js";
 import { ensureStarterRoles } from "./lib/permissions.js";
 import { ensureTiers } from "./lib/tiers.js";
@@ -35,7 +36,8 @@ app.use(
         imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        connectSrc: ["'self'"],
+        // Drive uploads go from the browser straight to Google.
+        connectSrc: ["'self'", "https://www.googleapis.com"],
         scriptSrc: ["'self'"],
       },
     },
@@ -103,6 +105,7 @@ app.use("/api/plans", requireAuth, planRoutes);
 app.use("/api/resources", requireAuth, resourceRoutes);
 app.use("/api/settings", requireAuth, settingsRoutes);
 app.use("/api/transfer", requireAuth, transferRoutes);
+app.use("/api/drive", requireAuth, driveRoutes);
 // Each route checks its own permission: admin.view to look, an admin to change accounts and roles.
 app.use("/api/admin", requireAuth, adminRoutes);
 app.use("/api", (req, res, next) => next(new HttpError(404, "Không có đường dẫn API này.")));

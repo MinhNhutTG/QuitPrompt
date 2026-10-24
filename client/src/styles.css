@@ -2883,3 +2883,152 @@ select.status-select:disabled {
 .tabs button.is-on {
   color: var(--heading);
 }
+
+/* ---- Google Drive: the team's shared folder */
+.drive-bar .input {
+  max-width: 560px;
+}
+.crumbs {
+  font-size: 14px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.crumbs [aria-current] {
+  color: var(--fg);
+  font-weight: 600;
+}
+.drive-box {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  min-height: 120px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.drive-box.is-over {
+  border-color: var(--accent);
+  outline: 2px dashed var(--accent);
+  outline-offset: -6px;
+}
+.drive-drop-hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--accent-soft) 88%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+  pointer-events: none;
+}
+.drive-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.drive-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  border-radius: var(--r);
+}
+.drive-row + .drive-row {
+  border-top: 1px solid var(--line);
+}
+.drive-row:hover {
+  background: var(--sunk);
+}
+.drive-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.drive-main:disabled {
+  cursor: default;
+}
+.drive-main:focus-visible {
+  outline: 2px solid var(--accent);
+  border-radius: 6px;
+}
+.drive-thumb,
+.drive-ico {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+}
+.drive-thumb {
+  object-fit: cover;
+  background: var(--sunk);
+}
+.drive-ico {
+  padding: 9px;
+  background: var(--sunk);
+  color: var(--muted);
+}
+.drive-ico-folder {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.drive-name {
+  display: grid;
+  min-width: 0;
+}
+.drive-name b {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.drive-name small {
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.drive-acts {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.drive-admin summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 14px;
+}
+.drive-admin[open] {
+  display: grid;
+  gap: 10px;
+}
+.drive-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  margin: 0 auto 12px;
+  border-radius: var(--r);
+  object-fit: contain;
+}
+@media (max-width: 640px) {
+  .drive-row {
+    flex-wrap: wrap;
+    gap: 0 10px;
+  }
+  .drive-acts {
+    width: 100%;
+    justify-content: flex-end;
+    padding-bottom: 6px;
+  }
+}

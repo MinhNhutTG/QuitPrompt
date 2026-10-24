@@ -1,7 +1,7 @@
 import { Role } from "../models/Role.js";
 import { getTier, tierKeyOf, NO_LIMITS } from "./tiers.js";
 
-// Everything a role can be allowed to do. Viewing products, prompts, plans and resources is always allowed;
+// Everything a role can be allowed to do. Viewing products, prompts, plans, resources and Drive files is always allowed;
 // managing accounts and roles is for admins only and never a tickable permission.
 export const PERMISSIONS = [
   { key: "product.edit", label: "Thêm, sửa sản phẩm và ảnh", group: "Sản phẩm" },
@@ -12,6 +12,8 @@ export const PERMISSIONS = [
   { key: "plan.delete", label: "Xoá kế hoạch", group: "Kế hoạch" },
   { key: "resource.edit", label: "Thêm, sửa tài nguyên", group: "Tài nguyên" },
   { key: "resource.delete", label: "Xoá tài nguyên", group: "Tài nguyên" },
+  { key: "drive.edit", label: "Tải file lên, tạo thư mục, đổi tên trên Drive", group: "Google Drive" },
+  { key: "drive.delete", label: "Xoá file trên Drive", group: "Google Drive" },
   { key: "data.import", label: "Nhập dữ liệu từ file", group: "Dữ liệu" },
   { key: "data.export", label: "Xuất dữ liệu ra file", group: "Dữ liệu" },
   { key: "admin.view", label: "Xem trang Quản trị", group: "Quản trị" },
@@ -27,7 +29,7 @@ const ADMIN = { key: ADMIN_ROLE, name: "Quản trị viên", permissions: PERMIS
 // Created once, on the first start with no roles at all.
 const STARTER_ROLES = [
   { key: "editor", name: "Biên tập", permissions: PERMISSION_KEYS.filter((k) => !k.startsWith("data.")) },
-  { key: DEFAULT_ROLE, name: "Thành viên", permissions: ["product.edit", "prompt.save", "resource.edit"] },
+  { key: DEFAULT_ROLE, name: "Thành viên", permissions: ["product.edit", "prompt.save", "resource.edit", "drive.edit"] },
   { key: "viewer", name: "Chỉ xem", permissions: [] },
 ];
 

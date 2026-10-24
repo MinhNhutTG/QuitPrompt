@@ -9,6 +9,7 @@ const loaders = {
   saved: () => import("./Saved.jsx"),
   plans: () => import("./Plans.jsx"),
   resources: () => import("./Resources.jsx"),
+  drive: () => import("./Drive.jsx"),
   library: () => import("./Library.jsx"),
   settings: () => import("./Settings.jsx"),
   admin: () => import("./Admin.jsx"),

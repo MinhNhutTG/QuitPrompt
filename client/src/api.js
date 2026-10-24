@@ -84,6 +84,22 @@ function uploadImage(productId, file, onProgress) {
   });
 }
 
+// Two steps: the server opens a Google upload session, then the file goes straight from the browser to Google.
+async function driveUpload(parent, file, onProgress) {
+  const { uploadUrl } = await request("POST", "/drive/uploads", { parent, name: file.name, mimeType: file.type || "", size: file.size });
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", uploadUrl);
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve(parseJson(xhr.responseText));
+      else reject(new ApiError(xhr.status, `Google Drive không nhận file (mã ${xhr.status}). Thử lại.`));
+    };
+    xhr.onerror = () => reject(new ApiError(0, NETWORK));
+    xhr.send(file);
+  });
+}
+
 export const api = {
   authConfig: () => request("GET", "/auth/config"),
   me: () => request("GET", "/auth/me", undefined, { notify401: false }),
@@ -133,6 +149,18 @@ export const api = {
   adminDeleteRole: (key) => request("DELETE", `/admin/roles/${key}`),
   adminTiers: () => request("GET", "/admin/tiers"),
   adminUpdateTier: (key, body) => request("PATCH", `/admin/tiers/${key}`, body),
+
+  driveStatus: () => request("GET", "/drive/status"),
+  driveFiles: (params) => request("GET", "/drive/files" + qs(params)),
+  driveCreateFolder: (body) => request("POST", "/drive/folders", body),
+  driveRename: (id, name) => request("PATCH", `/drive/files/${id}`, { name }),
+  driveDelete: (id) => request("DELETE", `/drive/files/${id}`),
+  driveDisconnect: () => request("POST", "/drive/disconnect"),
+  driveUpload,
+  // Plain links: the browser navigates (connect) or downloads with the session cookie.
+  driveConnectUrl: "/api/drive/connect",
+  driveDownloadUrl: (id) => `/api/drive/files/${id}/download`,
+  driveThumbUrl: (id, size) => `/api/drive/files/${id}/thumb?s=${size}`,
 
   settings: () => request("GET", "/settings"),
   saveSettings: (body) => request("PUT", "/settings", body),
