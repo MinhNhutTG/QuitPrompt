@@ -7,8 +7,9 @@ const schema = new mongoose.Schema(
     // AES-GCM encrypted with a key derived from JWT_SECRET (lib/drive.js).
     refreshToken: { type: String, required: true },
     email: { type: String, default: "" },
-    // The app's top folder; members only ever see what is inside it.
-    rootId: { type: String, required: true },
+    // The team's folder, chosen by an admin; members only ever see what is inside it. Empty until chosen.
+    rootId: { type: String, default: "" },
+    rootName: { type: String, default: "" },
     connectedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }

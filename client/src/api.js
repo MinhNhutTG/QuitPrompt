@@ -156,6 +156,7 @@ export const api = {
   driveRename: (id, name) => request("PATCH", `/drive/files/${id}`, { name }),
   driveDelete: (id) => request("DELETE", `/drive/files/${id}`),
   driveDisconnect: () => request("POST", "/drive/disconnect"),
+  driveSetRoot: (body) => request("POST", "/drive/root", body),
   driveUpload,
   // Plain links: the browser navigates (connect) or downloads with the session cookie.
   driveConnectUrl: "/api/drive/connect",

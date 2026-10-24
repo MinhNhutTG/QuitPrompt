@@ -5,12 +5,13 @@ import { DriveLink } from "../models/DriveLink.js";
 
 // Google Drive over plain REST (no SDK). One Google account holds the team folder; the server keeps its
 // refresh token and acts for everyone, so members never sign in to Google.
-// Scope drive.file: the app sees only files it created itself, which is exactly the team folder's tree.
-export const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
+// Full drive scope, so an existing folder (and files added to it from Google Drive itself) can be the team's folder.
+// The server still keeps members inside that one folder (pathTo).
+export const SCOPES = ["https://www.googleapis.com/auth/drive"];
 const API = "https://www.googleapis.com/drive/v3";
 export const UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
 export const FOLDER = "application/vnd.google-apps.folder";
-// Marks the app's top folder so reconnecting the same account finds it again instead of making a new one.
+// Marks a folder the app created as the team's folder, so making one again finds it instead of a duplicate.
 const ROOT_MARK = { xpRoot: "1" };
 
 export const driveConfigured = () => Boolean(config.googleClientId && config.googleClientSecret && config.googleRedirectUri);
@@ -129,6 +130,11 @@ function googleError(status, data) {
 
 // One Drive call. raw: return the fetch Response untouched (downloads, upload sessions).
 export async function gapi(method, path, { query, body, headers, raw, base = API, token } = {}) {
+  // The team's folder may sit in a shared drive; these flags are harmless for My Drive.
+  if (path.startsWith("/files")) {
+    query = { supportsAllDrives: "true", ...query };
+    if (method === "GET" && path === "/files") query.includeItemsFromAllDrives = "true";
+  }
   const url = `${base}${path}${query ? `?${new URLSearchParams(query)}` : ""}`;
   const send = async (t) =>
     fetch(url, {
@@ -143,26 +149,51 @@ export async function gapi(method, path, { query, body, headers, raw, base = API
   throw googleError(res.status, await res.json().catch(() => null));
 }
 
-// The account's email and the app's top folder (found again or created). Uses the token from the OAuth answer.
-export async function setUpRoot(token) {
+// The connected account's email. Uses the token from the OAuth answer.
+export async function accountEmail(token) {
   const about = await gapi("GET", "/about", { query: { fields: "user(emailAddress)" }, token });
-  const found = await gapi("GET", "/files", {
-    query: { q: `mimeType='${FOLDER}' and trashed=false and appProperties has { key='xpRoot' and value='1' }`, fields: "files(id)", pageSize: "1" },
-    token,
-  });
-  const rootId =
-    found.files?.[0]?.id ||
-    (await gapi("POST", "/files", { query: { fields: "id" }, body: { name: config.driveFolderName, mimeType: FOLDER, appProperties: ROOT_MARK }, token })).id;
-  return { email: about.user?.emailAddress || "", rootId };
+  return about.user?.emailAddress || "";
 }
 
-export async function saveLink({ refreshToken, email, rootId, userId }) {
+export async function saveLink({ refreshToken, email, rootId, rootName, userId }) {
   await DriveLink.findOneAndUpdate(
     { key: "team" },
-    { $set: { refreshToken: seal(refreshToken), email, rootId, connectedBy: userId } },
+    { $set: { refreshToken: seal(refreshToken), email, rootId, rootName, connectedBy: userId } },
     { upsert: true }
   );
   forgetLink();
+}
+
+// A folder id from what an admin pasted: a Drive folder link, an "open?id=" link, or the bare id.
+export function folderIdFrom(input) {
+  const s = String(input || "").trim();
+  const id = /\/folders\/([\w-]+)/.exec(s)?.[1] || /[?&]id=([\w-]+)/.exec(s)?.[1] || s;
+  return isDriveId(id) ? id : null;
+}
+
+// An existing folder becomes the team's folder.
+export async function useFolder(id) {
+  const f = await gapi("GET", `/files/${id}`, { query: { fields: "id,name,mimeType,trashed" } });
+  if (f.mimeType !== FOLDER) throw new HttpError(400, "Link này là một file, không phải thư mục.");
+  if (f.trashed) throw new HttpError(400, "Thư mục này đang nằm trong thùng rác.");
+  return setRoot(f.id, f.name);
+}
+
+// A new folder named DRIVE_FOLDER_NAME in My Drive (or the one the app made before).
+export async function makeFolder() {
+  const found = await gapi("GET", "/files", {
+    query: { q: `mimeType='${FOLDER}' and trashed=false and appProperties has { key='xpRoot' and value='1' }`, fields: "files(id,name)", pageSize: "1" },
+  });
+  const f =
+    found.files?.[0] ||
+    (await gapi("POST", "/files", { query: { fields: "id,name" }, body: { name: config.driveFolderName, mimeType: FOLDER, appProperties: ROOT_MARK } }));
+  return setRoot(f.id, f.name);
+}
+
+async function setRoot(rootId, rootName) {
+  await DriveLink.updateOne({ key: "team" }, { $set: { rootId, rootName } });
+  forgetLink();
+  return { rootId, rootName };
 }
 
 // ---- keeping members inside the team folder
@@ -193,12 +224,12 @@ export const isDriveId = (s) => typeof s === "string" && /^[\w-]{10,120}$/.test(
 // Path from the team folder down to id: [{ id, name }, ...]. 404 when id is outside it, in the bin, or unknown.
 export async function pathTo(id) {
   const link = await getLink();
-  if (!link) throw new HttpError(503, NOT_LINKED);
+  if (!link?.rootId) throw new HttpError(503, NOT_LINKED);
   if (!isDriveId(id)) throw new HttpError(404, "Không tìm thấy file trên Drive.");
   const chain = [];
   let cur = id;
   for (let depth = 0; depth < 40; depth++) {
-    if (cur === link.rootId) return [{ id: link.rootId, name: "Drive của team" }, ...chain.reverse()];
+    if (cur === link.rootId) return [{ id: link.rootId, name: link.rootName || "Drive của team" }, ...chain.reverse()];
     const meta = await metaOf(cur);
     if (meta.trashed || !meta.parent) break;
     chain.push({ id: cur, name: meta.name });

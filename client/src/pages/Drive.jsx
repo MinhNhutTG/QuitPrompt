@@ -17,7 +17,9 @@ const KIND_ICONS = {
 };
 
 const kindOf = (f) => (f.folder ? "folder" : f.mimeType?.startsWith("image/") ? "image" : f.mimeType?.startsWith("video/") ? "video" : "doc");
-const isGoogleDoc = (f) => f.mimeType?.startsWith("application/vnd.google-apps.");
+// Google Docs, Sheets, Slides and Drawings download as Office files; other Google types only open in Drive.
+const EXPORTABLE = ["document", "spreadsheet", "presentation", "drawing"].map((t) => `application/vnd.google-apps.${t}`);
+const downloadable = (f) => !f.folder && (!f.mimeType?.startsWith("application/vnd.google-apps.") || EXPORTABLE.includes(f.mimeType));
 
 function fmtSize(n) {
   if (n == null) return "";
@@ -123,7 +125,6 @@ function NameForm({ initial = "", submitLabel, pending, error, onSubmit, onCance
 }
 
 function FileRow({ f, onOpen, onPreview, onRename, onDelete }) {
-  const downloadable = !f.folder && !isGoogleDoc(f);
   return (
     <li className="drive-row">
       <button
@@ -145,7 +146,7 @@ function FileRow({ f, onOpen, onPreview, onRename, onDelete }) {
         </span>
       </button>
       <div className="drive-acts">
-        {downloadable && (
+        {downloadable(f) && (
           <a className="btn btn-sm" href={api.driveDownloadUrl(f.id)} download={f.name}>
             Tải về
           </a>
@@ -165,6 +166,53 @@ function FileRow({ f, onOpen, onPreview, onRename, onDelete }) {
   );
 }
 
+// Admins pick the team's folder: an existing one from its link, or a new one made by the app.
+function FolderPicker({ current, onDone }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [link, setLink] = useState("");
+  const save = useMutation({
+    mutationFn: api.driveSetRoot,
+    onSuccess: ({ folder }) => {
+      toast(`Đã chọn thư mục “${folder.name}”`);
+      setLink("");
+      qc.invalidateQueries({ queryKey: ["drive"] });
+      onDone?.();
+    },
+  });
+  return (
+    <form
+      className="form drive-pick"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (link.trim()) save.mutate({ folder: link.trim() });
+      }}
+    >
+      <Field
+        label={current ? "Đổi sang thư mục khác" : "Link thư mục Google Drive của team"}
+        hint="Trong Google Drive, bấm chuột phải vào thư mục → Chia sẻ → Sao chép đường liên kết, rồi dán vào đây."
+      >
+        <input className="input" value={link} placeholder="https://drive.google.com/drive/folders/..." onChange={(e) => setLink(e.target.value)} />
+      </Field>
+      {save.error && (
+        <p className="error" role="alert">
+          {save.error.message}
+        </p>
+      )}
+      <div className="btns">
+        <button type="submit" className="btn btn-primary" disabled={save.isPending || !link.trim()}>
+          {save.isPending ? "Đang kiểm tra..." : "Dùng thư mục này"}
+        </button>
+        {!current && (
+          <button type="button" className="btn btn-ghost" disabled={save.isPending} onClick={() => save.mutate({ create: true })}>
+            Hoặc tạo thư mục mới
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
+
 function NotReady({ status, isAdmin }) {
   if (!status.configured)
     return (
@@ -172,6 +220,14 @@ function NotReady({ status, isAdmin }) {
         {isAdmin
           ? "Thêm GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET và GOOGLE_REDIRECT_URI trên máy chủ (xem tài liệu 12), khởi động lại, rồi quay lại đây để kết nối."
           : "Quản trị viên cần cấu hình Google Drive trên máy chủ trước."}
+      </EmptyState>
+    );
+  if (status.connected)
+    return (
+      <EmptyState title="Chọn thư mục cho team" action={isAdmin && <FolderPicker />}>
+        {isAdmin
+          ? `Đã kết nối Drive ${status.email}. Chọn thư mục cả team sẽ dùng chung: thành viên chỉ thấy những gì nằm trong thư mục này.`
+          : "Quản trị viên chưa chọn thư mục Drive cho team."}
       </EmptyState>
     );
   return (
@@ -186,7 +242,7 @@ function NotReady({ status, isAdmin }) {
       }
     >
       {isAdmin
-        ? "Đăng nhập một tài khoản Google để làm kho chung. App tạo thư mục “Xưởng Prompt” trong Drive đó, cả team dùng chung, thành viên không cần đăng nhập Google."
+        ? "Đăng nhập tài khoản Google đang giữ kho file của team, rồi chọn thư mục dùng chung. Thành viên không cần đăng nhập Google."
         : "Nhờ quản trị viên kết nối một tài khoản Google cho team."}
     </EmptyState>
   );
@@ -200,7 +256,7 @@ export default function Drive() {
   const qc = useQueryClient();
   const toast = useToast();
   const status = useDriveStatus();
-  const connected = Boolean(status.data?.connected);
+  const connected = Boolean(status.data?.connected && status.data?.folder);
 
   const [params, setParams] = useSearchParams();
   const folder = params.get("folder") || "";
@@ -292,7 +348,7 @@ export default function Drive() {
       <div className="page-head">
         <div>
           <h1>Google Drive</h1>
-          <p>{connected ? `Thư mục chung của team, lưu trong Drive ${status.data.email}.` : "Kho file chung của team trên Google Drive."}</p>
+          <p>{connected ? `Thư mục “${status.data.folder.name}” trong Drive ${status.data.email}, dùng chung cả team.` : "Kho file chung của team trên Google Drive."}</p>
         </div>
         {connected && canEdit && !dq && (
           <div className="btns">
@@ -407,8 +463,9 @@ export default function Drive() {
             <details className="drive-admin">
               <summary>Quản lý kết nối</summary>
               <p className="hint">
-                Đang dùng Drive của <b>{status.data.email}</b>. Ngắt kết nối không xoá file: chúng vẫn nằm trong thư mục “Xưởng Prompt” của tài khoản đó, kết nối lại cùng tài khoản là thấy lại.
+                Đang dùng thư mục <b>{status.data.folder.name}</b> trong Drive của <b>{status.data.email}</b>. Ngắt kết nối không xoá file nào trên Drive.
               </p>
+              <FolderPicker current={status.data.folder} onDone={() => set({ folder: "", q: "" })} />
               <div className="btns">
                 <a className="btn btn-sm" href={api.driveConnectUrl}>
                   Kết nối lại / đổi tài khoản
@@ -469,7 +526,7 @@ export default function Drive() {
           <>
             <img className="drive-preview" src={api.driveThumbUrl(preview.id, 1600)} alt={preview.name} />
             <div className="btns">
-              {!isGoogleDoc(preview) && (
+              {downloadable(preview) && (
                 <a className="btn btn-primary" href={api.driveDownloadUrl(preview.id)} download={preview.name}>
                   Tải về ({fmtSize(preview.size)})
                 </a>

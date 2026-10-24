@@ -11,22 +11,25 @@ import { ADMIN_ROLE } from "../lib/permissions.js";
 import { writeLog } from "../lib/audit.js";
 import {
   FOLDER,
+  accountEmail,
   authUrl,
   driveConfigured,
   exchangeCode,
+  folderIdFrom,
   forgetLink,
   forgetMeta,
   gapi,
   getLink,
   isDriveId,
+  makeFolder,
   metaOf,
   pathTo,
   primeMeta,
   requireDriveConfig,
   revoke,
   saveLink,
-  setUpRoot,
   UPLOAD_API,
+  useFolder,
 } from "../lib/drive.js";
 
 const router = Router();
@@ -34,6 +37,13 @@ const router = Router();
 const STATE_COOKIE = "ps_drive_state";
 const FIELDS = "id,name,mimeType,size,modifiedTime,hasThumbnail,appProperties";
 const GOOGLE_APPS = "application/vnd.google-apps.";
+// Google Docs, Sheets, Slides and Drawings have no bytes of their own: they download as Office files.
+const EXPORTS = {
+  "application/vnd.google-apps.document": ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"],
+  "application/vnd.google-apps.spreadsheet": ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx"],
+  "application/vnd.google-apps.presentation": ["application/vnd.openxmlformats-officedocument.presentationml.presentation", ".pptx"],
+  "application/vnd.google-apps.drawing": ["image/png", ".png"],
+};
 
 // Drive names may hold almost anything; slashes would only confuse people downloading to disk.
 const name = (label) => text(label, 200, 1).refine((s) => !/[\\/]/.test(s) && s !== "." && s !== "..", `Tên không được chứa dấu / hoặc \\.`);
@@ -63,6 +73,7 @@ async function stamp(req) {
 async function linked() {
   const link = await getLink();
   if (!link) throw new HttpError(503, "Google Drive chưa được kết nối. Nhờ quản trị viên kết nối ở trang Drive.");
+  if (!link.rootId) throw new HttpError(503, "Quản trị viên chưa chọn thư mục Drive cho team.");
   return link;
 }
 
@@ -91,6 +102,7 @@ router.get(
       configured: driveConfigured(),
       connected: Boolean(link),
       email: link?.email || "",
+      folder: link?.rootId ? { id: link.rootId, name: link.rootName } : null,
       connectedAt: link?.updatedAt || null,
       maxUploadMb: config.driveMaxUploadMb,
     });
@@ -116,10 +128,12 @@ router.get("/callback", requireDriveConfig, async (req, res) => {
     const code = typeof req.query.code === "string" ? req.query.code : "";
     if (!code) throw new HttpError(400, "Google không trả về mã kết nối.");
     const tokens = await exchangeCode(code);
-    const { email, rootId } = await setUpRoot(tokens.access_token);
+    const email = await accountEmail(tokens.access_token);
     const old = await getLink();
     if (old && old.email !== email) await revoke(old);
-    await saveLink({ refreshToken: tokens.refresh_token, email, rootId, userId: req.userId });
+    // Reconnecting the same account keeps the chosen folder; another account must choose again.
+    const keep = old?.email === email;
+    await saveLink({ refreshToken: tokens.refresh_token, email, rootId: keep ? old.rootId : "", rootName: keep ? old.rootName : "", userId: req.userId });
     writeLog(req, { user: req.userId, action: "drive.connect", label: email });
     back(res, { connected: "1" });
   } catch (err) {
@@ -142,6 +156,25 @@ router.post(
   })
 );
 
+// The team's folder: an existing Drive folder from its link, or { create: true } for a new one.
+router.post(
+  "/root",
+  requireAdmin,
+  ah(async (req, res) => {
+    if (!(await getLink())) throw new HttpError(503, "Google Drive chưa được kết nối.");
+    const data = parse(z.object({ folder: z.string().max(500).optional(), create: z.boolean().optional() }), req.body);
+    let root;
+    if (data.create) root = await makeFolder();
+    else {
+      const id = folderIdFrom(data.folder);
+      if (!id) throw new HttpError(400, "Dán link thư mục Google Drive (dạng https://drive.google.com/drive/folders/...).");
+      root = await useFolder(id);
+    }
+    res.locals.audit = { label: root.rootName };
+    res.json({ folder: { id: root.rootId, name: root.rootName } });
+  })
+);
+
 // ---- browsing: one folder's content, or a search over the whole team tree
 router.get(
   "/files",
@@ -152,9 +185,15 @@ router.get(
 
     if (q) {
       const found = await gapi("GET", "/files", {
-        query: { q: `name contains ${quote(q)} and trashed=false`, fields: `files(${FIELDS},parents)`, pageSize: "60", orderBy: "folder,modifiedTime desc" },
+        query: {
+          q: `name contains ${quote(q)} and trashed=false`,
+          fields: `files(${FIELDS},parents)`,
+          pageSize: "60",
+          orderBy: "folder,modifiedTime desc",
+          corpora: "allDrives",
+        },
       });
-      // drive.file only shows the app's own files, but one may have been moved out of the team folder in Drive.
+      // Drive cannot search one folder tree, so the whole account is searched and anything outside the team folder dropped.
       const items = [];
       for (const f of found.files || []) {
         const parent = f.parents?.[0];
@@ -276,13 +315,17 @@ router.get(
     await linked();
     const { meta } = await childOf(req.params.id);
     if (meta.mimeType === FOLDER) throw new HttpError(400, "Không tải được cả thư mục. Mở thư mục rồi tải từng file.");
-    if (meta.mimeType.startsWith(GOOGLE_APPS)) throw new HttpError(400, "File Google Docs/Sheets cần mở trực tiếp trong Google Drive.");
-    const up = await gapi("GET", `/files/${req.params.id}`, { query: { alt: "media" }, raw: true });
+    const exp = EXPORTS[meta.mimeType];
+    if (!exp && meta.mimeType.startsWith(GOOGLE_APPS)) throw new HttpError(400, "Loại file này chỉ mở được trong Google Drive.");
+    const up = exp
+      ? await gapi("GET", `/files/${req.params.id}/export`, { query: { mimeType: exp[0] }, raw: true })
+      : await gapi("GET", `/files/${req.params.id}`, { query: { alt: "media" }, raw: true });
+    const fileName = exp && !meta.name.toLowerCase().endsWith(exp[1]) ? meta.name + exp[1] : meta.name;
     res.setHeader("Content-Type", up.headers.get("content-type") || "application/octet-stream");
     const len = up.headers.get("content-length");
     if (len) res.setHeader("Content-Length", len);
-    const ascii = meta.name.replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "_");
-    res.setHeader("Content-Disposition", `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(meta.name)}`);
+    const ascii = fileName.replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "_");
+    res.setHeader("Content-Disposition", `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`);
     const body = Readable.fromWeb(up.body);
     req.on("close", () => body.destroy());
     body.on("error", () => res.destroy());

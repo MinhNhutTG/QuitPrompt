@@ -3032,3 +3032,7 @@ select.status-select:disabled {
     padding-bottom: 6px;
   }
 }
+.drive-pick {
+  width: min(100%, 560px);
+  text-align: left;
+}

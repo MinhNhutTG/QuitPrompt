@@ -9,8 +9,10 @@ Một kho file chung trên Google Drive ngay trong app: xem, tìm, tải lên, t
 | Vấn đề | Quyết định |
 |---|---|
 | Drive của ai | **Một tài khoản Google cho cả team.** Quản trị viên kết nối một lần; thành viên không cần đăng nhập Google |
-| Phạm vi | App tạo thư mục **“Xưởng Prompt”** (đổi tên bằng `DRIVE_FOLDER_NAME`) trong Drive đó. Thành viên chỉ thấy những gì bên trong thư mục này |
-| Quyền Google | `drive.file`: app chỉ thấy file do chính app tạo, không đọc được phần còn lại của Drive. File kéo vào thư mục bằng giao diện Google Drive sẽ **không** hiện trong app |
+| Phạm vi | Quản trị viên **chọn một thư mục có sẵn** (dán link, ví dụ thư mục “Brother”) hoặc để app tạo thư mục mới (`DRIVE_FOLDER_NAME`). Thành viên chỉ thấy những gì bên trong thư mục này; máy chủ kiểm tra mọi thao tác |
+| Quyền Google | `drive` (toàn bộ Drive), để dùng được thư mục có sẵn và thấy cả file thêm từ giao diện Google Drive. Đây là scope “restricted”: app chưa được Google xác minh nên màn hình đồng ý có cảnh báo, quản trị viên bấm qua một lần. Chỉ một tài khoản đăng nhập nên không vướng giới hạn 100 người dùng của app chưa xác minh |
+| Thư mục trong Shared drive | Được hỗ trợ |
+| File Google Docs/Sheets/Slides | Tải về thành .docx/.xlsx/.pptx |
 | Tải lên | Trình duyệt gửi file thẳng lên Google (phiên resumable do máy chủ mở). File lớn không đi qua Render/Vercel. Mặc định tối đa 500 MB mỗi file (`DRIVE_MAX_UPLOAD_MB`) |
 | Tải về | Đi qua máy chủ (cần token của team), trình duyệt tự hiện tiến độ |
 | Xoá | Vào thùng rác của Drive, khôi phục được trong 30 ngày từ chính Google Drive |
@@ -21,7 +23,7 @@ Một kho file chung trên Google Drive ngay trong app: xem, tìm, tải lên, t
 
 1. Vào [Google Cloud Console](https://console.cloud.google.com/) → tạo project (hoặc dùng project có sẵn).
 2. **APIs & Services → Library** → bật **Google Drive API**.
-3. **OAuth consent screen**: loại *External*, điền tên app và email. Scope thêm `.../auth/drive.file`. Bấm **Publish app** (chuyển sang *In production*): `drive.file` là scope không nhạy cảm nên không cần Google duyệt, và ở chế độ *Testing* refresh token tự hết hạn sau 7 ngày.
+3. **OAuth consent screen**: loại *External*, điền tên app và email. Ở **Data Access** thêm scope `https://www.googleapis.com/auth/drive`. Ở **Branding** điền tên app, email hỗ trợ, email liên hệ và thêm tên miền app vào **Authorized domains** (không tải logo). Rồi ở **Audience** bấm **Publish app** (chuyển sang *In production*); nếu Google gợi ý gửi xác minh thì bỏ qua. Ở chế độ *Testing* refresh token tự hết hạn sau 7 ngày.
 4. **Credentials → Create credentials → OAuth client ID**, loại *Web application*. Ở **Authorized redirect URIs** thêm đúng địa chỉ mở app + `/api/drive/callback`:
    - Máy cá nhân: `http://localhost:5173/api/drive/callback`
    - Vercel + Render: `https://<tên-app>.vercel.app/api/drive/callback`
@@ -34,7 +36,8 @@ Một kho file chung trên Google Drive ngay trong app: xem, tìm, tải lên, t
    GOOGLE_REDIRECT_URI=https://<tên-app>.vercel.app/api/drive/callback
    ```
 
-6. Khởi động lại máy chủ, đăng nhập bằng tài khoản quản trị → mục **Google Drive** → **Kết nối Google Drive** → chọn tài khoản Google của team → Cho phép.
+6. Khởi động lại máy chủ, đăng nhập bằng tài khoản quản trị → mục **Google Drive** → **Kết nối Google Drive** → chọn tài khoản Google đang giữ thư mục. Gặp màn hình “Google chưa xác minh ứng dụng này” thì bấm **Nâng cao** → **Đi tới ... (không an toàn)** → Cho phép.
+7. Quay về app, dán link thư mục (trong Drive: chuột phải thư mục → Chia sẻ → Sao chép đường liên kết) → **Dùng thư mục này**. Đổi thư mục sau này ở mục “Quản lý kết nối” cuối trang.
 
 Nên dùng một tài khoản Google riêng của team (không phải tài khoản cá nhân), vì mọi file nằm trong dung lượng của tài khoản đó.
 
@@ -50,9 +53,10 @@ Nên dùng một tài khoản Google riêng của team (không phải tài kho�
 
 | Phương thức | Đường dẫn | Mô tả |
 |---|---|---|
-| GET | `/api/drive/status` | `{ configured, connected, email, connectedAt, maxUploadMb }` |
+| GET | `/api/drive/status` | `{ configured, connected, email, folder, connectedAt, maxUploadMb }` |
+| POST | `/api/drive/root` | Admin. `{ folder: "<link hoặc id>" }` hoặc `{ create: true }` → `{ folder }` |
 | GET | `/api/drive/connect` | Admin. Chuyển sang màn hình đồng ý của Google |
-| GET | `/api/drive/callback` | Google gọi về; lưu token, tạo/tìm lại thư mục gốc, về `/drive` |
+| GET | `/api/drive/callback` | Google gọi về; lưu token (kết nối lại cùng tài khoản thì giữ thư mục đã chọn), về `/drive` |
 | POST | `/api/drive/disconnect` | Admin. Thu hồi token, xoá liên kết (file vẫn còn trên Drive) |
 | GET | `/api/drive/files?folder=&pageToken=` | Nội dung một thư mục (100 mục/trang), kèm `path` |
 | GET | `/api/drive/files?q=` | Tìm theo tên trong cả kho (tối đa 60 kết quả) |

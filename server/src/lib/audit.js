@@ -26,6 +26,7 @@ const RULES = [
   ["POST", /^\/api\/drive\/uploads$/, "drive.upload", "Drive: tải file lên", "drive"],
   ["PATCH", /^\/api\/drive\/files\/([\w-]+)$/, "drive.rename", "Drive: đổi tên", "drive"],
   ["DELETE", /^\/api\/drive\/files\/([\w-]+)$/, "drive.delete", "Drive: xoá vào thùng rác", "drive"],
+  ["POST", /^\/api\/drive\/root$/, "drive.root", "Drive: chọn thư mục của team", "drive"],
   ["POST", /^\/api\/drive\/disconnect$/, "drive.disconnect", "Drive: ngắt kết nối", "drive"],
   ["PUT", /^\/api\/settings$/, "settings.update", "Đổi cài đặt", "settings"],
   ["POST", /^\/api\/transfer\/import$/, "data.import", "Nhập dữ liệu", "data"],
