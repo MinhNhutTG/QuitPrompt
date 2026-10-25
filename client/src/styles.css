@@ -1138,7 +1138,10 @@ select.input {
   color: var(--fg);
   font-weight: 600;
   font-size: 13px;
+  font-family: inherit;
   text-decoration: none;
+  border: 0;
+  cursor: pointer;
 }
 .toast-action:hover {
   background: var(--line);

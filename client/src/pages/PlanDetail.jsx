@@ -10,6 +10,7 @@ import LazyImage from "../components/LazyImage.jsx";
 import { useToast } from "../components/Toast.jsx";
 import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
 import { SLOTS, STATUS, progressOf } from "../lib/plans.js";
+import { saveFiles, standalone } from "../lib/download.js";
 
 function fmtSize(n) {
   if (!n) return "";
@@ -152,6 +153,8 @@ function Handoff({ plan }) {
   // One download per file, a moment apart: browsers drop downloads started all at once
   // (and may ask once to allow several).
   function downloadAll() {
+    // Home-screen app: one share sheet for all of them.
+    if (standalone) return saveFiles(files.map((s) => ({ url: api.driveDownloadUrl(s.file.id), name: s.file.name })), toast);
     files.forEach((s, i) =>
       setTimeout(() => {
         const a = document.createElement("a");

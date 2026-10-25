@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { useAuth, useCan } from "../auth.jsx";
 import { preload } from "../pages/index.js";
 import { useClickOutside } from "../lib/util.js";
+import { useStandaloneDownloads } from "../lib/download.js";
 import { Skeleton } from "./ui.jsx";
 import { useToast } from "./Toast.jsx";
 
@@ -194,6 +195,7 @@ function Sidebar({ nav }) {
 
 export default function Layout() {
   const nav = useNav();
+  useStandaloneDownloads();
   return (
     <div className="app">
       <Sidebar nav={nav} />

@@ -14,6 +14,7 @@ const ICONS = {
 };
 
 // toast("Đã lưu") · toast("Lỗi...", { tone: "danger" }) · toast("Đã lưu", { action: { label: "Xem", to: "/..." } })
+// An action may run code instead of navigating: { label, onClick }.
 // Options: tone ok | danger | info, detail (second line), action, duration (ms).
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
@@ -79,7 +80,19 @@ function ToastItem({ t, dismiss }) {
         <span className="toast-msg">{t.msg}</span>
         {t.detail && <span className="toast-detail">{t.detail}</span>}
       </span>
-      {t.action && (
+      {t.action?.onClick && (
+        <button
+          type="button"
+          className="toast-action"
+          onClick={() => {
+            onClose();
+            t.action.onClick();
+          }}
+        >
+          {t.action.label}
+        </button>
+      )}
+      {t.action?.to && (
         <Link className="toast-action" to={t.action.to} onClick={onClose}>
           {t.action.label}
         </Link>
