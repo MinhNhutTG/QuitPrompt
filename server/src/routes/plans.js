@@ -96,6 +96,19 @@ function settle(plan) {
   else plan.done = Math.min(Math.max(plan.done || 0, 0), Math.max(plan.target - 1, 0));
 }
 
+// How many of the plan's files and two texts are in (the client's progressOf counts the same).
+const ITEM_COUNT = Object.keys(PLAN_SLOTS).length + 2;
+const filled = (plan) => Object.keys(PLAN_SLOTS).filter((s) => plan.files?.[s]?.id).length + (plan.voiceText ? 1 : 0) + (plan.caption ? 1 : 0);
+
+// After a file or text changes, the status follows what is in: none → todo, some → partial, all → done.
+// A plan the assignee marked done before it was full stays done; one that was done only because it was full drops back.
+function autoStatus(plan, before) {
+  const n = filled(plan);
+  if (n === ITEM_COUNT) plan.status = "done";
+  else if (plan.status !== "done" || before === ITEM_COUNT) plan.status = n ? "partial" : "todo";
+  settle(plan);
+}
+
 // Filters: assignee, status ("open" = todo + partial), category, q (product name or sku),
 // dueFrom/dueTo (inclusive days), overdue=1 with today (the viewer's local day, "YYYY-MM-DD").
 // Unfinished first, done last; within each, by due day (none last), then newest. Returns one numbered page plus a summary of the whole filter.
@@ -228,7 +241,10 @@ router.patch(
       throw new HttpError(403, deniedMessage("plan.edit"));
     }
     if (data.assignee) await assertMember(data.assignee);
+    const before = filled(plan);
     plan.set(data);
+    // A status chosen in the same request wins over the automatic one.
+    if (data.status === undefined && (data.voiceText !== undefined || data.caption !== undefined)) autoStatus(plan, before);
     settle(plan);
     await plan.save();
     const [item] = await decorate([plan.toObject()]);
@@ -279,6 +295,8 @@ router.post(
     } else if (slots.length) {
       driveWarning = "Google Drive chưa được kết nối nên chưa chép được file.";
     }
+    autoStatus(plan, 0);
+    if (plan.isModified()) await plan.save();
     res.locals.audit = { label: name };
     const [item] = await decorate([plan.toObject()]);
     res.status(201).json({ item, driveWarning });
@@ -340,7 +358,9 @@ router.post(
     const f = await gapi("GET", `/files/${data.fileId}`, { query: { fields: "id,name,size,mimeType,parents,trashed" } });
     if (f.trashed || !plan.folder?.id || !f.parents?.includes(plan.folder.id)) throw new HttpError(400, "File này không nằm trong thư mục của kế hoạch.");
     const old = plan.files?.[data.slot];
+    const before = filled(plan);
     plan.set(`files.${data.slot}`, { id: f.id, name: f.name, size: Number(f.size) || 0, mimeType: f.mimeType || "", by: req.userId, at: new Date() });
+    autoStatus(plan, before);
     await plan.save();
     if (old?.id && old.id !== f.id) await trash(old.id).catch((err) => console.error("Drive: không xoá được file cũ", old.id, err.message));
     res.locals.audit = { label: `${PLAN_SLOTS[data.slot]}: ${f.name}` };
@@ -363,7 +383,9 @@ router.delete(
         if (err.status !== 404) throw err;
       }
     }
+    const before = filled(plan);
     plan.set(`files.${slot}`, undefined);
+    autoStatus(plan, before);
     await plan.save();
     res.locals.audit = { label: PLAN_SLOTS[slot] };
     const [item] = await decorate([plan.toObject()]);

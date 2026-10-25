@@ -15,7 +15,7 @@ Cả nhóm nhìn chung một bảng để biết sản phẩm nào đang đượ
 | Text | Lời đọc và mô tả khi đăng lưu trong app (MongoDB), không lưu thành file trên Drive |
 | Drive chưa kết nối | Kế hoạch vẫn tạo được; thư mục được tạo khi tải file đầu tiên hoặc bấm "Tạo thư mục" trong trang chi tiết |
 | Xoá kế hoạch | Thư mục của kế hoạch vào thùng rác Drive (khôi phục được trong 30 ngày). Xoá sản phẩm cũng vậy với mọi kế hoạch của nó |
-| Tiến độ | Không tự đếm. **Người thực hiện tự chọn** trạng thái: Chưa thực hiện, Còn thiếu, Đã hoàn thành. Bảng hiện thêm "Đã có x/6 mục" (4 file + 2 đoạn text) |
+| Tiến độ | **Tự cập nhật** theo số mục đã có (4 file + 2 đoạn text), mỗi khi tải lên, xoá file hoặc sửa text: 0 mục là Chưa thực hiện, có một phần là Còn thiếu, đủ 6/6 là Đã hoàn thành. Người thực hiện vẫn tự chọn được trạng thái, kể cả xác nhận Đã hoàn thành khi chưa đủ mục (giữ nguyên cho tới khi họ đổi). Bảng hiện thêm "Đã có x/6 mục" |
 | Hiển thị | Luôn hiện kế hoạch của **cả team**; bộ lọc chỉ để thu hẹp, nút "Xem cả team" bỏ lọc |
 | Quyền | `plan.edit`: thêm, sửa sản phẩm, người thực hiện, hạn. `plan.delete`: xoá. Người thêm dòng chọn trạng thái ban đầu; sau khi lưu thì chỉ người thực hiện đổi được trạng thái. Tải file, xoá file, sửa lời đọc và mô tả: người thực hiện hoặc vai trò có `plan.edit`. Ai cũng xem và tải file về được |
 | Thứ tự | Kế hoạch chưa xong lên trước (hạn gần nhất trước, không có hạn ở cuối), **đã hoàn thành xuống cuối** |
@@ -27,6 +27,8 @@ Cả nhóm nhìn chung một bảng để biết sản phẩm nào đang đượ
 | Chưa thực hiện | `todo` |
 | Còn thiếu | `partial` |
 | Đã hoàn thành | `done` |
+
+Kế hoạch đang Đã hoàn thành nhờ đủ 6/6 mục mà bị xoá bớt mục thì lùi về Còn thiếu (hoặc Chưa thực hiện nếu không còn mục nào).
 
 **Quá hạn** không phải trạng thái riêng: là nhãn đỏ hiện thêm khi hạn đã qua mà chưa hoàn thành.
 
