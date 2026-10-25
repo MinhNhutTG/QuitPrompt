@@ -146,8 +146,10 @@ function GridSkeleton() {
       {Array.from({ length: 8 }, (_, i) => (
         <div key={i} className="pcard">
           <Skeleton h="auto" r={14} className="ratio-34" />
-          <Skeleton h={16} w="70%" />
-          <Skeleton h={12} w="40%" />
+          <div className="pcard-body">
+            <Skeleton h={16} w="70%" />
+            <Skeleton h={12} w="40%" />
+          </div>
         </div>
       ))}
     </div>
@@ -212,7 +214,7 @@ export default function Products() {
           {items.map((p, i) => (
             <Link key={p._id} to={`/products/${p._id}`} className="pcard">
               <LazyImage image={p.images?.[0]} width={240} ratio="3 / 4" eager={i < 8} alt="" />
-              <div>
+              <div className="pcard-body">
                 <b>{p.name}</b>
                 <span className="hint">
                   {p.category ? `${p.category} · ` : ""}

@@ -11,18 +11,6 @@ import LazyImage from "./LazyImage.jsx";
 import { useCopy, withNegative } from "./PromptPanel.jsx";
 import { useToast } from "./Toast.jsx";
 
-function summary(settings = {}) {
-  const parts = [];
-  if (settings.dur) parts.push(`${settings.dur} giây`);
-  if (settings.open || Array.isArray(settings.mid)) {
-    const n = (settings.open ? 1 : 0) + (settings.mid?.length || 0) + (settings.endOn ? 1 : 0);
-    parts.push(`${n} động tác`);
-  } else if (Array.isArray(settings.beats)) {
-    parts.push(`${settings.beats.length} động tác`);
-  }
-  return parts;
-}
-
 // Builder prompts can be rebuilt from settings, so only their note and tool are editable;
 // pasted ones have nothing to rebuild from, so their text is editable too.
 function NoteEditor({ item, onDone }) {
@@ -79,25 +67,37 @@ function NoteEditor({ item, onDone }) {
   );
 }
 
-const ProductLabel = ({ product }) => (
-  <>
-    <LazyImage image={product.images?.[0]} width={36} ratio="1 / 1" />
-    <span>
-      {product.name}
-      {product.sku && <small className="hint"> · {product.sku}</small>}
-      {product.category && <small className="hint"> · {product.category}</small>}
-    </span>
-  </>
-);
+const ICONS = {
+  copy: "M10 8h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1ZM15 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3",
+  copyNeg: "M10 8h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1ZM15 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3M12 14h5",
+  reuse: "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
+  edit: "M4 20h4L19 9l-4-4L4 16ZM13.5 6.5l4 4",
+  trash: "M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6",
+  view: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
+};
+
+// On phones only the icon shows (the label stays as aria-label and tooltip), plus the short `keep` text if given.
+function Act({ icon, label, keep, className = "", ...props }) {
+  return (
+    <button type="button" className={`btn btn-sm pc-act ${keep ? "pc-keep" : ""} ${className}`} aria-label={label} title={label} {...props}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d={ICONS[icon]} />
+      </svg>
+      <span className="pc-lbl">{label}</span>
+      {keep && <span className="pc-short">{keep}</span>}
+    </button>
+  );
+}
 
 export default function PromptCard({ item, showProduct = false }) {
   const qc = useQueryClient();
   const toast = useToast();
   const navigate = useNavigate();
-  const { flash, copy } = useCopy();
+  const { copy } = useCopy();
   const can = useCan();
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [viewing, setViewing] = useState(false);
   const product = item.product || {};
 
   const remove = useMutation({
@@ -123,74 +123,82 @@ export default function PromptCard({ item, showProduct = false }) {
   const external = item.source === "external";
   // More than a minute apart: the note, tool or text was edited after saving.
   const edited = item.updatedAt && item.createdAt && new Date(item.updatedAt) - new Date(item.createdAt) > 60 * 1000;
+  const copyPrompt = () => copy(item.prompt, "p");
+  const copyAll = () => copy(withNegative(item.prompt, item.negative), "all");
+
+  const meta = (
+    <div className="pc-meta">
+      <span>
+        <b className="pc-who">{mine ? "Bạn" : item.savedBy?.displayName}</b> ·{" "}
+        <time dateTime={item.createdAt} title={fmtDateTimeFull(item.createdAt)}>
+          {fmtDateTime(item.createdAt)}
+        </time>
+      </span>
+    </div>
+  );
 
   return (
     <article className="card pc">
-      {showProduct && (
-        <Link to={`/products/${product._id}`} className="pc-prod">
-          <ProductLabel product={product} />
-        </Link>
-      )}
-      <div className="pc-meta">
-        <span>
-          Lưu bởi <b className="pc-who">{mine ? "bạn" : item.savedBy?.displayName}</b> ·{" "}
-          <time dateTime={item.createdAt} title={fmtDateTimeFull(item.createdAt)}>
-            {fmtDateTimeFull(item.createdAt)}
-          </time>
-        </span>
-        {edited && (
-          <span title={fmtDateTimeFull(item.updatedAt)}>
-            sửa lúc <time dateTime={item.updatedAt}>{fmtDateTime(item.updatedAt)}</time>
-          </span>
-        )}
-        {external && <span className="badge">Dán từ ngoài</span>}
-        {item.tool && <span>{item.tool}</span>}
-        {summary(item.settings).map((s) => (
-          <span key={s}>{s}</span>
-        ))}
-        {flash && <span className="ok-text">Đã copy</span>}
-      </div>
-      {editing ? (
-        <NoteEditor item={item} onDone={() => setEditing(false)} />
+      {showProduct ? (
+        <div className="pc-head">
+          <Link to={`/products/${product._id}`} className="pc-thumb" tabIndex={-1} aria-hidden="true">
+            <LazyImage image={product.images?.[0]} width={44} ratio="1 / 1" />
+          </Link>
+          <div className="pc-title">
+            <Link to={`/products/${product._id}`} className="pc-name">
+              {product.name}
+              {product.sku && <small className="hint"> · {product.sku}</small>}
+            </Link>
+            {meta}
+          </div>
+        </div>
       ) : (
-        item.note && <p className="pc-note">{item.note}</p>
+        meta
       )}
-      <details>
-        <summary>Xem prompt</summary>
-        <pre className="out" tabIndex={0}>
-          {item.prompt}
-        </pre>
-        {item.negative && (
-          <pre className="out out-neg" tabIndex={0}>
-            {item.negative}
-          </pre>
-        )}
-      </details>
-      <div className="btns">
-        <button type="button" className="btn btn-sm btn-primary" onClick={() => copy(item.prompt, "p")}>
-          Copy prompt
-        </button>
-        {item.negative && (
-          <button type="button" className="btn btn-sm" onClick={() => copy(withNegative(item.prompt, item.negative), "all")}>
-            Copy + negative
-          </button>
-        )}
-        {canReuse && (
-          <button type="button" className="btn btn-sm" onClick={reuse}>
-            Dùng lại và chỉnh
-          </button>
-        )}
-        {canEdit && !editing && (
-          <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(true)}>
-            {external ? "Sửa" : "Sửa ghi chú"}
-          </button>
-        )}
-        {canDelete && (
-          <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => setConfirming(true)}>
-            Xoá
-          </button>
-        )}
+      {editing ? <NoteEditor item={item} onDone={() => setEditing(false)} /> : item.note && <p className="pc-note">{item.note}</p>}
+      <div className="pc-acts">
+        <Act icon="view" label="Xem prompt" onClick={() => setViewing(true)} />
+        <Act icon="copy" label="Copy prompt" keep="Copy" className="btn-primary" onClick={copyPrompt} />
+        {item.negative && <Act icon="copyNeg" label="Copy + negative" onClick={copyAll} />}
+        {canReuse && <Act icon="reuse" label="Dùng lại và chỉnh" onClick={reuse} />}
+        {canEdit && !editing && <Act icon="edit" label={external ? "Sửa" : "Sửa ghi chú"} className="btn-ghost" onClick={() => setEditing(true)} />}
+        {canDelete && <Act icon="trash" label="Xoá" className="btn-danger-ghost" onClick={() => setConfirming(true)} />}
       </div>
+      <Modal open={viewing} onClose={() => setViewing(false)} title={product.name || "Prompt"} wide>
+        <div className="pc-view">
+          <div className="pc-meta">
+            <span>
+              Lưu bởi <b className="pc-who">{mine ? "bạn" : item.savedBy?.displayName}</b> · {fmtDateTimeFull(item.createdAt)}
+            </span>
+            {edited && <span title={fmtDateTimeFull(item.updatedAt)}>sửa lúc {fmtDateTime(item.updatedAt)}</span>}
+            {external && <span className="badge">Dán từ ngoài</span>}
+          </div>
+          {item.note && <p className="pc-note">{item.note}</p>}
+          <pre className="out" tabIndex={0}>
+            {item.prompt}
+          </pre>
+          {item.negative && (
+            <pre className="out out-neg" tabIndex={0}>
+              {item.negative}
+            </pre>
+          )}
+          <div className="btns">
+            <button type="button" className="btn btn-primary" onClick={copyPrompt}>
+              Copy prompt
+            </button>
+            {item.negative && (
+              <button type="button" className="btn" onClick={copyAll}>
+                Copy + negative
+              </button>
+            )}
+            {canReuse && (
+              <button type="button" className="btn" onClick={reuse}>
+                Dùng lại và chỉnh
+              </button>
+            )}
+          </div>
+        </div>
+      </Modal>
       <Modal open={confirming} onClose={() => setConfirming(false)} title="Xoá prompt này?">
         <p>
           {mine ? "Prompt của bạn" : <>Prompt do <b>{item.savedBy?.displayName}</b> lưu</>} cho <b>{product.name}</b> sẽ bị xoá với mọi

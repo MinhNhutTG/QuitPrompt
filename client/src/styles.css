@@ -1315,21 +1315,27 @@ select.input {
 .pcard .hint {
   display: block;
 }
+.pcard-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
 
 /* ---------- product detail */
 .detail {
-  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
 }
 .gallery {
   display: grid;
   gap: 10px;
+  align-content: start;
 }
 .gallery-main {
   border-radius: var(--r-lg);
 }
 .thumbs {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  grid-template-columns: repeat(auto-fill, 56px);
   gap: 8px;
 }
 .thumb {
@@ -1479,25 +1485,26 @@ select.input {
   gap: 10px;
   padding: 16px;
 }
-.pc-prod {
-  display: flex;
+.pc-head {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  color: var(--fg);
-  text-decoration: none;
-  font-weight: 600;
+}
+.pc-title {
+  display: grid;
+  gap: 2px;
   min-width: 0;
 }
-.pc-prod .img {
-  width: 36px;
-  flex: none;
-}
-.pc-prod span {
+.pc-name {
+  color: var(--fg);
+  font-weight: 600;
+  text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pc-prod:hover span {
+.pc-name:hover {
   color: var(--accent);
 }
 .pc-meta {
@@ -1514,14 +1521,17 @@ select.input {
 .pc-note {
   white-space: pre-wrap;
 }
-.pc details summary {
-  cursor: pointer;
-  color: var(--accent);
-  font-size: 14px;
-  font-weight: 500;
+.pc-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
-.pc details .out {
-  margin-top: 8px;
+.pc-short {
+  display: none;
+}
+.pc-view {
+  display: grid;
+  gap: 12px;
 }
 .sentinel {
   height: 1px;
@@ -3035,4 +3045,113 @@ select.status-select:disabled {
 .drive-pick {
   width: min(100%, 560px);
   text-align: left;
+}
+
+/* Phones held upright: products and saved prompts as a compact list instead of big cards. */
+@media (max-width: 640px) {
+  .pgrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .pcard {
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+  }
+  /* Product detail: a modest photo instead of one filling the screen width. */
+  .gallery-main {
+    width: min(100%, 200px);
+    justify-self: center;
+  }
+  .gallery > .btns {
+    justify-content: center;
+  }
+  .thumbs {
+    grid-template-columns: repeat(auto-fill, 48px);
+    gap: 6px;
+  }
+  .thumb .badge {
+    left: 2px;
+    bottom: 2px;
+    font-size: 9px;
+    padding: 0 3px;
+  }
+  .pcard + .pcard {
+    border-top: 1px solid var(--line);
+  }
+  .pcard::after {
+    content: "\203A";
+    color: var(--muted);
+    font-size: 22px;
+    line-height: 1;
+  }
+  .pgrid[aria-busy] .pcard::after {
+    content: none;
+  }
+  /* The ratio is inline on the element; on the list it is a small square thumbnail. */
+  .pcard .img {
+    aspect-ratio: 1 / 1 !important;
+    border-radius: var(--r);
+  }
+  .pcard:hover .img {
+    transform: none;
+  }
+  .pcard:active {
+    background: var(--sunk);
+  }
+  .pcard .hint {
+    font-size: 12.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .plist {
+    gap: 8px;
+  }
+  .pc {
+    gap: 6px;
+    padding: 12px;
+  }
+  .pc-meta {
+    font-size: 12.5px;
+    gap: 2px 8px;
+  }
+  .pc-note {
+    font-size: 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .pc-view .pc-note {
+    display: block;
+  }
+  .pc-acts {
+    gap: 4px;
+  }
+  .pc-act:not(.pc-keep) {
+    width: 34px;
+    min-height: 34px;
+    padding: 0;
+  }
+  .pc-act .pc-lbl {
+    display: none;
+  }
+  .pc-act .pc-short {
+    display: inline;
+  }
+  .pc-act.pc-keep {
+    min-height: 34px;
+  }
+  .pc-view .out {
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 12px;
+  }
 }
