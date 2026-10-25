@@ -2066,6 +2066,13 @@ select.status-select:disabled {
   justify-content: flex-end;
   gap: 6px;
 }
+.copy-opts {
+  display: grid;
+  gap: 2px;
+}
+.copy-opts legend {
+  margin-bottom: 4px;
+}
 .handoff {
   display: grid;
   gap: 10px;
@@ -2091,9 +2098,8 @@ select.status-select:disabled {
   .plan-head {
     grid-template-columns: 48px minmax(0, 1fr);
   }
-  .plan-head > .btn {
+  .plan-head > .btns {
     grid-column: 1 / -1;
-    justify-self: start;
   }
   .plan-head-text h1 {
     font-size: 19px;

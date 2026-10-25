@@ -236,6 +236,55 @@ router.patch(
   })
 );
 
+// A new plan like this one: same product, assignee, due day and note, starting over as "todo" today.
+// texts: also the voice-over and caption. files: slots whose Drive files are copied into the new plan's folder.
+router.post(
+  "/:id/copy",
+  can("plan.edit"),
+  ah(async (req, res) => {
+    const data = parse(z.object({ texts: z.boolean().optional().default(false), files: z.array(slotKey).max(4).optional().default([]) }), req.body);
+    const src = await loadPlan(req.params.id);
+    const name = await productName(src);
+    if (!name) throw new HttpError(404, "Sản phẩm của kế hoạch này đã bị xoá.");
+    await assertMember(src.assignee).catch(() => {
+      throw new HttpError(404, "Người thực hiện của kế hoạch này không còn. Thêm kế hoạch mới thay vì sao chép.");
+    });
+    const plan = await VideoPlan.create({
+      product: src.product,
+      assignee: src.assignee,
+      dueDate: src.dueDate,
+      note: src.note,
+      day: vnDay(),
+      createdBy: req.userId,
+      ...(data.texts && { voiceText: src.voiceText, caption: src.caption }),
+    });
+
+    let driveWarning = "";
+    const slots = [...new Set(data.files)].filter((s) => src.files?.[s]?.id);
+    if (driveConfigured() && (await getLink())?.rootId) {
+      try {
+        const folder = await ensurePlanFolder(plan, name);
+        for (const slot of slots) {
+          const f = await gapi("POST", `/files/${src.files[slot].id}/copy`, {
+            query: { fields: "id,name,size,mimeType" },
+            body: { name: src.files[slot].name, parents: [folder], appProperties: await stamp(req) },
+          });
+          plan.set(`files.${slot}`, { id: f.id, name: f.name, size: Number(f.size) || 0, mimeType: f.mimeType || "", by: req.userId, at: new Date() });
+        }
+        await plan.save();
+      } catch (err) {
+        await plan.save().catch(() => {});
+        driveWarning = `Đã tạo kế hoạch nhưng chưa chép xong trên Google Drive (${err.message}).`;
+      }
+    } else if (slots.length) {
+      driveWarning = "Google Drive chưa được kết nối nên chưa chép được file.";
+    }
+    res.locals.audit = { label: name };
+    const [item] = await decorate([plan.toObject()]);
+    res.status(201).json({ item, driveWarning });
+  })
+);
+
 // ---- the plan's files, kept in its own Drive folder
 
 // Makes the folder now (plans made while Drive was not connected have none yet).

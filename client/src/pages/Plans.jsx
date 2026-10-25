@@ -7,6 +7,7 @@ import { uid, useDebounce } from "../lib/util.js";
 import { useAuth } from "../auth.jsx";
 import { EmptyState, ErrorState, Modal, Pager, Skeleton } from "../components/ui.jsx";
 import ProductPicker from "../components/ProductPicker.jsx";
+import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { STATUS, progressOf } from "../lib/plans.js";
 
@@ -67,7 +68,7 @@ const FIELDS = ["product", "assignee", "dueDate", "status"];
 // One editable row. plan = null for a new, unsaved row.
 // A new row is filled in by whoever may add plans (status included). On a saved row, roles with plan.edit change
 // the details and only the assignee changes the status; roles with plan.delete may delete or select it.
-function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSelect, canEdit, canDelete }) {
+function PlanRow({ plan, members, me, today, onSaved, onDelete, onCopy, selected, onSelect, canEdit, canDelete }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState(() => formOf(plan, me, today));
@@ -178,6 +179,11 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
                 Tải video
               </a>
             )}
+            {canEdit && !plan.product.name.startsWith("(") && (
+              <button type="button" className="btn btn-sm btn-ghost" onClick={() => onCopy(plan)}>
+                Sao chép
+              </button>
+            )}
             <Link className="btn btn-sm btn-ghost" to={`/?product=${plan.product._id}`}>
               Tạo prompt
             </Link>
@@ -248,6 +254,7 @@ export default function Plans() {
   const dropDraft = (key) => setDrafts((d) => d.filter((k) => k !== key));
 
   const [deleting, setDeleting] = useState(null);
+  const [copying, setCopying] = useState(null);
 
   // Chosen plans by id, kept across pages; a new filter starts over.
   const [selected, setSelected] = useState(() => new Map());
@@ -461,7 +468,7 @@ export default function Plans() {
                   <PlanRow key={key} plan={null} members={members} me={user?.id} today={today} onSaved={() => dropDraft(key)} onDelete={() => dropDraft(key)} canEdit />
                 ))}
                 {items.map((p) => (
-                  <PlanRow key={p._id} plan={p} members={members} me={user?.id} today={data.today || today} onDelete={setDeleting} selected={selected.has(p._id)} onSelect={select} canEdit={canEdit} canDelete={canDelete} />
+                  <PlanRow key={p._id} plan={p} members={members} me={user?.id} today={data.today || today} onDelete={setDeleting} onCopy={setCopying} selected={selected.has(p._id)} onSelect={select} canEdit={canEdit} canDelete={canDelete} />
                 ))}
               </tbody>
             </table>
@@ -493,6 +500,8 @@ export default function Plans() {
           </>
         )}
       </Modal>
+
+      <CopyPlanDialog plan={copying} onClose={() => setCopying(null)} />
 
       <Modal open={Boolean(deleting)} onClose={() => setDeleting(null)} title="Xoá kế hoạch này?">
         {deleting && (

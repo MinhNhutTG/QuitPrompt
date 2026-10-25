@@ -8,6 +8,7 @@ import { copyText, fmtDate, fmtDateTimeFull } from "../lib/util.js";
 import { ConfirmButton, EmptyState, ErrorState, Field, Skeleton } from "../components/ui.jsx";
 import LazyImage from "../components/LazyImage.jsx";
 import { useToast } from "../components/Toast.jsx";
+import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
 import { SLOTS, STATUS, progressOf } from "../lib/plans.js";
 
 function fmtSize(n) {
@@ -227,6 +228,7 @@ export default function PlanDetail() {
   const { data, isLoading, error, refetch } = usePlan(id);
   const drive = useDriveStatus();
   const plan = data?.item;
+  const [copying, setCopying] = useState(false);
 
   const onChanged = (item) => {
     qc.setQueryData(["plans", "one", id], { item });
@@ -283,11 +285,19 @@ export default function PlanDetail() {
           </p>
         </div>
         {!productGone && (
-          <Link className="btn" to={`/?product=${plan.product._id}`}>
-            Tạo prompt
-          </Link>
+          <div className="btns">
+            {can("plan.edit") && (
+              <button type="button" className="btn" onClick={() => setCopying(true)}>
+                Sao chép
+              </button>
+            )}
+            <Link className="btn" to={`/?product=${plan.product._id}`}>
+              Tạo prompt
+            </Link>
+          </div>
         )}
       </div>
+      <CopyPlanDialog plan={copying ? plan : null} onClose={() => setCopying(false)} />
 
       <Handoff plan={plan} />
 

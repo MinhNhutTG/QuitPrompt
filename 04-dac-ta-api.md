@@ -277,6 +277,14 @@ Lỗi: sản phẩm hoặc người thực hiện không tồn tại → 404.
 200 { "item": { ... } }
 ```
 
+### `POST /api/plans/:id/copy`
+`plan.edit`. Kế hoạch mới cùng sản phẩm, người thực hiện, hạn, ghi chú; `todo`, ngày tạo hôm nay, thư mục Drive riêng. `texts`: chép lời đọc và mô tả. `files`: các mục có file được nhân bản (Drive copy) vào thư mục mới.
+```json
+{ "texts": true, "files": ["audio"] }
+201 { "item": { ... }, "driveWarning": "" }
+```
+Sản phẩm hoặc người thực hiện đã bị xoá → 404.
+
 ### File của kế hoạch
 Người thực hiện hoặc `plan.edit`. `slot` là `clip1`, `clip2`, `audio` hoặc `final`.
 

@@ -19,6 +19,7 @@ const RULES = [
   ["PATCH", /^\/api\/plans\/(\w+)$/, "plan.update", "Sửa kế hoạch", "plan"],
   ["DELETE", /^\/api\/plans\/(\w+)$/, "plan.delete", "Xoá kế hoạch", "plan"],
   ["POST", /^\/api\/plans\/bulk-delete$/, "plan.bulk_delete", "Xoá nhiều kế hoạch", "plan"],
+  ["POST", /^\/api\/plans\/(\w+)\/copy$/, "plan.copy", "Sao chép kế hoạch", "plan"],
   ["POST", /^\/api\/plans\/(\w+)\/files$/, "plan.file.add", "Tải file kế hoạch", "plan"],
   ["DELETE", /^\/api\/plans\/(\w+)\/files\/\w+$/, "plan.file.delete", "Xoá file kế hoạch", "plan"],
   ["POST", /^\/api\/resources$/, "resource.create", "Thêm tài nguyên", "resource"],
