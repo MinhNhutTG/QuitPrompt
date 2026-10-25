@@ -8,6 +8,7 @@ const loaders = {
   productDetail: () => import("./ProductDetail.jsx"),
   saved: () => import("./Saved.jsx"),
   plans: () => import("./Plans.jsx"),
+  planDetail: () => import("./PlanDetail.jsx"),
   resources: () => import("./Resources.jsx"),
   drive: () => import("./Drive.jsx"),
   library: () => import("./Library.jsx"),

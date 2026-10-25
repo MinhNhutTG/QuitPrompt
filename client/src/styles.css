@@ -1973,6 +1973,148 @@ select.status-select:disabled {
   display: grid;
   gap: 2px;
 }
+
+/* ---- one plan: details, files, texts */
+.plan-head {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+.plan-head-text h1 {
+  margin: 0;
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+.plan-head-text h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+.plan-head-text h1 a:hover {
+  color: var(--accent);
+}
+.plan-info dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px 20px;
+}
+.plan-info dt {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.plan-info dd {
+  margin: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.plan-info .status-select {
+  width: auto;
+}
+.notice {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--r);
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 14px;
+}
+.slots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.slot {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+.slot + .slot {
+  border-top: 1px solid var(--line);
+}
+.slot-ico {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r);
+  background: var(--sunk);
+  color: var(--muted);
+}
+.slot.is-filled .slot-ico {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.slot-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.slot-body .hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.slot-acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.handoff {
+  display: grid;
+  gap: 10px;
+}
+.handoff .sec-h {
+  margin: 0;
+}
+.handoff.is-done {
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 6%, var(--surface));
+}
+.plan-files {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.plan-files.is-full {
+  color: var(--ok);
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .plan-head {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+  .plan-head > .btn {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .plan-head-text h1 {
+    font-size: 19px;
+  }
+  .plan-info dl {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+  }
+  .slot {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 4px 10px;
+  }
+  .slot-ico {
+    width: 36px;
+    height: 36px;
+  }
+  .slot-acts {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
 .ptable-wrap {
   padding: 0;
   /* visible, not auto: the product picker's list must spill out of the table */

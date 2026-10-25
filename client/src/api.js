@@ -87,6 +87,17 @@ function uploadImage(productId, file, onProgress) {
 // Two steps: the server opens a Google upload session, then the file goes straight from the browser to Google.
 async function driveUpload(parent, file, onProgress) {
   const { uploadUrl } = await request("POST", "/drive/uploads", { parent, name: file.name, mimeType: file.type || "", size: file.size });
+  return putToGoogle(uploadUrl, file, onProgress);
+}
+
+// Same two steps into a plan's own folder, then the server files the upload under its slot. Returns { item }.
+async function planUpload(planId, slot, file, onProgress) {
+  const { uploadUrl } = await request("POST", `/plans/${planId}/uploads`, { slot, name: file.name, mimeType: file.type || "", size: file.size });
+  const f = await putToGoogle(uploadUrl, file, onProgress);
+  return request("POST", `/plans/${planId}/files`, { slot, fileId: f.id });
+}
+
+function putToGoogle(uploadUrl, file, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", uploadUrl);
@@ -122,7 +133,11 @@ export const api = {
 
   plans: (params) => request("GET", "/plans" + qs(params)),
   createPlans: (body) => request("POST", "/plans", body),
+  plan: (id) => request("GET", `/plans/${id}`),
   updatePlan: (id, body) => request("PATCH", `/plans/${id}`, body),
+  planFolder: (id) => request("POST", `/plans/${id}/folder`),
+  planUpload,
+  planDeleteFile: (id, slot) => request("DELETE", `/plans/${id}/files/${slot}`),
   deletePlan: (id) => request("DELETE", `/plans/${id}`),
   deletePlans: (ids) => request("POST", "/plans/bulk-delete", { ids }),
 

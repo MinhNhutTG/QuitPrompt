@@ -72,5 +72,5 @@ Mọi thao tác theo `id` đều kiểm tra file nằm trong thư mục gốc c�
 ## 6. Để sau
 
 - Chuyển/di chuyển file giữa các thư mục.
-- Gắn file Drive vào sản phẩm hoặc kế hoạch video.
+- Gắn file Drive vào sản phẩm. (Kế hoạch video đã có thư mục và file riêng: xem [tài liệu 09](09-ke-hoach-video.md).)
 - Tải cả thư mục thành file zip.

@@ -231,7 +231,7 @@ Trả toàn bộ dữ liệu của tài khoản (sản phẩm kèm URL ảnh, pr
 
 ## 7. Kế hoạch video `/api/plans`
 
-Kế hoạch dùng chung cho cả nhóm. Thành viên nào cũng lập, sửa mục tiêu, người thực hiện, hạn, ghi chú và xoá được; **chỉ người thực hiện** đổi được trạng thái. Xem [tài liệu 09](09-ke-hoach-video.md).
+Kế hoạch dùng chung cho cả nhóm, mỗi kế hoạch là một video và có thư mục riêng trên Google Drive. `plan.edit` lập và sửa người thực hiện, hạn, ghi chú; `plan.delete` xoá; **chỉ người thực hiện** đổi được trạng thái. File, lời đọc và mô tả: người thực hiện hoặc `plan.edit`. Xem [tài liệu 09](09-ke-hoach-video.md).
 
 ### `GET /api/plans?assignee=&status=&category=&q=&dueFrom=&dueTo=&overdue=&today=&page=&limit=`
 - `assignee`: id người thực hiện.
@@ -244,32 +244,50 @@ Kế hoạch dùng chung cho cả nhóm. Thành viên nào cũng lập, sửa m�
 ```json
 200 {
   "items": [
-    { "_id": "...", "target": 10, "done": 7, "status": "partial", "dueDate": "2026-10-25", "note": "",
+    { "_id": "...", "status": "partial", "dueDate": "2026-10-25", "day": "2026-10-25", "note": "",
+      "folder": { "id": "1AbC...", "name": "Nón lá (1)" },
+      "files": { "clip1": { "id": "...", "name": "Video 10s 1.mp4", "size": 5242880, "mimeType": "video/mp4", "by": "...", "at": "..." } },
+      "voiceText": "...", "caption": "...",
       "product": { "_id": "...", "name": "Nón lá", "sku": "N12", "category": "Nón", "images": [ { "url": "..." } ] },
       "assignee": { "id": "...", "displayName": "Bình" }, "createdBy": { "id": "...", "displayName": "An" },
       "createdAt": "...", "updatedAt": "..." }
   ],
   "total": 12, "page": 1, "pages": 1, "limit": 20, "today": "2026-10-21",
-  "summary": { "plans": 12, "target": 80, "done": 47, "todo": 4, "partial": 5, "finished": 3, "overdue": 2 }
+  "summary": { "plans": 12, "target": 12, "done": 3, "todo": 4, "partial": 5, "finished": 3, "overdue": 2 }
 }
 ```
 `summary` tính trên toàn bộ kết quả lọc, không chỉ trang đang xem.
 
+### `GET /api/plans/:id`
+`200 { "item": { ... } }`, cùng dạng một dòng ở trên.
+
 ### `POST /api/plans`
-Lập một hoặc nhiều kế hoạch cùng lúc, mỗi sản phẩm một dòng (giao diện gửi một sản phẩm mỗi lần). `status`, `done` không bắt buộc (mặc định `todo`, 0): người thêm dòng được chọn trạng thái ban đầu.
+Lập một hoặc nhiều kế hoạch cùng lúc, mỗi sản phẩm một dòng (giao diện gửi một sản phẩm mỗi lần). `status` không bắt buộc (mặc định `todo`): người thêm dòng được chọn trạng thái ban đầu. Máy chủ tạo thư mục Drive cho từng kế hoạch; không được thì vẫn lưu và trả lý do trong `driveWarning`.
 ```json
-{ "products": ["671a..."], "target": 5, "assignee": "6719...", "dueDate": "2026-10-31", "note": "", "status": "partial", "done": 2 }
-201 { "items": [ ... ] }
+{ "products": ["671a..."], "assignee": "6719...", "dueDate": "2026-10-31", "note": "", "status": "todo" }
+201 { "items": [ ... ], "driveWarning": "" }
 ```
-Lỗi: sản phẩm hoặc người thực hiện không tồn tại → 404; mục tiêu ngoài 1–999 → 400.
+Lỗi: sản phẩm hoặc người thực hiện không tồn tại → 404.
 
 ### `PATCH /api/plans/:id`
 ```json
-{ "target": 8, "assignee": "...", "dueDate": "", "note": "..." }   // ai cũng sửa được
-{ "status": "partial", "done": 3 }                                   // chỉ người thực hiện, người khác → 403
+{ "assignee": "...", "dueDate": "", "note": "..." }     // plan.edit
+{ "status": "partial" }                                  // chỉ người thực hiện, người khác → 403
+{ "voiceText": "...", "caption": "..." }                 // người thực hiện hoặc plan.edit
 200 { "item": { ... } }
 ```
-`done` tự chỉnh theo trạng thái: `todo` → 0, `done` → bằng `target`, `partial` → giữ trong khoảng 0 đến `target − 1`.
+
+### File của kế hoạch
+Người thực hiện hoặc `plan.edit`. `slot` là `clip1`, `clip2`, `audio` hoặc `final`.
+
+| Phương thức | Đường dẫn | Mô tả |
+|---|---|---|
+| POST | `/api/plans/:id/folder` | Tạo thư mục Drive nếu chưa có → `{ item }` |
+| POST | `/api/plans/:id/uploads` | `{ slot, name, mimeType, size }` → `{ uploadUrl }`. Tạo thư mục nếu chưa có; file được đặt tên theo mục, giữ đuôi. Trình duyệt `PUT` file vào `uploadUrl` |
+| POST | `/api/plans/:id/files` | `{ slot, fileId }` sau khi tải xong: kiểm tra file nằm trong thư mục kế hoạch, gắn vào mục, file cũ của mục vào thùng rác → `{ item }` |
+| DELETE | `/api/plans/:id/files/:slot` | File vào thùng rác Drive, bỏ khỏi mục → `{ item }` |
+
+Tải về dùng `GET /api/drive/files/:id/download` ([tài liệu 12](12-google-drive.md)).
 
 ### `DELETE /api/plans/:id`
-`200 { "ok": true }`.
+`200 { "ok": true }`. Thư mục Drive của kế hoạch vào thùng rác.

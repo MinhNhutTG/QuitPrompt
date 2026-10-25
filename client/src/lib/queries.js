@@ -22,6 +22,7 @@ export const usePlans = (params) =>
 
 export const useResources = () => useQuery({ queryKey: ["resources"], queryFn: api.resources });
 
+export const usePlan = (id) => useQuery({ queryKey: ["plans", "one", id], queryFn: () => api.plan(id), enabled: Boolean(id) });
 export const useDriveStatus = () => useQuery({ queryKey: ["drive", "status"], queryFn: api.driveStatus, staleTime: 60 * 1000 });
 
 // One folder (or a search), 100 entries per page.

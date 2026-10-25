@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { config } from "../config.js";
 import { HttpError } from "./http.js";
 import { DriveLink } from "../models/DriveLink.js";
+import { User } from "../models/User.js";
 
 // Google Drive over plain REST (no SDK). One Google account holds the team folder; the server keeps its
 // refresh token and acts for everyone, so members never sign in to Google.
@@ -220,6 +221,42 @@ export function primeMeta(f, parent) {
 }
 
 export const isDriveId = (s) => typeof s === "string" && /^[\w-]{10,120}$/.test(s);
+
+// Drive search strings are single-quoted.
+export const quote = (s) => `'${s.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+
+// Who made a file, stored on it so the list can show it (appProperties: key + value ≤ 124 bytes).
+export async function stamp(req) {
+  const u = await User.findById(req.userId, { username: 1, displayName: 1 }).lean();
+  return { by: String(req.userId), byName: (u?.displayName || u?.username || "").slice(0, 40) };
+}
+
+// Opens a resumable upload into parent and returns the session URL the browser PUTs the bytes to,
+// so large videos never pass through (or count against) this server and its proxies.
+export async function openUpload({ parent, name, mimeType, size, appProperties, origin, fields }) {
+  const session = await gapi("POST", "/files", {
+    base: UPLOAD_API,
+    raw: true,
+    query: { uploadType: "resumable", fields },
+    body: { name, parents: [parent], appProperties },
+    headers: {
+      "X-Upload-Content-Type": mimeType || "application/octet-stream",
+      // Google rejects the upload if the browser sends a different length, so the size cap holds.
+      "X-Upload-Content-Length": String(size),
+      // The session URL only accepts the browser's PUT (CORS) when opened for its origin.
+      Origin: origin,
+    },
+  });
+  const uploadUrl = session.headers.get("location");
+  if (!uploadUrl) throw new HttpError(502, "Google Drive không mở được phiên tải lên. Thử lại.");
+  return uploadUrl;
+}
+
+// To Drive's bin (restorable there for 30 days), folder content included.
+export async function trash(id) {
+  await gapi("PATCH", `/files/${id}`, { query: { fields: "id" }, body: { trashed: true } });
+  forgetMeta(id);
+}
 
 // Path from the team folder down to id: [{ id, name }, ...]. 404 when id is outside it, in the bin, or unknown.
 export async function pathTo(id) {

@@ -1,12 +1,16 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
-import { VideoPlan, PLAN_STATUSES } from "../models/VideoPlan.js";
+import { VideoPlan, PLAN_SLOTS, PLAN_STATUSES } from "../models/VideoPlan.js";
 import { Product } from "../models/Product.js";
 import { User } from "../models/User.js";
+import { config } from "../config.js";
 import { ah, parse, assertId, isId, escapeRegex, text, HttpError } from "../lib/http.js";
 import { can } from "../middleware/auth.js";
 import { deniedMessage } from "../lib/permissions.js";
+import { vnDay } from "../lib/tiers.js";
+import { driveConfigured, gapi, getLink, openUpload, stamp, trash } from "../lib/drive.js";
+import { ensurePlanFolder, trashPlanFolders } from "../lib/planDrive.js";
 
 const router = Router();
 
@@ -17,7 +21,8 @@ const id = (what) => z.string({ required_error: `Chưa chọn ${what}.` }).refin
 
 const createSchema = z.object({
   products: z.array(id("sản phẩm"), { required_error: "Chưa chọn sản phẩm." }).min(1, "Chưa chọn sản phẩm.").max(50, "Mỗi lần tối đa 50 sản phẩm."),
-  target,
+  // A plan is one finished video now; the count only stays for older clients.
+  target: target.optional().default(1),
   assignee: id("người thực hiện"),
   dueDate: day.optional().default(""),
   note: text("ghi chú", 1000).optional().default(""),
@@ -33,7 +38,30 @@ const patchSchema = z.object({
   note: text("ghi chú", 1000).optional(),
   status: z.enum(PLAN_STATUSES, { errorMap: () => ({ message: "Trạng thái không hợp lệ." }) }).optional(),
   done: z.number().int().min(0).max(999).optional(),
+  voiceText: text("lời đọc", 5000).optional(),
+  caption: text("mô tả khi đăng", 5000).optional(),
 });
+
+// The assignee does the work, so besides roles with plan.edit they may also fill in texts and files.
+const WORK_FIELDS = new Set(["status", "done", "voiceText", "caption"]);
+const canWork = (req, plan) => String(plan.assignee) === String(req.userId) || req.permissions.has("plan.edit");
+
+async function loadPlan(planId) {
+  assertId(planId, "kế hoạch");
+  const plan = await VideoPlan.findById(planId);
+  if (!plan) throw new HttpError(404, "Không tìm thấy kế hoạch.");
+  return plan;
+}
+
+async function loadWorkablePlan(req) {
+  const plan = await loadPlan(req.params.id);
+  if (!canWork(req, plan)) throw new HttpError(403, "Chỉ người thực hiện hoặc người được quyền sửa kế hoạch mới thay đổi được file.");
+  return plan;
+}
+
+const productName = async (plan) => (await Product.findById(plan.product, { name: 1 }).lean())?.name || "";
+
+const slotKey = z.enum(Object.keys(PLAN_SLOTS), { errorMap: () => ({ message: "Mục file không hợp lệ." }) });
 
 const PRODUCT_FIELDS = { name: 1, sku: 1, category: 1, images: { $slice: 1 } };
 const GONE_PRODUCT = { name: "(sản phẩm đã xoá)", images: [] };
@@ -148,35 +176,147 @@ router.post(
     const productIds = [...new Set(data.products)];
     const [found] = await Promise.all([Product.countDocuments({ _id: { $in: productIds } }), assertMember(data.assignee)]);
     if (found !== productIds.length) throw new HttpError(404, "Có sản phẩm không còn tồn tại. Tải lại trang rồi chọn lại.");
+    const day = vnDay();
     const docs = await VideoPlan.insertMany(
       productIds.map((product) => {
-        const plan = { product, target: data.target, assignee: data.assignee, dueDate: data.dueDate, note: data.note, status: data.status, done: data.done, createdBy: req.userId };
+        const plan = { product, target: data.target, assignee: data.assignee, dueDate: data.dueDate, note: data.note, status: data.status, done: data.done, day, createdBy: req.userId };
         settle(plan);
         return plan;
       })
     );
-    res.status(201).json({ items: await decorate(docs.map((d) => d.toObject())) });
+    // Each plan gets its Drive folder now. Without Drive (or if Google fails) the plan is still saved
+    // and the folder is made on its first upload.
+    let driveWarning = "";
+    if (driveConfigured() && (await getLink())?.rootId) {
+      const names = new Map((await Product.find({ _id: { $in: productIds } }, { name: 1 }).lean()).map((p) => [String(p._id), p.name]));
+      for (const doc of docs) {
+        try {
+          await ensurePlanFolder(doc, names.get(String(doc.product)));
+        } catch (err) {
+          driveWarning = `Chưa tạo được thư mục trên Google Drive (${err.message}). Thư mục sẽ được tạo khi tải file đầu tiên.`;
+          break;
+        }
+      }
+    }
+    res.status(201).json({ items: await decorate(docs.map((d) => d.toObject())), driveWarning });
+  })
+);
+
+router.get(
+  "/:id",
+  ah(async (req, res) => {
+    const plan = await loadPlan(req.params.id);
+    const [item] = await decorate([plan.toObject()]);
+    res.json({ item });
   })
 );
 
 // Target, assignee, due day and note need plan.edit; the status is the assignee's alone, whatever their role.
+// The voice-over text and caption: the assignee or plan.edit.
 router.patch(
   "/:id",
   ah(async (req, res) => {
-    assertId(req.params.id, "kế hoạch");
     const data = parse(patchSchema, req.body);
-    const plan = await VideoPlan.findById(req.params.id);
-    if (!plan) throw new HttpError(404, "Không tìm thấy kế hoạch.");
+    const plan = await loadPlan(req.params.id);
     if ((data.status !== undefined || data.done !== undefined) && String(plan.assignee) !== String(req.userId)) {
       throw new HttpError(403, "Chỉ người thực hiện mới cập nhật được trạng thái.");
     }
-    if (Object.keys(data).some((k) => k !== "status" && k !== "done") && !req.permissions.has("plan.edit")) {
+    if ((data.voiceText !== undefined || data.caption !== undefined) && !canWork(req, plan)) {
+      throw new HttpError(403, "Chỉ người thực hiện hoặc người được quyền sửa kế hoạch mới sửa được lời đọc và mô tả.");
+    }
+    if (Object.keys(data).some((k) => !WORK_FIELDS.has(k)) && !req.permissions.has("plan.edit")) {
       throw new HttpError(403, deniedMessage("plan.edit"));
     }
     if (data.assignee) await assertMember(data.assignee);
     plan.set(data);
     settle(plan);
     await plan.save();
+    const [item] = await decorate([plan.toObject()]);
+    res.json({ item });
+  })
+);
+
+// ---- the plan's files, kept in its own Drive folder
+
+// Makes the folder now (plans made while Drive was not connected have none yet).
+router.post(
+  "/:id/folder",
+  ah(async (req, res) => {
+    const plan = await loadWorkablePlan(req);
+    await ensurePlanFolder(plan, await productName(plan));
+    const [item] = await decorate([plan.toObject()]);
+    res.json({ item });
+  })
+);
+
+// Opens a Google upload session in the plan's folder; the browser sends the bytes straight to Google,
+// then reports the new file with POST /:id/files.
+router.post(
+  "/:id/uploads",
+  ah(async (req, res) => {
+    const max = config.driveMaxUploadMb;
+    const data = parse(
+      z.object({
+        slot: slotKey,
+        name: text("tên file", 200, 1),
+        mimeType: z.string().trim().max(200).regex(/^[\w.+-]+\/[\w.+-]+$/, "Loại file không hợp lệ.").or(z.literal("")).default(""),
+        size: z.number({ invalid_type_error: "Dung lượng file không hợp lệ." }).int().min(0).max(max * 1024 * 1024, `Mỗi file tối đa ${max} MB.`),
+      }),
+      req.body
+    );
+    const plan = await loadWorkablePlan(req);
+    const folder = await ensurePlanFolder(plan, await productName(plan));
+    // Named after its slot so the folder reads clearly in Google Drive; the extension is kept.
+    const ext = /\.[\w]{1,8}$/.exec(data.name)?.[0].toLowerCase() || "";
+    const origin = req.get("origin") || config.clientOrigin || new URL(config.googleRedirectUri).origin;
+    const uploadUrl = await openUpload({
+      parent: folder,
+      name: PLAN_SLOTS[data.slot] + ext,
+      mimeType: data.mimeType,
+      size: data.size,
+      appProperties: await stamp(req),
+      origin,
+      fields: "id,name,size,mimeType",
+    });
+    res.status(201).json({ uploadUrl });
+  })
+);
+
+// The upload finished: the file goes into its slot, and the file it replaces goes to Drive's bin.
+router.post(
+  "/:id/files",
+  ah(async (req, res) => {
+    const data = parse(z.object({ slot: slotKey, fileId: z.string().regex(/^[\w-]{10,120}$/, "File không hợp lệ.") }), req.body);
+    const plan = await loadWorkablePlan(req);
+    const f = await gapi("GET", `/files/${data.fileId}`, { query: { fields: "id,name,size,mimeType,parents,trashed" } });
+    if (f.trashed || !plan.folder?.id || !f.parents?.includes(plan.folder.id)) throw new HttpError(400, "File này không nằm trong thư mục của kế hoạch.");
+    const old = plan.files?.[data.slot];
+    plan.set(`files.${data.slot}`, { id: f.id, name: f.name, size: Number(f.size) || 0, mimeType: f.mimeType || "", by: req.userId, at: new Date() });
+    await plan.save();
+    if (old?.id && old.id !== f.id) await trash(old.id).catch((err) => console.error("Drive: không xoá được file cũ", old.id, err.message));
+    res.locals.audit = { label: `${PLAN_SLOTS[data.slot]}: ${f.name}` };
+    const [item] = await decorate([plan.toObject()]);
+    res.json({ item });
+  })
+);
+
+router.delete(
+  "/:id/files/:slot",
+  ah(async (req, res) => {
+    const slot = parse(slotKey, req.params.slot);
+    const plan = await loadWorkablePlan(req);
+    const old = plan.files?.[slot];
+    if (old?.id) {
+      try {
+        await trash(old.id);
+      } catch (err) {
+        // Already gone from Drive: just clear the slot.
+        if (err.status !== 404) throw err;
+      }
+    }
+    plan.set(`files.${slot}`, undefined);
+    await plan.save();
+    res.locals.audit = { label: PLAN_SLOTS[slot] };
     const [item] = await decorate([plan.toObject()]);
     res.json({ item });
   })
@@ -192,7 +332,10 @@ router.post(
   can("plan.delete"),
   ah(async (req, res) => {
     const { ids } = parse(bulkDeleteSchema, req.body);
-    const { deletedCount } = await VideoPlan.deleteMany({ _id: { $in: [...new Set(ids)] } });
+    const unique = [...new Set(ids)];
+    const folders = await VideoPlan.find({ _id: { $in: unique } }, { folder: 1 }).lean();
+    const { deletedCount } = await VideoPlan.deleteMany({ _id: { $in: unique } });
+    await trashPlanFolders(folders);
     res.json({ ok: true, deleted: deletedCount });
   })
 );
@@ -204,8 +347,8 @@ router.delete(
     assertId(req.params.id, "kế hoạch");
     const plan = await VideoPlan.findByIdAndDelete(req.params.id);
     if (!plan) throw new HttpError(404, "Không tìm thấy kế hoạch.");
-    const product = await Product.findById(plan.product, { name: 1 }).lean();
-    res.locals.audit = { label: product?.name || "", meta: { target: plan.target } };
+    await trashPlanFolders([plan]);
+    res.locals.audit = { label: await productName(plan) };
     res.json({ ok: true });
   })
 );

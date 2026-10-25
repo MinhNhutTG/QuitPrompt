@@ -3,7 +3,6 @@ import { Readable } from "node:stream";
 import { Router } from "express";
 import { z } from "zod";
 import { config } from "../config.js";
-import { User } from "../models/User.js";
 import { DriveLink } from "../models/DriveLink.js";
 import { ah, parse, text, HttpError } from "../lib/http.js";
 import { can, requireAdmin } from "../middleware/auth.js";
@@ -23,12 +22,15 @@ import {
   isDriveId,
   makeFolder,
   metaOf,
+  openUpload,
   pathTo,
   primeMeta,
+  quote,
   requireDriveConfig,
   revoke,
   saveLink,
-  UPLOAD_API,
+  stamp,
+  trash,
   useFolder,
 } from "../lib/drive.js";
 
@@ -61,14 +63,6 @@ const toItem = (f) => ({
   path: f.path,
 });
 
-// Drive search strings are single-quoted.
-const quote = (s) => `'${s.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
-
-// Who made a file, stored on it so the list can show it (appProperties: key + value ≤ 124 bytes).
-async function stamp(req) {
-  const u = await User.findById(req.userId, { username: 1, displayName: 1 }).lean();
-  return { by: String(req.userId), byName: (u?.displayName || u?.username || "").slice(0, 40) };
-}
 
 async function linked() {
   const link = await getLink();
@@ -260,21 +254,7 @@ router.post(
     );
     await folderPath(data.parent);
     const origin = req.get("origin") || config.clientOrigin || new URL(config.googleRedirectUri).origin;
-    const session = await gapi("POST", "/files", {
-      base: UPLOAD_API,
-      raw: true,
-      query: { uploadType: "resumable", fields: FIELDS },
-      body: { name: data.name, parents: [data.parent], appProperties: await stamp(req) },
-      headers: {
-        "X-Upload-Content-Type": data.mimeType || "application/octet-stream",
-        // Google rejects the upload if the browser sends a different length, so the size cap holds.
-        "X-Upload-Content-Length": String(data.size),
-        // The session URL only accepts the browser's PUT (CORS) when opened for its origin.
-        Origin: origin,
-      },
-    });
-    const uploadUrl = session.headers.get("location");
-    if (!uploadUrl) throw new HttpError(502, "Google Drive không mở được phiên tải lên. Thử lại.");
+    const uploadUrl = await openUpload({ parent: data.parent, name: data.name, mimeType: data.mimeType, size: data.size, appProperties: await stamp(req), origin, fields: FIELDS });
     res.locals.audit = { label: data.name };
     res.status(201).json({ uploadUrl });
   })
@@ -301,8 +281,7 @@ router.delete(
   ah(async (req, res) => {
     await linked();
     const { meta } = await childOf(req.params.id);
-    await gapi("PATCH", `/files/${req.params.id}`, { query: { fields: "id" }, body: { trashed: true } });
-    forgetMeta(req.params.id);
+    await trash(req.params.id);
     res.locals.audit = { label: meta.name };
     res.json({ ok: true });
   })

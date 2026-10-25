@@ -8,6 +8,7 @@ import { ah, parse, assertId, escapeRegex, text, HttpError } from "../lib/http.j
 import { requireCloudinary, uploadBuffer, destroyImages } from "../lib/cloudinary.js";
 import { can } from "../middleware/auth.js";
 import { useDaily } from "../lib/tiers.js";
+import { trashPlanFolders } from "../lib/planDrive.js";
 
 const router = Router();
 
@@ -86,9 +87,11 @@ router.delete(
   can("product.delete"),
   ah(async (req, res) => {
     const item = await findProduct(req);
+    const plans = await VideoPlan.find({ product: item._id }, { folder: 1 }).lean();
     await Promise.all([Prompt.deleteMany({ product: item._id }), VideoPlan.deleteMany({ product: item._id })]);
     await item.deleteOne();
     await destroyImages(item.images.map((i) => i.publicId));
+    await trashPlanFolders(plans);
     res.locals.audit = { label: item.name };
     res.json({ ok: true });
   })

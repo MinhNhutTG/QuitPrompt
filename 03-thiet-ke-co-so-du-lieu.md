@@ -134,12 +134,17 @@ Kế hoạch làm video, mỗi tài liệu là một dòng "sản phẩm × ngư
 | Trường | Kiểu | Ràng buộc | Ghi chú |
 |---|---|---|---|
 | `product` | ObjectId → products | bắt buộc | Xoá sản phẩm thì xoá luôn kế hoạch |
-| `target` | int | 1–999 | Mục tiêu số video |
+| `target` | int | 1–999 | Chỉ còn ở kế hoạch cũ; kế hoạch mới luôn là 1 (một kế hoạch = một video) |
 | `assignee` | ObjectId → users | bắt buộc | Người thực hiện |
 | `status` | string | `todo`, `partial`, `done` | Chưa thực hiện, Còn thiếu, Đã hoàn thành. Người thực hiện tự chọn, app không tự đếm |
-| `done` | int | 0–999 | Số video đã làm khi `partial`; `todo` luôn 0, `done` luôn bằng `target` |
+| `done` | int | 0–999 | Chỉ còn ở kế hoạch cũ; tự chỉnh theo trạng thái |
 | `dueDate` | string | `"YYYY-MM-DD"` hoặc `""` | Ngày theo lịch, không lệch múi giờ |
+| `day` | string | `"YYYY-MM-DD"` | Ngày tạo theo giờ Việt Nam, đặt tên thư mục ngày trên Drive |
 | `note` | string | tối đa 1000 | |
+| `folder` | `{ id, name }` | | Thư mục của kế hoạch trên Drive; rỗng khi chưa tạo được |
+| `files.clip1`, `files.clip2`, `files.audio`, `files.final` | `{ id, name, size, mimeType, by, at }` | không bắt buộc | File Drive của từng mục: 2 video 10 giây, mp3 lời đọc, video thành phẩm |
+| `voiceText` | string | tối đa 5000 | Text lời đọc |
+| `caption` | string | tối đa 5000 | Mô tả khi đăng |
 | `createdBy` | ObjectId → users | bắt buộc | Người lập kế hoạch |
 | `createdAt`, `updatedAt` | date | tự động | |
 

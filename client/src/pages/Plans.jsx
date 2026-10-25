@@ -8,14 +8,9 @@ import { useAuth } from "../auth.jsx";
 import { EmptyState, ErrorState, Modal, Pager, Skeleton } from "../components/ui.jsx";
 import ProductPicker from "../components/ProductPicker.jsx";
 import { useToast } from "../components/Toast.jsx";
+import { STATUS, progressOf } from "../lib/plans.js";
 
 const NO_CATEGORY = "__none";
-
-export const STATUS = {
-  todo: { label: "Chưa thực hiện", tone: "todo" },
-  partial: { label: "Còn thiếu", tone: "partial" },
-  done: { label: "Đã hoàn thành", tone: "done" },
-};
 
 const STATUS_FILTERS = [
   { value: "", label: "Tất cả" },
@@ -64,10 +59,10 @@ function MemberSelect({ value, onChange, members, me, emptyLabel, label, disable
 // A new row starts due today; the user can change or clear it.
 const formOf = (plan, me, today) =>
   plan
-    ? { product: plan.product._id, target: String(plan.target), assignee: plan.assignee.id, dueDate: plan.dueDate || "", status: plan.status, done: String(plan.done) }
-    : { product: null, target: "", assignee: me || "", dueDate: today || "", status: "todo", done: "0" };
+    ? { product: plan.product._id, assignee: plan.assignee.id, dueDate: plan.dueDate || "", status: plan.status }
+    : { product: null, assignee: me || "", dueDate: today || "", status: "todo" };
 
-const FIELDS = ["product", "target", "assignee", "dueDate", "status", "done"];
+const FIELDS = ["product", "assignee", "dueDate", "status"];
 
 // One editable row. plan = null for a new, unsaved row.
 // A new row is filled in by whoever may add plans (status included). On a saved row, roles with plan.edit change
@@ -83,13 +78,13 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
   const dirty = !plan || FIELDS.some((k) => form[k] !== base[k]);
   const canStatus = !plan || plan.assignee.id === me;
   const locked = Boolean(plan) && !canEdit;
-  const target = Number(form.target);
 
   const save = useMutation({
     mutationFn: (body) => (plan ? api.updatePlan(plan._id, body) : api.createPlans({ ...body, products: [form.product] })),
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["plans"] });
-      toast(plan ? "Đã lưu kế hoạch" : "Đã thêm kế hoạch");
+      if (res.driveWarning) toast("Đã thêm kế hoạch", { tone: "danger", detail: res.driveWarning });
+      else toast(plan ? "Đã lưu kế hoạch" : "Đã thêm kế hoạch");
       onSaved?.();
     },
     onError: (e) => toast(e.message, { tone: "danger" }),
@@ -97,16 +92,14 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
 
   function submit() {
     if (!form.product) return toast("Chọn sản phẩm cần làm video.", { tone: "danger" });
-    if (!/^\d+$/.test(form.target.trim()) || target < 1 || target > 999) return toast("Mục tiêu là số video từ 1 đến 999.", { tone: "danger" });
     if (!form.assignee) return toast("Chọn người thực hiện.", { tone: "danger" });
-    const done = Number(form.done) || 0;
-    if (form.status === "partial" && (done < 0 || done >= target)) return toast(`"Còn thiếu" thì số đã làm phải từ 0 đến ${target - 1}.`, { tone: "danger" });
     // Without plan.edit only the status may change, so the rest is not sent.
-    const body = locked ? {} : { target, assignee: form.assignee, dueDate: form.dueDate };
+    const body = locked ? {} : { assignee: form.assignee, dueDate: form.dueDate };
     // A saved row only sends the status when it changed: others may edit the rest but not the status.
-    if (!plan || form.status !== base.status || form.done !== base.done) Object.assign(body, { status: form.status, done });
+    if (!plan || form.status !== base.status) body.status = form.status;
     save.mutate(body);
   }
+  const progress = plan && progressOf(plan);
 
   const overdue = form.status !== "done" && form.dueDate && form.dueDate < today;
   return (
@@ -127,18 +120,11 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
         ) : (
           <ProductPicker value={form.product} onChange={(p) => set("product")(p?._id || null)} placeholder="Chọn sản phẩm" label="Sản phẩm" />
         )}
-      </td>
-      <td data-label="Mục tiêu">
-        <input
-          className="input plan-target"
-          inputMode="numeric"
-          aria-label="Mục tiêu (số video)"
-          placeholder="10"
-          maxLength={3}
-          value={form.target}
-          disabled={locked}
-          onChange={(e) => set("target")(e.target.value.replace(/\D/g, ""))}
-        />
+        {progress && (
+          <span className={`plan-files ${progress.have === progress.total ? "is-full" : ""}`}>
+            Đã có {progress.have}/{progress.total} mục
+          </span>
+        )}
       </td>
       <td data-label="Người thực hiện">
         <MemberSelect value={form.assignee} onChange={set("assignee")} members={members} me={me} emptyLabel={form.assignee ? undefined : "Chọn người"} label="Người thực hiện" disabled={locked} />
@@ -156,10 +142,7 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
             aria-label="Trạng thái"
             value={form.status}
             disabled={!canStatus}
-            onChange={(e) => {
-              const status = e.target.value;
-              setForm((f) => ({ ...f, status, done: status === "partial" ? f.done : "0" }));
-            }}
+            onChange={(e) => set("status")(e.target.value)}
           >
             {Object.entries(STATUS).map(([v, s]) => (
               <option key={v} value={v}>
@@ -167,20 +150,6 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
               </option>
             ))}
           </select>
-          {form.status === "partial" && (
-            <label className="status-count">
-              đã làm
-              <input
-                className="input"
-                inputMode="numeric"
-                maxLength={3}
-                disabled={!canStatus}
-                value={form.done}
-                onChange={(e) => set("done")(e.target.value.replace(/\D/g, ""))}
-              />
-              /{form.target || "?"}
-            </label>
-          )}
         </div>
       </td>
       <td className="plan-actions">
@@ -200,9 +169,19 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, selected, onSele
           </button>
         )}
         {plan && !dirty && (
-          <Link className="btn btn-sm btn-ghost" to={`/?product=${plan.product._id}`}>
-            Tạo prompt
-          </Link>
+          <>
+            <Link className="btn btn-sm btn-primary" to={`/plans/${plan._id}`}>
+              Chi tiết
+            </Link>
+            {plan.files?.final && (
+              <a className="btn btn-sm" href={api.driveDownloadUrl(plan.files.final.id)} download={plan.files.final.name}>
+                Tải video
+              </a>
+            )}
+            <Link className="btn btn-sm btn-ghost" to={`/?product=${plan.product._id}`}>
+              Tạo prompt
+            </Link>
+          </>
         )}
       </td>
     </tr>
@@ -314,7 +293,7 @@ export default function Plans() {
     set({ page: n > 1 ? n : "" });
     top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-  const pct = sum?.target ? Math.round((sum.done / sum.target) * 100) : 0;
+  const pct = sum?.plans ? Math.round((sum.finished / sum.plans) * 100) : 0;
   const showTable = items.length > 0 || drafts.length > 0;
 
   return (
@@ -322,7 +301,7 @@ export default function Plans() {
       <div className="page-head" ref={top}>
         <div>
           <h1>Kế hoạch video</h1>
-          <p>Kế hoạch của cả team: sản phẩm nào cần bao nhiêu video, ai làm, tới đâu rồi.</p>
+          <p>Kế hoạch của cả team: mỗi kế hoạch là một video, có thư mục riêng trên Google Drive.</p>
         </div>
         {canEdit && (
           <button type="button" className="btn btn-primary" onClick={addDraft} disabled={!members.length}>
@@ -375,9 +354,9 @@ export default function Plans() {
         <div className="plan-sum" aria-live="polite">
           <div className="plan-sum-main">
             <span>
-              <b>{sum.plans}</b> kế hoạch · <b>{sum.done}</b>/{sum.target} video ({pct}%)
+              <b>{sum.plans}</b> kế hoạch · <b>{sum.finished}</b> đã hoàn thành ({pct}%)
             </span>
-            <div className="meter" role="img" aria-label={`Đã làm ${pct}%`}>
+            <div className="meter" role="img" aria-label={`Đã hoàn thành ${pct}%`}>
               <span style={{ width: `${pct}%` }} />
             </div>
           </div>
@@ -434,7 +413,7 @@ export default function Plans() {
               )
             }
           >
-            {canEdit ? "Thêm một dòng, chọn sản phẩm, số video cần làm, người thực hiện và hạn rồi bấm Lưu." : "Khi có kế hoạch video, chúng sẽ hiện ở đây."}
+            {canEdit ? "Thêm một dòng, chọn sản phẩm, người thực hiện và hạn rồi bấm Lưu. Bấm Chi tiết để tải video, mp3 và nhập lời đọc." : "Khi có kế hoạch video, chúng sẽ hiện ở đây."}
           </EmptyState>
         )
       ) : (
@@ -469,7 +448,6 @@ export default function Plans() {
                     )}
                   </th>
                   <th>Sản phẩm</th>
-                  <th>Mục tiêu</th>
                   <th>Người thực hiện</th>
                   <th>Hạn</th>
                   <th>Trạng thái</th>
@@ -495,11 +473,11 @@ export default function Plans() {
       <Modal open={bulkOpen} onClose={() => setBulkOpen(false)} title={`Xoá ${selected.size} kế hoạch?`}>
         {bulkOpen && (
           <>
-            <p>Các kế hoạch sau sẽ bị xoá với cả team và không khôi phục được:</p>
+            <p>Các kế hoạch sau sẽ bị xoá với cả team. Thư mục của chúng trên Google Drive chuyển vào thùng rác (khôi phục được trong 30 ngày):</p>
             <ul className="bulk-list">
               {[...selected.values()].slice(0, 8).map((p) => (
                 <li key={p._id}>
-                  <b>{p.product.name}</b> · {p.target} video · {p.assignee.displayName}
+                  <b>{p.product.name}</b> · {p.assignee.displayName}
                 </li>
               ))}
               {selected.size > 8 && <li className="hint">và {selected.size - 8} kế hoạch khác</li>}
@@ -520,8 +498,8 @@ export default function Plans() {
         {deleting && (
           <>
             <p>
-              Kế hoạch <b>{deleting.target} video</b> cho <b>{deleting.product.name}</b> (giao cho {deleting.assignee.displayName}) sẽ bị xoá với cả
-              team.
+              Kế hoạch cho <b>{deleting.product.name}</b> (giao cho {deleting.assignee.displayName}) sẽ bị xoá với cả team.
+              {deleting.folder?.id && " Thư mục của kế hoạch trên Google Drive chuyển vào thùng rác (khôi phục được trong 30 ngày)."}
             </p>
             <div className="btns">
               <button type="button" className="btn btn-danger" onClick={() => remove.mutate(deleting)} disabled={remove.isPending}>
