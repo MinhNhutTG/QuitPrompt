@@ -2191,6 +2191,11 @@ select.status-select:disabled {
 .plan-actions .btn + .btn {
   margin-left: 4px;
 }
+.btn-icon {
+  width: 32px;
+  padding: 0;
+  flex: none;
+}
 /* Phones and narrow windows: each row becomes a card, fields stacked under their column name. */
 @media (max-width: 980px) {
   .ptable-wrap {

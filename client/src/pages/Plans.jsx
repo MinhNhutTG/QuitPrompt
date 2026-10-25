@@ -65,6 +65,20 @@ const formOf = (plan, me, today) =>
 
 const FIELDS = ["product", "assignee", "dueDate", "status"];
 
+const ICONS = {
+  copy: "M10 8h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1ZM15 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3",
+  trash: "M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6",
+};
+
+// Icon-only row action; the label stays as aria-label and tooltip.
+const IconAct = ({ icon, label, className, ...props }) => (
+  <button type="button" className={`btn btn-sm btn-icon ${className}`} aria-label={label} title={label} {...props}>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={ICONS[icon]} />
+    </svg>
+  </button>
+);
+
 // One editable row. plan = null for a new, unsaved row.
 // A new row is filled in by whoever may add plans (status included). On a saved row, roles with plan.edit change
 // the details and only the assignee changes the status; roles with plan.delete may delete or select it.
@@ -164,11 +178,6 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, onCopy, selected
             Huỷ sửa
           </button>
         )}
-        {(!plan || canDelete) && (
-          <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => onDelete(plan)}>
-            Xoá
-          </button>
-        )}
         {plan && !dirty && (
           <>
             <Link className="btn btn-sm btn-primary" to={`/plans/${plan._id}`}>
@@ -179,16 +188,13 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, onCopy, selected
                 Tải video
               </a>
             )}
-            {canEdit && !plan.product.name.startsWith("(") && (
-              <button type="button" className="btn btn-sm btn-ghost" onClick={() => onCopy(plan)}>
-                Sao chép
-              </button>
-            )}
             <Link className="btn btn-sm btn-ghost" to={`/?product=${plan.product._id}`}>
               Tạo prompt
             </Link>
+            {canEdit && !plan.product.name.startsWith("(") && <IconAct icon="copy" label="Sao chép" className="btn-ghost" onClick={() => onCopy(plan)} />}
           </>
         )}
+        {(!plan || canDelete) && <IconAct icon="trash" label="Xoá" className="btn-danger-ghost" onClick={() => onDelete(plan)} />}
       </td>
     </tr>
   );
