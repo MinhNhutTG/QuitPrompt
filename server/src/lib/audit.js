@@ -22,6 +22,8 @@ const RULES = [
   ["POST", /^\/api\/plans\/(\w+)\/copy$/, "plan.copy", "Sao chép kế hoạch", "plan"],
   ["POST", /^\/api\/plans\/(\w+)\/files$/, "plan.file.add", "Tải file kế hoạch", "plan"],
   ["DELETE", /^\/api\/plans\/(\w+)\/files\/\w+$/, "plan.file.delete", "Xoá file kế hoạch", "plan"],
+  ["POST", /^\/api\/plans\/(\w+)\/quickedit$/, "plan.quickedit", "Mở kế hoạch trong QuickEdit", "plan"],
+  ["POST", /^\/api\/quickedit\/files$/, "plan.quickedit.final", "Gửi video thành phẩm từ QuickEdit", "plan"],
   ["POST", /^\/api\/resources$/, "resource.create", "Thêm tài nguyên", "resource"],
   ["PATCH", /^\/api\/resources\/(\w+)$/, "resource.update", "Sửa tài nguyên", "resource"],
   ["DELETE", /^\/api\/resources\/(\w+)$/, "resource.delete", "Xoá tài nguyên", "resource"],

@@ -33,6 +33,22 @@ export function sessionUserId(req) {
   }
 }
 
+// Loads the account a verified token names onto req. Returns why it cannot act, or "" when it can.
+async function attachUser(req, session) {
+  const user = await User.findById(session.sub, { role: 1, disabled: 1, sessionVersion: 1, premium: 1, premiumUntil: 1 }).lean();
+  if (!user || user.disabled || (user.sessionVersion || 0) !== (session.v || 0)) {
+    return !user ? "Tài khoản không còn tồn tại." : user.disabled ? "Tài khoản của bạn đã bị khoá. Liên hệ quản trị viên." : "Phiên đăng nhập đã hết hạn, hãy đăng nhập lại.";
+  }
+  req.session = session;
+  req.userId = session.sub;
+  req.role = user.role || "member";
+  const access = await accessOf(user);
+  req.permissions = new Set(access.permissions);
+  req.tier = access.tier.key;
+  req.limits = access.limits;
+  return "";
+}
+
 // One small lookup per request, so a disabled account or a reset password takes effect at once.
 export async function requireAuth(req, res, next) {
   const token = req.cookies?.[COOKIE];
@@ -40,24 +56,47 @@ export async function requireAuth(req, res, next) {
   let session;
   try {
     session = jwt.verify(token, config.jwtSecret, VERIFY);
+    // A QuickEdit token (below) is never a session.
+    if (session.typ) throw new Error("not a session");
   } catch {
     clearSession(res);
     return next(new HttpError(401, "Phiên đăng nhập đã hết hạn, hãy đăng nhập lại."));
   }
   try {
-    const user = await User.findById(session.sub, { role: 1, disabled: 1, sessionVersion: 1, premium: 1, premiumUntil: 1 }).lean();
-    if (!user || user.disabled || (user.sessionVersion || 0) !== (session.v || 0)) {
+    const why = await attachUser(req, session);
+    if (why) {
       clearSession(res);
-      const msg = !user ? "Tài khoản không còn tồn tại." : user.disabled ? "Tài khoản của bạn đã bị khoá. Liên hệ quản trị viên." : "Phiên đăng nhập đã hết hạn, hãy đăng nhập lại.";
-      return next(new HttpError(401, msg));
+      return next(new HttpError(401, why));
     }
-    req.session = session;
-    req.userId = session.sub;
-    req.role = user.role || "member";
-    const access = await accessOf(user);
-    req.permissions = new Set(access.permissions);
-    req.tier = access.tier.key;
-    req.limits = access.limits;
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ---- QuickEdit, the desktop editor, works on one plan with a token of its own instead of the login cookie:
+// it reads the plan's texts and files and sends back the finished video. The token names the plan and the user,
+// lasts a working day, and dies with the user's sessions (password reset, "log out everywhere").
+const HANDOFF = "quickedit";
+export const HANDOFF_HOURS = 12;
+
+export const signHandoff = (userId, version, planId) =>
+  jwt.sign({ sub: String(userId), v: version, plan: String(planId), typ: HANDOFF }, config.jwtSecret, { algorithm: "HS256", expiresIn: `${HANDOFF_HOURS}h` });
+
+// "Authorization: Bearer <token>"; sets req.planId besides what requireAuth sets.
+export async function requireHandoff(req, res, next) {
+  const token = /^Bearer (\S+)$/.exec(req.get("authorization") || "")?.[1];
+  let session;
+  try {
+    session = jwt.verify(token || "", config.jwtSecret, VERIFY);
+    if (session.typ !== HANDOFF) throw new Error("not a QuickEdit token");
+  } catch {
+    return next(new HttpError(401, "Mã mở kế hoạch đã hết hạn. Bấm “Tạo video” trên QuickPrompt lần nữa."));
+  }
+  try {
+    const why = await attachUser(req, session);
+    if (why) return next(new HttpError(401, why));
+    req.planId = session.plan;
     next();
   } catch (err) {
     next(err);

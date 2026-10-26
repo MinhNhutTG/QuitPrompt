@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
@@ -6,7 +7,7 @@ import { Product } from "../models/Product.js";
 import { User } from "../models/User.js";
 import { config } from "../config.js";
 import { ah, parse, assertId, isId, escapeRegex, text, HttpError } from "../lib/http.js";
-import { can } from "../middleware/auth.js";
+import { HANDOFF_HOURS, can, signHandoff } from "../middleware/auth.js";
 import { deniedMessage } from "../lib/permissions.js";
 import { vnDay } from "../lib/tiers.js";
 import { driveConfigured, gapi, getLink, openUpload, stamp, trash } from "../lib/drive.js";
@@ -349,23 +350,126 @@ router.post(
   })
 );
 
-// The upload finished: the file goes into its slot, and the file it replaces goes to Drive's bin.
+const fileIdSchema = z.string().regex(/^[\w-]{10,120}$/, "File không hợp lệ.");
+
+// An upload into the plan's folder finished: the file goes into its slot, and the file it replaces goes to Drive's bin.
+async function putFile(req, res, plan, slot, fileId) {
+  const f = await gapi("GET", `/files/${fileId}`, { query: { fields: "id,name,size,mimeType,parents,trashed" } });
+  if (f.trashed || !plan.folder?.id || !f.parents?.includes(plan.folder.id)) throw new HttpError(400, "File này không nằm trong thư mục của kế hoạch.");
+  const old = plan.files?.[slot];
+  const before = filled(plan);
+  plan.set(`files.${slot}`, { id: f.id, name: f.name, size: Number(f.size) || 0, mimeType: f.mimeType || "", by: req.userId, at: new Date() });
+  autoStatus(plan, before);
+  await plan.save();
+  if (old?.id && old.id !== f.id) await trash(old.id).catch((err) => console.error("Drive: không xoá được file cũ", old.id, err.message));
+  res.locals.audit = { label: `${PLAN_SLOTS[slot]}: ${f.name}` };
+  const [item] = await decorate([plan.toObject()]);
+  res.json({ item });
+}
+
 router.post(
   "/:id/files",
   ah(async (req, res) => {
-    const data = parse(z.object({ slot: slotKey, fileId: z.string().regex(/^[\w-]{10,120}$/, "File không hợp lệ.") }), req.body);
+    const data = parse(z.object({ slot: slotKey, fileId: fileIdSchema }), req.body);
+    await putFile(req, res, await loadWorkablePlan(req), data.slot, data.fileId);
+  })
+);
+
+// ---- QuickEdit (the desktop editor). "Tạo video" asks for a token here and hands it to QuickEdit with a
+// quickedit:// link; QuickEdit then uses the routes in quickeditRoutes below with that token.
+
+// The files QuickEdit starts from.
+const SOURCE_SLOTS = ["clip1", "clip2", "audio"];
+
+router.post(
+  "/:id/quickedit",
+  ah(async (req, res) => {
     const plan = await loadWorkablePlan(req);
-    const f = await gapi("GET", `/files/${data.fileId}`, { query: { fields: "id,name,size,mimeType,parents,trashed" } });
-    if (f.trashed || !plan.folder?.id || !f.parents?.includes(plan.folder.id)) throw new HttpError(400, "File này không nằm trong thư mục của kế hoạch.");
-    const old = plan.files?.[data.slot];
-    const before = filled(plan);
-    plan.set(`files.${data.slot}`, { id: f.id, name: f.name, size: Number(f.size) || 0, mimeType: f.mimeType || "", by: req.userId, at: new Date() });
-    autoStatus(plan, before);
-    await plan.save();
-    if (old?.id && old.id !== f.id) await trash(old.id).catch((err) => console.error("Drive: không xoá được file cũ", old.id, err.message));
-    res.locals.audit = { label: `${PLAN_SLOTS[data.slot]}: ${f.name}` };
+    const missing = SOURCE_SLOTS.filter((s) => !plan.files?.[s]?.id).map((s) => PLAN_SLOTS[s]);
+    if (missing.length) throw new HttpError(400, `Kế hoạch còn thiếu ${missing.join(", ")}.`);
+    res.locals.audit = { label: await productName(plan) };
+    res.status(201).json({ token: signHandoff(req.userId, req.session.v || 0, plan._id), expiresAt: new Date(Date.now() + HANDOFF_HOURS * 3600e3) });
+  })
+);
+
+export const quickeditRoutes = Router();
+
+// The token's plan, while its user may still work on it.
+async function handoffPlan(req) {
+  const plan = await loadPlan(req.planId);
+  if (!canWork(req, plan)) throw new HttpError(403, "Bạn không còn là người thực hiện kế hoạch này.");
+  return plan;
+}
+
+// What QuickEdit needs to build the video: names and texts, and which files there are.
+quickeditRoutes.get(
+  "/plan",
+  ah(async (req, res) => {
+    const plan = await handoffPlan(req);
     const [item] = await decorate([plan.toObject()]);
-    res.json({ item });
+    res.json({
+      id: String(plan._id),
+      product: item.product.name,
+      sku: item.product.sku || "",
+      day: plan.day,
+      voiceText: plan.voiceText,
+      caption: plan.caption,
+      files: Object.fromEntries(Object.keys(PLAN_SLOTS).filter((s) => plan.files?.[s]?.id).map((s) => [s, { name: plan.files[s].name, size: plan.files[s].size }])),
+    });
+  })
+);
+
+// One of the plan's files, streamed from Drive.
+quickeditRoutes.get(
+  "/files/:slot",
+  ah(async (req, res) => {
+    const slot = parse(slotKey, req.params.slot);
+    const plan = await handoffPlan(req);
+    const file = plan.files?.[slot];
+    if (!file?.id) throw new HttpError(404, `Kế hoạch chưa có ${PLAN_SLOTS[slot]}.`);
+    const up = await gapi("GET", `/files/${file.id}`, { query: { alt: "media" }, raw: true });
+    res.setHeader("Content-Type", up.headers.get("content-type") || "application/octet-stream");
+    const len = up.headers.get("content-length");
+    if (len) res.setHeader("Content-Length", len);
+    const body = Readable.fromWeb(up.body);
+    req.on("close", () => body.destroy());
+    body.on("error", () => res.destroy());
+    body.pipe(res);
+  })
+);
+
+// The finished video: an upload session into the plan's folder (QuickEdit sends the bytes straight to Google),
+// then POST /files with the new file's id puts it in the "Video thành phẩm" slot.
+quickeditRoutes.post(
+  "/uploads",
+  ah(async (req, res) => {
+    const max = config.driveMaxUploadMb;
+    const data = parse(
+      z.object({
+        size: z.number({ invalid_type_error: "Dung lượng file không hợp lệ." }).int().min(1).max(max * 1024 * 1024, `Mỗi file tối đa ${max} MB.`),
+      }),
+      req.body
+    );
+    const plan = await handoffPlan(req);
+    const folder = await ensurePlanFolder(plan, await productName(plan));
+    const uploadUrl = await openUpload({
+      parent: folder,
+      name: `${PLAN_SLOTS.final}.mp4`,
+      mimeType: "video/mp4",
+      size: data.size,
+      appProperties: await stamp(req),
+      origin: config.clientOrigin || new URL(config.googleRedirectUri).origin,
+      fields: "id,name,size,mimeType",
+    });
+    res.status(201).json({ uploadUrl });
+  })
+);
+
+quickeditRoutes.post(
+  "/files",
+  ah(async (req, res) => {
+    const { fileId } = parse(z.object({ fileId: fileIdSchema }), req.body);
+    await putFile(req, res, await handoffPlan(req), "final", fileId);
   })
 );
 

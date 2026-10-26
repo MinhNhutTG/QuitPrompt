@@ -137,6 +137,7 @@ export const api = {
   updatePlan: (id, body) => request("PATCH", `/plans/${id}`, body),
   copyPlan: (id, body) => request("POST", `/plans/${id}/copy`, body),
   planFolder: (id) => request("POST", `/plans/${id}/folder`),
+  planQuickEdit: (id) => request("POST", `/plans/${id}/quickedit`),
   planUpload,
   planDeleteFile: (id, slot) => request("DELETE", `/plans/${id}/files/${slot}`),
   deletePlan: (id) => request("DELETE", `/plans/${id}`),

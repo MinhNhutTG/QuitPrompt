@@ -62,7 +62,15 @@ Kế hoạch cũ có trường mục tiêu (số video); trường này không c
 - Collection `videoplans`: xem [tài liệu 03, mục 2.4](03-thiet-ke-co-so-du-lieu.md).
 - API `/api/plans`: xem [tài liệu 04, mục 7](04-dac-ta-api.md).
 
-## 7. Để sau
+## 7. Dựng video bằng QuickEdit
+
+- Trang chi tiết có nút **Tạo video** khi kế hoạch đã có Video 10s 1, Video 10s 2 và Lời đọc, cho người thực hiện hoặc vai trò có `plan.edit`.
+- Bấm nút: máy chủ cấp một mã cho riêng kế hoạch đó (`POST /api/plans/:id/quickedit` → `{ token, expiresAt }`), trình duyệt mở `quickedit://open?site=<địa chỉ app>&token=<mã>`, tức app QuickEdit trên máy (app desktop, cài riêng). Máy chưa có QuickEdit thì không có gì xảy ra.
+- Mã sống 12 giờ, chỉ dùng được với kế hoạch đó, mất hiệu lực khi người dùng đổi mật khẩu, bị khoá hoặc đăng xuất mọi nơi; không dùng thay cookie đăng nhập được.
+- QuickEdit dùng mã ở header `Authorization: Bearer` với `/api/quickedit`: `GET /plan` (tên sản phẩm, ngày, lời đọc, mô tả, danh sách file), `GET /files/:slot` (tải file từ Drive), `POST /uploads` `{ size }` (mở phiên tải lên “Video thành phẩm.mp4” vào thư mục kế hoạch), `POST /files` `{ fileId }` (đặt file vào mục Video thành phẩm, tiến độ tự cập nhật). Mỗi lần gọi đều kiểm tra người dùng vẫn được làm kế hoạch đó.
+- Nhật ký ghi “Mở kế hoạch trong QuickEdit” và “Gửi video thành phẩm từ QuickEdit”.
+
+## 8. Để sau
 
 - Hiện kế hoạch đang chạy ngay trong trang chi tiết sản phẩm.
 - Lịch sử ai đổi trạng thái lúc nào; thống kê theo người, theo tuần.

@@ -238,6 +238,17 @@ export default function PlanDetail() {
     qc.invalidateQueries({ queryKey: ["plans"], predicate: (q) => q.queryKey[1] !== "one" });
   };
 
+  // Opens the plan in QuickEdit, the desktop editor on this computer, through its quickedit:// link. The link carries
+  // this site's address and a token for this plan only; QuickEdit downloads the files and sends the video back.
+  const openEditor = useMutation({
+    mutationFn: () => api.planQuickEdit(id),
+    onSuccess: ({ token }) => {
+      window.location.href = `quickedit://open?site=${encodeURIComponent(window.location.origin)}&token=${encodeURIComponent(token)}`;
+      toast("Đang mở QuickEdit", { detail: "Nếu trình duyệt hỏi có mở QuickEdit không, chọn Mở. Không thấy gì xảy ra thì máy này chưa có QuickEdit." });
+    },
+    onError: (e) => toast(e.message, { tone: "danger" }),
+  });
+
   const makeFolder = useMutation({
     mutationFn: () => api.planFolder(id),
     onSuccess: ({ item }) => {
@@ -272,6 +283,8 @@ export default function PlanDetail() {
   const today = new Date().toLocaleDateString("en-CA");
   const overdue = plan.status !== "done" && plan.dueDate && plan.dueDate < today;
   const productGone = plan.product.name.startsWith("(");
+  // QuickEdit starts from the two clips and the voice-over.
+  const editable = canWork && ["clip1", "clip2", "audio"].every((k) => plan.files?.[k]);
 
   return (
     <div className="page">
@@ -297,6 +310,11 @@ export default function PlanDetail() {
             <Link className="btn" to={`/?product=${plan.product._id}`}>
               Tạo prompt
             </Link>
+            {editable && (
+              <button type="button" className="btn btn-primary" onClick={() => openEditor.mutate()} disabled={openEditor.isPending} title="Mở 2 video và lời đọc trong QuickEdit trên máy này để dựng video">
+                {openEditor.isPending ? "Đang mở..." : "Tạo video"}
+              </button>
+            )}
           </div>
         )}
       </div>
