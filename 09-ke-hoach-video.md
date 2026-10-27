@@ -38,16 +38,17 @@ Kế hoạch cũ có trường mục tiêu (số video); trường này không c
 ## 4. Màn hình `/plans`
 
 - Mục **Kế hoạch** trên thanh điều hướng (máy tính) và là tab thứ 4 trên điện thoại.
-- **Sửa trực tiếp trên bảng**, không mở hộp thoại. Mỗi dòng gồm: ô chọn sản phẩm (có ảnh, tìm được, bên dưới là "Đã có x/6 mục") · ô chọn người thực hiện · ô chọn ngày hạn · ô chọn trạng thái · nút **Lưu** · nút **Xoá**.
-- **Thêm kế hoạch:** bấm "+ Thêm kế hoạch" thì một dòng trống (nền nhấn nhẹ) hiện ở đầu bảng, người thực hiện mặc định là mình, hạn mặc định là hôm nay. Điền xong bấm Lưu; máy chủ tạo luôn thư mục trên Drive. Không tạo được thư mục thì vẫn lưu kế hoạch và báo lý do. Bấm Xoá thì bỏ dòng chưa lưu.
-- **Dòng đã lưu:** sửa ô nào thì dòng đổi nền và hiện nút Lưu, Huỷ sửa; không sửa gì thì hiện **Chi tiết**, **Tải video** (khi đã có video thành phẩm), **Sao chép**, Xoá và Tạo prompt.
-- **Sao chép** (cần `plan.edit`, có ở cả trang danh sách và trang chi tiết): hộp thoại tạo kế hoạch mới cùng sản phẩm, người thực hiện, hạn nộp, ghi chú; trạng thái "Chưa thực hiện", ngày tạo là hôm nay, thư mục Drive riêng. Tick để chép thêm lời đọc và mô tả (mặc định có) và từng file đã có (mặc định không; file được nhân bản trên Drive vào thư mục mới). Xong thì mở luôn kế hoạch mới. Ô trạng thái bị khoá với người không phải người thực hiện (rê chuột thấy lý do). Xoá dòng đã lưu hỏi Có/Không.
-- **Xoá nhiều:** tick ô đầu mỗi dòng (ô ở tiêu đề chọn cả trang). Lựa chọn giữ khi sang trang khác, đổi bộ lọc thì bỏ chọn. Thanh "Đã chọn N kế hoạch" hiện nút Xoá N kế hoạch, hỏi Có/Không kèm danh sách rồi xoá một lượt (`POST /api/plans/bulk-delete` với `{ ids }`, tối đa 500).
-- Kế hoạch đã hoàn thành nằm cuối bảng và mờ đi; quá hạn hiện chữ đỏ dưới ngày hạn.
-- Màn hình hẹp hơn 980px (điện thoại, máy tính bảng): mỗi dòng thành một thẻ, các ô xếp dọc có nhãn, không cuộn ngang.
+- **Mỗi kế hoạch là một tờ giấy note** (kiểu giấy dán tường: màu pastel, giấy kẻ dòng, một miếng băng dính ở mép trên, hơi nghiêng, thẳng lại khi rê chuột). Màu giấy và băng dính cố định theo từng kế hoạch. Các thẻ xếp thành lưới, thẻ nhỏ gọn (khoảng 4 cột trên máy tính, 1 cột trên điện thoại, không cuộn ngang).
+- **Sửa trực tiếp trên thẻ**, không mở hộp thoại. Mỗi thẻ gồm: ảnh nhỏ và tên sản phẩm (bấm để mở chi tiết), "Đã có x/6 mục" · Người làm · Hạn (chữ đỏ "Quá hạn" dưới nhãn) · Trạng thái · các nút.
+- **Ghim:** nút ghim ở góc phải trên của thẻ, mọi thành viên bấm được. Thẻ đã ghim hiện đinh ghim đỏ thay cho băng dính, không nghiêng, và **luôn nằm đầu danh sách** cho cả team (ghim sau cùng đứng trước), trước cả thứ tự hạn và trạng thái. Bấm lần nữa để bỏ ghim.
+- **Thêm kế hoạch:** bấm "+ Thêm kế hoạch" thì một thẻ trống (viền nét đứt) hiện ở đầu lưới, người thực hiện mặc định là mình, hạn mặc định là hôm nay. Điền xong bấm Lưu; máy chủ tạo luôn thư mục trên Drive. Không tạo được thư mục thì vẫn lưu kế hoạch và báo lý do. Bấm Xoá thì bỏ thẻ chưa lưu.
+- **Thẻ đã lưu:** sửa ô nào thì thẻ có viền xanh và hiện nút Lưu, Huỷ sửa; không sửa gì thì hiện **Chi tiết**, **Tải video** (khi đã có video thành phẩm), **Prompt** (tạo prompt cho sản phẩm), biểu tượng **Sao chép** và **Xoá**.
+- **Sao chép** (cần `plan.edit`, có ở cả trang danh sách và trang chi tiết): hộp thoại tạo kế hoạch mới cùng sản phẩm, người thực hiện, hạn nộp, ghi chú; trạng thái "Chưa thực hiện", ngày tạo là hôm nay, thư mục Drive riêng. Tick để chép thêm lời đọc và mô tả (mặc định có) và từng file đã có (mặc định không; file được nhân bản trên Drive vào thư mục mới). Xong thì mở luôn kế hoạch mới. Xoá kế hoạch hỏi Có/Không.
+- **Xoá nhiều:** tick ô ở góc trái trên mỗi thẻ ("Chọn mọi kế hoạch trên trang này" phía trên lưới chọn cả trang). Lựa chọn giữ khi sang trang khác, đổi bộ lọc thì bỏ chọn. Thanh "Đã chọn N kế hoạch" hiện nút Xoá N kế hoạch, hỏi Có/Không kèm danh sách rồi xoá một lượt (`POST /api/plans/bulk-delete` với `{ ids }`, tối đa 500).
+- Kế hoạch đã hoàn thành và đã đăng bài nằm cuối (sau các thẻ ghim và thẻ chưa xong), nội dung mờ đi.
 - **Bộ lọc:** tìm theo tên/mã sản phẩm, Người thực hiện (mặc định "Cả team"), Trạng thái (thêm "Chưa xong"), Hạn (Quá hạn, Hôm nay, 7 ngày tới, Tháng này), Loại sản phẩm. Bộ lọc và trang nằm trên URL.
-- **Tổng hợp** theo bộ lọc: số kế hoạch, số đã hoàn thành (%), số dòng theo từng trạng thái, số quá hạn.
-- Phân trang đánh số, 20 dòng mỗi trang.
+- **Tổng hợp** theo bộ lọc: số kế hoạch, số đã hoàn thành (%), số kế hoạch theo từng trạng thái, số quá hạn.
+- Phân trang đánh số, 20 thẻ mỗi trang.
 
 ## 5. Màn hình chi tiết `/plans/:id`
 

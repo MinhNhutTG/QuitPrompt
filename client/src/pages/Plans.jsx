@@ -7,6 +7,7 @@ import { uid, useDebounce } from "../lib/util.js";
 import { useAuth } from "../auth.jsx";
 import { EmptyState, ErrorState, Modal, Pager, Skeleton } from "../components/ui.jsx";
 import ProductPicker from "../components/ProductPicker.jsx";
+import LazyImage from "../components/LazyImage.jsx";
 import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { STATUS, isFinished, progressOf } from "../lib/plans.js";
@@ -80,10 +81,19 @@ const IconAct = ({ icon, label, className, ...props }) => (
   </button>
 );
 
-// One editable row. plan = null for a new, unsaved row.
-// A new row is filled in by whoever may add plans (status included). On a saved row, roles with plan.edit change
-// the details and any member changes the status; roles with plan.delete may delete or select it.
-function PlanRow({ plan, members, me, today, onSaved, onDelete, onCopy, selected, onSelect, canEdit, canDelete }) {
+// Each plan keeps its own paper and tape colour (from its id), and a slight tilt, like notes stuck on a wall.
+const PAPERS = 6;
+const TAPES = 5;
+function looks(id) {
+  let h = 0;
+  for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return { paper: h % PAPERS, tape: (h >> 4) % TAPES, tilt: ((h >> 8) % 5) - 2 };
+}
+
+// One plan as a sticky note. plan = null for a new, unsaved one.
+// A new note is filled in by whoever may add plans (status included). On a saved note, roles with plan.edit change
+// the assignee and due day; any member changes the status and pins it; roles with plan.delete may delete or select it.
+function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selected, onSelect, canEdit, canDelete }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState(() => formOf(plan, me, today));
@@ -104,69 +114,113 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, onCopy, selected
     },
     onError: (e) => toast(e.message, { tone: "danger" }),
   });
+  const pin = useMutation({
+    mutationFn: (on) => api.updatePlan(plan._id, { pinned: on }),
+    onSuccess: (_, on) => {
+      qc.invalidateQueries({ queryKey: ["plans"] });
+      toast(on ? "Đã ghim lên đầu" : "Đã bỏ ghim");
+    },
+    onError: (e) => toast(e.message, { tone: "danger" }),
+  });
 
   function submit() {
     if (!form.product) return toast("Chọn sản phẩm cần làm video.", { tone: "danger" });
     if (!form.assignee) return toast("Chọn người thực hiện.", { tone: "danger" });
     // Without plan.edit only the status may change, so the rest is not sent.
     const body = locked ? {} : { assignee: form.assignee, dueDate: form.dueDate };
-    // A saved row only sends the status when it changed, so it never undoes an automatic change made meanwhile.
+    // A saved note only sends the status when it changed, so it never undoes an automatic change made meanwhile.
     if (!plan || form.status !== base.status) body.status = form.status;
     save.mutate(body);
   }
   const progress = plan && progressOf(plan);
-
+  const gone = plan?.product.name.startsWith("(");
+  const pinned = Boolean(plan?.pinnedAt);
+  const look = looks(plan?._id || "new");
   const overdue = !isFinished(form.status) && form.dueDate && form.dueDate < today;
+
   return (
-    <tr className={[!plan && "is-draft", plan && isFinished(plan.status) && "is-done", dirty && plan && "is-dirty", selected && "is-selected"].filter(Boolean).join(" ")}>
-      <td className="plan-check">
+    <article
+      className={["note", `paper-${look.paper}`, !plan && "is-draft", plan && isFinished(plan.status) && "is-done", dirty && plan && "is-dirty", selected && "is-selected", pinned && "is-pinned"].filter(Boolean).join(" ")}
+      style={{ "--tilt": `${look.tilt * 0.4}deg` }}
+      aria-label={plan ? `Kế hoạch ${plan.product.name}` : "Kế hoạch mới"}
+    >
+      {pinned ? <span className="note-pin" aria-hidden="true" /> : <span className={`note-tape tape-${look.tape}`} aria-hidden="true" />}
+
+      <div className="note-top">
         {plan && canDelete && (
-          <label>
+          <label className="note-check" title="Chọn để xoá nhiều">
             <input type="checkbox" checked={selected} onChange={(e) => onSelect(plan, e.target.checked)} aria-label={`Chọn kế hoạch ${plan.product.name}`} />
-            <span className="plan-check-text">Chọn</span>
           </label>
         )}
-      </td>
-      <td data-label="Sản phẩm" className="plan-product-cell">
-        {plan && plan.product.name.startsWith("(") ? (
-          <span className="hint">{plan.product.name}</span>
-        ) : locked ? (
-          <span>{plan.product.name}</span>
-        ) : (
-          <ProductPicker value={form.product} onChange={(p) => set("product")(p?._id || null)} placeholder="Chọn sản phẩm" label="Sản phẩm" />
-        )}
-        {progress && (
-          <span className={`plan-files ${progress.have === progress.total ? "is-full" : ""}`}>
-            Đã có {progress.have}/{progress.total} mục
-          </span>
-        )}
-      </td>
-      <td data-label="Người thực hiện">
-        <MemberSelect value={form.assignee} onChange={set("assignee")} members={members} me={me} emptyLabel={form.assignee ? undefined : "Chọn người"} label="Người thực hiện" disabled={locked} />
-      </td>
-      <td data-label="Hạn">
-        <div className="plan-due">
-          <input className="input" type="date" aria-label="Hạn hoàn thành" value={form.dueDate} disabled={locked} onChange={(e) => set("dueDate")(e.target.value)} />
-          {overdue && <span className="plan-overdue">Quá hạn</span>}
-        </div>
-      </td>
-      <td data-label="Trạng thái">
-        <div className="status-edit">
-          <select
-            className={`input status-select status-${STATUS[form.status].tone}`}
-            aria-label="Trạng thái"
-            value={form.status}
-            onChange={(e) => set("status")(e.target.value)}
+        <span className="grow" />
+        {plan && (
+          <button
+            type="button"
+            className={`note-pin-btn ${pinned ? "is-on" : ""}`}
+            onClick={() => pin.mutate(!pinned)}
+            disabled={pin.isPending}
+            aria-pressed={pinned}
+            aria-label={pinned ? "Bỏ ghim" : "Ghim lên đầu"}
+            title={pinned ? "Bỏ ghim" : "Ghim lên đầu danh sách cho cả team"}
           >
-            {Object.entries(STATUS).map(([v, s]) => (
-              <option key={v} value={v}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill={pinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5ZM12 14v6" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      <div className="note-product">
+        {plan && <LazyImage image={plan.product.images?.[0]} width={44} ratio="1 / 1" />}
+        <div className="note-product-text">
+          {!plan ? (
+            <ProductPicker value={form.product} onChange={(p) => set("product")(p?._id || null)} placeholder="Chọn sản phẩm" label="Sản phẩm" />
+          ) : gone ? (
+            <span className="hint">{plan.product.name}</span>
+          ) : (
+            <Link className="note-title" to={`/plans/${plan._id}`} title={plan.product.name}>
+              {plan.product.name}
+            </Link>
+          )}
+          {progress && (
+            <span className={`plan-files ${progress.have === progress.total ? "is-full" : ""}`}>
+              Đã có {progress.have}/{progress.total} mục
+            </span>
+          )}
         </div>
-      </td>
-      <td className="plan-actions">
+      </div>
+
+      <dl className="note-fields">
+        <div>
+          <dt>Người làm</dt>
+          <dd>
+            <MemberSelect value={form.assignee} onChange={set("assignee")} members={members} me={me} emptyLabel={form.assignee ? undefined : "Chọn người"} label="Người thực hiện" disabled={locked} />
+          </dd>
+        </div>
+        <div>
+          <dt>
+            Hạn
+            {overdue && <span className="plan-overdue">Quá hạn</span>}
+          </dt>
+          <dd>
+            <input className="input" type="date" aria-label="Hạn hoàn thành" value={form.dueDate} disabled={locked} onChange={(e) => set("dueDate")(e.target.value)} />
+          </dd>
+        </div>
+        <div>
+          <dt>Trạng thái</dt>
+          <dd>
+            <select className={`input status-select status-${STATUS[form.status].tone}`} aria-label="Trạng thái" value={form.status} onChange={(e) => set("status")(e.target.value)}>
+              {Object.entries(STATUS).map(([v, st]) => (
+                <option key={v} value={v}>
+                  {st.label}
+                </option>
+              ))}
+            </select>
+          </dd>
+        </div>
+      </dl>
+
+      <div className="note-acts">
         {dirty && (
           <button type="button" className="btn btn-sm btn-primary" onClick={submit} disabled={save.isPending}>
             {save.isPending ? "Đang lưu..." : "Lưu"}
@@ -188,14 +242,16 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, onCopy, selected
               </a>
             )}
             <Link className="btn btn-sm btn-ghost" to={`/?product=${plan.product._id}`}>
-              Tạo prompt
+              Prompt
             </Link>
-            {canEdit && !plan.product.name.startsWith("(") && <IconAct icon="copy" label="Sao chép" className="btn-ghost" onClick={() => onCopy(plan)} />}
           </>
         )}
-        {(!plan || canDelete) && <IconAct icon="trash" label="Xoá" className="btn-danger-ghost" onClick={() => onDelete(plan)} />}
-      </td>
-    </tr>
+        <span className="note-icons">
+          {plan && !dirty && canEdit && !gone && <IconAct icon="copy" label="Sao chép" className="btn-ghost" onClick={() => onCopy(plan)} />}
+          {(!plan || canDelete) && <IconAct icon="trash" label="Xoá" className="btn-danger-ghost" onClick={() => onDelete(plan)} />}
+        </span>
+      </div>
+    </article>
   );
 }
 
@@ -253,7 +309,7 @@ export default function Plans() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, isPlaceholderData]);
 
-  // New rows not saved yet, newest on top.
+  // New plans not saved yet, newest first.
   const [drafts, setDrafts] = useState([]);
   const addDraft = () => setDrafts((d) => [uid(), ...d]);
   const dropDraft = (key) => setDrafts((d) => d.filter((k) => k !== key));
@@ -308,7 +364,7 @@ export default function Plans() {
   // Posted plans are finished too.
   const finished = (sum?.finished || 0) + (sum?.posted || 0);
   const pct = sum?.plans ? Math.round((finished / sum.plans) * 100) : 0;
-  const showTable = items.length > 0 || drafts.length > 0;
+  const showBoard = items.length > 0 || drafts.length > 0;
 
   return (
     <div className="page">
@@ -409,14 +465,14 @@ export default function Plans() {
       )}
 
       {isLoading ? (
-        <div className="plist" aria-busy="true">
-          <Skeleton h={64} r={14} />
-          <Skeleton h={64} r={14} />
-          <Skeleton h={64} r={14} />
+        <div className="notes" aria-busy="true">
+          <Skeleton h={250} r={6} />
+          <Skeleton h={250} r={6} />
+          <Skeleton h={250} r={6} />
         </div>
       ) : error ? (
         <ErrorState error={error} onRetry={refetch} />
-      ) : !showTable ? (
+      ) : !showBoard ? (
         filtered ? (
           <EmptyState title="Không thấy kế hoạch nào khớp">Thử bỏ bớt bộ lọc.</EmptyState>
         ) : (
@@ -430,7 +486,7 @@ export default function Plans() {
               )
             }
           >
-            {canEdit ? "Thêm một dòng, chọn sản phẩm, người thực hiện và hạn rồi bấm Lưu. Bấm Chi tiết để tải video, mp3 và nhập lời đọc." : "Khi có kế hoạch video, chúng sẽ hiện ở đây."}
+            {canEdit ? "Thêm một kế hoạch, chọn sản phẩm, người thực hiện và hạn rồi bấm Lưu. Bấm Chi tiết để tải video, mp3 và nhập lời đọc." : "Khi có kế hoạch video, chúng sẽ hiện ở đây."}
           </EmptyState>
         )
       ) : (
@@ -448,40 +504,24 @@ export default function Plans() {
               </button>
             </div>
           )}
-          <div className={`card ptable-wrap ${isPlaceholderData ? "is-stale" : ""}`} aria-busy={isFetching}>
-            <table className="ptable">
-              <thead>
-                <tr>
-                  <th className="plan-check">
-                    {canDelete && (
-                      <input
-                        type="checkbox"
-                        aria-label="Chọn mọi kế hoạch trên trang này"
-                        checked={pageAllOn}
-                        ref={(el) => el && (el.indeterminate = !pageAllOn && items.some((p) => selected.has(p._id)))}
-                        onChange={(e) => selectPage(e.target.checked)}
-                        disabled={!items.length}
-                      />
-                    )}
-                  </th>
-                  <th>Sản phẩm</th>
-                  <th>Người thực hiện</th>
-                  <th>Hạn</th>
-                  <th>Trạng thái</th>
-                  <th>
-                    <span className="sr-only">Thao tác</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {drafts.map((key) => (
-                  <PlanRow key={key} plan={null} members={members} me={user?.id} today={today} onSaved={() => dropDraft(key)} onDelete={() => dropDraft(key)} canEdit />
-                ))}
-                {items.map((p) => (
-                  <PlanRow key={p._id} plan={p} members={members} me={user?.id} today={data.today || today} onDelete={setDeleting} onCopy={setCopying} selected={selected.has(p._id)} onSelect={select} canEdit={canEdit} canDelete={canDelete} />
-                ))}
-              </tbody>
-            </table>
+          {canDelete && items.length > 0 && (
+            <label className="notes-select-all">
+              <input
+                type="checkbox"
+                checked={pageAllOn}
+                ref={(el) => el && (el.indeterminate = !pageAllOn && items.some((p) => selected.has(p._id)))}
+                onChange={(e) => selectPage(e.target.checked)}
+              />
+              Chọn mọi kế hoạch trên trang này
+            </label>
+          )}
+          <div className={`notes ${isPlaceholderData ? "is-stale" : ""}`} aria-busy={isFetching}>
+            {drafts.map((key) => (
+              <PlanNote key={key} plan={null} members={members} me={user?.id} today={today} onSaved={() => dropDraft(key)} onDelete={() => dropDraft(key)} canEdit />
+            ))}
+            {items.map((p) => (
+              <PlanNote key={p._id} plan={p} members={members} me={user?.id} today={data.today || today} onDelete={setDeleting} onCopy={setCopying} selected={selected.has(p._id)} onSelect={select} canEdit={canEdit} canDelete={canDelete} />
+            ))}
           </div>
           {data && <Pager page={data.page} pages={data.pages} onPage={goPage} disabled={isPlaceholderData} />}
         </>

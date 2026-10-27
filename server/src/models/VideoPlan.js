@@ -40,6 +40,8 @@ const schema = new mongoose.Schema(
     // The day the plan was made (Vietnam time). Its Drive folder sits in a folder named after this day.
     day: { type: String, default: "", match: /^(\d{4}-\d{2}-\d{2})?$/ },
     note: { type: String, maxlength: 1000, default: "" },
+    // Pinned to the top of the team's list (newest pin first); null when not pinned. Any member pins or unpins.
+    pinnedAt: { type: Date, default: null },
     // The plan's own Drive folder: <team folder>/<DD_MM_YYYY>/<product name (n)>. Made on creation, or later when Drive was not connected.
     folder: {
       id: { type: String, default: "" },

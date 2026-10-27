@@ -239,7 +239,7 @@ Kế hoạch dùng chung cho cả nhóm, mỗi kế hoạch là một video và 
 - `category`: loại sản phẩm (`__none` là chưa phân loại). `q`: tên hoặc mã sản phẩm.
 - `dueFrom`, `dueTo`: ngày `YYYY-MM-DD`, tính cả hai đầu. `overdue=1`: hạn trước `today` và chưa hoàn thành.
 - `today`: ngày hôm nay theo máy người xem, dùng để tính quá hạn (thiếu thì lấy ngày UTC của máy chủ).
-- Sắp xếp: chưa hoàn thành trước, rồi `done`, `posted` ở cuối cùng; trong mỗi nhóm hạn gần nhất trước, không có hạn ở cuối. Mặc định 20 mỗi trang, tối đa 50.
+- Sắp xếp: kế hoạch đã ghim trước hết (`pinnedAt` mới nhất trước), rồi chưa hoàn thành, rồi `done`, `posted` ở cuối cùng; trong mỗi nhóm hạn gần nhất trước, không có hạn ở cuối. Mặc định 20 mỗi trang, tối đa 50.
 
 ```json
 200 {
@@ -274,6 +274,7 @@ Lỗi: sản phẩm hoặc người thực hiện không tồn tại → 404.
 { "assignee": "...", "dueDate": "", "note": "..." }     // plan.edit
 { "status": "posted" }                                   // mọi thành viên
 { "voiceText": "...", "caption": "..." }                 // mọi thành viên
+{ "pinned": true }                                       // ghim lên đầu danh sách (false: bỏ ghim), mọi thành viên
 200 { "item": { ... } }
 ```
 

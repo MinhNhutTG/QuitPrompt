@@ -1939,19 +1939,9 @@ select.input {
   align-items: center;
   gap: 6px;
 }
-.ptable .status-edit {
-  flex-wrap: nowrap;
-}
 select.status-select {
   font-weight: 600;
   border-color: transparent;
-}
-.ptable select.status-select {
-  width: auto;
-  min-width: 150px;
-}
-.ptable td[data-label="Người thực hiện"] select {
-  min-width: 128px;
 }
 select.status-select:disabled {
   opacity: 1;
@@ -2128,153 +2118,10 @@ select.status-select:disabled {
     justify-content: flex-start;
   }
 }
-.ptable-wrap {
-  padding: 0;
-  /* visible, not auto: the product picker's list must spill out of the table */
-  overflow: visible;
-}
-.ptable-wrap.is-stale {
-  opacity: 0.55;
-}
-.ptable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-.ptable th {
-  text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  padding: 10px 8px;
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-}
-.ptable th:first-child,
-.ptable td:first-child {
-  padding-left: 14px;
-}
-.ptable td {
-  padding: 8px;
-  border-bottom: 1px solid var(--line);
-  vertical-align: middle;
-}
-.ptable tbody tr:last-child td {
-  border-bottom: 0;
-}
-.ptable .input {
-  min-height: 40px;
-  padding-top: 6px;
-  padding-bottom: 6px;
-  font-size: 14px;
-}
-.ptable .picker-btn {
-  min-height: 40px;
-  padding-top: 3px;
-  padding-bottom: 3px;
-}
-.plan-product-cell {
-  min-width: 230px;
-  width: 30%;
-}
-.plan-target {
-  width: 72px;
-  text-align: center;
-}
-.ptable tr.is-draft td {
-  background: var(--accent-soft);
-}
-.ptable tr.is-dirty td {
-  background: color-mix(in srgb, var(--accent-soft) 55%, transparent);
-}
-.ptable tr.is-done td:not(.plan-actions) {
-  opacity: 0.6;
-}
-.plan-actions {
-  white-space: nowrap;
-  text-align: right;
-  padding-right: 14px !important;
-}
-.plan-actions .btn + .btn {
-  margin-left: 4px;
-}
 .btn-icon {
   width: 32px;
   padding: 0;
   flex: none;
-}
-/* Phones and narrow windows: each row becomes a card, fields stacked under their column name. */
-@media (max-width: 980px) {
-  .ptable-wrap {
-    background: none;
-    border: 0;
-    box-shadow: none;
-  }
-  .ptable thead {
-    display: none;
-  }
-  .ptable,
-  .ptable tbody {
-    display: grid;
-    gap: 12px;
-  }
-  .ptable tr {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 10px 12px;
-    padding: 14px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--r-lg);
-  }
-  .ptable tr.is-draft {
-    background: var(--accent-soft);
-    border-color: var(--accent);
-  }
-  .ptable tr.is-draft td,
-  .ptable tr.is-dirty td {
-    background: none;
-  }
-  .ptable td,
-  .ptable td:first-child {
-    display: grid;
-    gap: 4px;
-    align-content: start;
-    padding: 0;
-    border: 0;
-    width: auto;
-    min-width: 0;
-  }
-  .ptable td[data-label]::before {
-    content: attr(data-label);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--muted);
-  }
-  .plan-product-cell,
-  .ptable td[data-label="Trạng thái"],
-  .plan-actions {
-    grid-column: 1 / -1;
-  }
-  .plan-target {
-    width: 100%;
-    text-align: left;
-  }
-  .ptable .status-edit {
-    flex-wrap: wrap;
-  }
-  .ptable select.status-select {
-    flex: 1;
-  }
-  .plan-actions {
-    display: flex !important;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 4px 0 0 !important;
-  }
-  .plan-actions .btn + .btn {
-    margin-left: 0;
-  }
 }
 
 /* ---- resource store: skills and image prompts */
@@ -2320,32 +2167,6 @@ select.status-select:disabled {
 }
 
 /* ---- plans: choose several, delete at once */
-.ptable .plan-check {
-  width: 1%;
-  padding-right: 0;
-}
-.plan-check label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-}
-.plan-check input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-.plan-check-text {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-}
-.ptable tr.is-selected td {
-  background: var(--accent-soft);
-}
 .bulk-bar {
   position: sticky;
   top: calc(var(--top-h) + 8px);
@@ -2369,30 +2190,6 @@ select.status-select:disabled {
   display: grid;
   gap: 4px;
   font-size: 14px;
-}
-@media (max-width: 980px) {
-  .ptable .plan-check {
-    grid-column: 1 / -1;
-    width: auto;
-  }
-  .ptable td.plan-check:empty {
-    display: none;
-  }
-  .plan-check-text {
-    position: static;
-    width: auto;
-    height: auto;
-    clip: auto;
-    font-size: 13px;
-    color: var(--muted);
-  }
-  .ptable tr.is-selected {
-    border-color: var(--accent);
-    background: var(--accent-soft);
-  }
-  .ptable tr.is-selected td {
-    background: none;
-  }
 }
 @media (max-width: 899px) {
   .bulk-bar {
@@ -3314,4 +3111,264 @@ select.status-select:disabled {
     overflow-y: auto;
     padding: 12px;
   }
+}
+
+/* ---- plans as sticky notes: pastel paper (its colour from the plan's id), ruled lines, a strip of tape or, when
+   pinned, a push pin; slightly tilted, straightened on hover. The paper keeps light colours in both themes. */
+.notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 232px), 1fr));
+  gap: 26px 18px;
+  padding: 14px 4px 6px;
+  align-items: start;
+}
+.notes.is-stale {
+  opacity: 0.55;
+}
+.notes-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.notes-select-all input,
+.note-check input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.note {
+  --paper: #fbf3dc;
+  --rule: rgba(70, 80, 120, 0.08);
+  --fg: #2a2f3a;
+  --heading: #1f2633;
+  --muted: #5f6573;
+  --surface: rgba(255, 255, 255, 0.62);
+  --sunk: rgba(255, 255, 255, 0.5);
+  --line: rgba(40, 50, 80, 0.12);
+  --line-strong: rgba(40, 50, 80, 0.22);
+  --tan: #8d97ab;
+  --accent: #2563d8;
+  --accent-fg: #ffffff;
+  --accent-soft: #e3edfc;
+  --ok: #12804f;
+  --danger: #c23545;
+  --danger-soft: #fde8ea;
+  --warn: #8f5400;
+  --warn-soft: #fff1d6;
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 18px 12px 10px;
+  color: var(--fg);
+  background: repeating-linear-gradient(to bottom, transparent 0 25px, var(--rule) 25px 26px) 0 40px / 100% calc(100% - 50px) no-repeat, var(--paper);
+  border-radius: 3px 3px 16px 3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 12px 20px -10px rgba(0, 0, 0, 0.32);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.note:hover,
+.note:focus-within {
+  transform: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 16px 28px -12px rgba(0, 0, 0, 0.38);
+}
+/* An open product list sits over the notes after it. */
+.note:focus-within {
+  z-index: 3;
+}
+/* The curled corner. */
+.note::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 0 0 16px 0;
+  background: linear-gradient(135deg, transparent 45%, rgba(0, 0, 0, 0.07) 50%, rgba(255, 255, 255, 0.75) 62%, var(--paper) 100%);
+  pointer-events: none;
+}
+.paper-0 {
+  --paper: #fbf3dc;
+}
+.paper-1 {
+  --paper: #f6efc4;
+}
+.paper-2 {
+  --paper: #f5e8f4;
+}
+.paper-3 {
+  --paper: #dcf5e8;
+}
+.paper-4 {
+  --paper: #f8e3df;
+}
+.paper-5 {
+  --paper: #e5e9fb;
+}
+.note-tape {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  width: 84px;
+  height: 24px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: var(--tape);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+}
+.tape-0 {
+  --tape: rgba(246, 185, 59, 0.62);
+}
+.tape-1 {
+  --tape: rgba(140, 214, 80, 0.6);
+}
+.tape-2 {
+  --tape: rgba(72, 196, 190, 0.58);
+}
+.tape-3 {
+  --tape: rgba(170, 132, 230, 0.58);
+}
+.tape-4 {
+  --tape: rgba(244, 118, 160, 0.58);
+}
+.note-pin {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 32%, #ff9a9a 0 18%, #e0404b 45%, #a31d2a 100%);
+  box-shadow: 0 3px 4px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+.note.is-pinned {
+  transform: none;
+}
+.note.is-draft {
+  outline: 2px dashed var(--accent);
+  outline-offset: 3px;
+}
+.note.is-dirty,
+.note.is-selected {
+  box-shadow: 0 0 0 2px var(--accent), 0 12px 20px -10px rgba(0, 0, 0, 0.32);
+}
+.note.is-done > :not(.note-acts):not(.note-top) {
+  opacity: 0.72;
+}
+.note-top {
+  display: flex;
+  align-items: center;
+  min-height: 20px;
+  margin-top: -8px;
+}
+.note-pin-btn {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-right: -6px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.note-pin-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--fg);
+}
+.note-pin-btn.is-on {
+  color: #c62f3b;
+}
+.note-product {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-width: 0;
+}
+.note-product .img {
+  width: 38px;
+  flex: none;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.note-product-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.note-title {
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.3;
+  color: var(--heading);
+  text-decoration: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.note-title:hover {
+  text-decoration: underline;
+}
+.note .plan-files {
+  margin-top: 0;
+}
+.note-fields {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+.note-fields > div {
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.note-fields dt {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.note-fields dd {
+  margin: 0;
+  min-width: 0;
+}
+.note .input {
+  min-height: 30px;
+  padding: 3px 8px;
+  font-size: 13px;
+}
+/* "Quá hạn" under the label, so the day keeps its whole box. */
+.note-fields dt .plan-overdue {
+  display: block;
+  font-size: 11.5px;
+}
+/* Copy and delete stay together at the end, on the next line together when the row is full. */
+.note-icons {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.note .picker-btn {
+  min-height: 34px;
+}
+.note-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-top: 2px;
+}
+.note .grow {
+  flex: 1;
 }

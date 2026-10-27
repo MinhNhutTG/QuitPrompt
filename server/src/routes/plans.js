@@ -40,11 +40,12 @@ const patchSchema = z.object({
   done: z.number().int().min(0).max(999).optional(),
   voiceText: text("lời đọc", 5000).optional(),
   caption: text("mô tả khi đăng", 5000).optional(),
+  pinned: z.boolean({ invalid_type_error: "Ghim không hợp lệ." }).optional(),
 });
 
-// The team works on every plan, whoever it is for: any member changes the status, the texts and the files.
-// The rest (assignee, due day, note) needs plan.edit.
-const WORK_FIELDS = new Set(["status", "done", "voiceText", "caption"]);
+// The team works on every plan, whoever it is for: any member changes the status, the texts and the files, and
+// pins it. The rest (assignee, due day, note) needs plan.edit.
+const WORK_FIELDS = new Set(["status", "done", "voiceText", "caption", "pinned"]);
 
 async function loadPlan(planId) {
   assertId(planId, "kế hoạch");
@@ -112,7 +113,7 @@ function autoStatus(plan, before) {
 
 // Filters: assignee, status ("open" = todo + partial), category, q (product name or sku),
 // dueFrom/dueTo (inclusive days), overdue=1 with today (the viewer's local day, "YYYY-MM-DD").
-// Unfinished first, then done, posted last; within each, by due day (none last), then newest. Returns one numbered page plus a summary of the whole filter.
+// Pinned first (newest pin first), then unfinished, then done, posted last; within each, by due day (none last), then newest. Returns one numbered page plus a summary of the whole filter.
 router.get(
   "/",
   ah(async (req, res) => {
@@ -172,12 +173,18 @@ router.get(
     const page = Math.min(Math.max(Math.floor(Number(req.query.page)) || 1, 1), pages);
     const rows = await VideoPlan.aggregate([
       { $match: match },
-      // -1 unfinished, 0 done, 1 posted.
-      { $addFields: { finish: { $indexOfArray: [FINISHED_STATUSES, "$status"] }, noDue: { $eq: ["$dueDate", ""] } } },
-      { $sort: { finish: 1, noDue: 1, dueDate: 1, _id: -1 } },
+      // pin: 0 pinned, 1 not. finish: -1 unfinished, 0 done, 1 posted.
+      {
+        $addFields: {
+          pin: { $cond: [{ $ifNull: ["$pinnedAt", false] }, 0, 1] },
+          finish: { $indexOfArray: [FINISHED_STATUSES, "$status"] },
+          noDue: { $eq: ["$dueDate", ""] },
+        },
+      },
+      { $sort: { pin: 1, pinnedAt: -1, finish: 1, noDue: 1, dueDate: 1, _id: -1 } },
       { $skip: (page - 1) * limit },
       { $limit: limit },
-      { $project: { finish: 0, noDue: 0 } },
+      { $project: { pin: 0, finish: 0, noDue: 0 } },
     ]);
     const { _id, plans, ...counts } = summary || { target: 0, done: 0, todo: 0, partial: 0, finished: 0, posted: 0, overdue: 0 };
     res.json({ items: await decorate(rows), total, page, pages, limit, today, summary: { plans: total, ...counts } });
@@ -227,7 +234,7 @@ router.get(
   })
 );
 
-// Target, assignee, due day and note need plan.edit; the status and the two texts are anyone's.
+// Target, assignee, due day and note need plan.edit; the status, the two texts and pinned are anyone's.
 router.patch(
   "/:id",
   ah(async (req, res) => {
@@ -238,7 +245,9 @@ router.patch(
     }
     if (data.assignee) await assertMember(data.assignee);
     const before = filled(plan);
-    plan.set(data);
+    const { pinned, ...fields } = data;
+    plan.set(fields);
+    if (pinned !== undefined) plan.pinnedAt = pinned ? new Date() : null;
     // A status chosen in the same request wins over the automatic one.
     if (data.status === undefined && (data.voiceText !== undefined || data.caption !== undefined)) autoStatus(plan, before);
     settle(plan);
