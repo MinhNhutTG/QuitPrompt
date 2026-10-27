@@ -1,4 +1,6 @@
 import { ActivityLog } from "../models/ActivityLog.js";
+import { User } from "../models/User.js";
+import { broadcast } from "./live.js";
 
 // Every logged action: [method, path pattern (group 1 = target id), code, Vietnamese label, group].
 const RULES = [
@@ -83,13 +85,45 @@ function labelOf(body) {
   return body?.user?.username || "";
 }
 
+// Not told to the team: a failed login names no account (and may carry someone else's guess at a username).
+const PRIVATE = new Set(["auth.login_failed"]);
+
+// A log row as the team sees it, without IP or browser: { id, action, label, group, target, targetId, user, at }.
+// names: user id → display name, when the caller already has them.
+export function notice(log, names = new Map()) {
+  const a = ACTIONS[log.action] || { label: log.action, group: "" };
+  const id = String(log.user || "");
+  return {
+    id: String(log._id),
+    action: log.action,
+    label: a.label,
+    group: a.group,
+    target: log.label || "",
+    targetId: log.targetId || "",
+    count: log.meta?.count,
+    user: { id, displayName: names.get(id) || "" },
+    at: log.createdAt,
+  };
+}
+
+export async function namesOf(ids) {
+  const users = await User.find({ _id: { $in: [...new Set(ids.map(String))].filter(Boolean) } }, { username: 1, displayName: 1 }).lean();
+  return new Map(users.map((u) => [String(u._id), u.displayName || u.username]));
+}
+
+// Written, then told to every open page as an "activity" event.
 export function writeLog(req, entry) {
   ActivityLog.create({
     ip: clip(req.ip, 60),
     ua: clip(req.get("user-agent"), 200),
     ...entry,
     label: clip(entry.label, 200),
-  }).catch((err) => console.error("Không ghi được nhật ký:", err.message));
+  })
+    .then(async (log) => {
+      if (PRIVATE.has(log.action) || !log.user) return;
+      broadcast("activity", notice(log, await namesOf([log.user])));
+    })
+    .catch((err) => console.error("Không ghi được nhật ký:", err.message));
 }
 
 // Logs each successful action listed in RULES once the response is sent.

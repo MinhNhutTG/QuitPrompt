@@ -229,6 +229,10 @@ Trả toàn bộ dữ liệu của tài khoản (sản phẩm kèm URL ảnh, pr
 
 ---
 
+## 6b. Chat và thông báo realtime
+
+`GET /api/live` (luồng sự kiện), `GET`/`POST /api/chat`, `GET /api/notifications`, `POST /api/notifications/seen`. Xem [tài liệu 13, mục 4](13-chat-thong-bao.md).
+
 ## 7. Kế hoạch video `/api/plans`
 
 Kế hoạch dùng chung cho cả nhóm, mỗi kế hoạch là một video và có thư mục riêng trên Google Drive. `plan.edit` lập và sửa người thực hiện, hạn, ghi chú; `plan.delete` xoá. Trạng thái, file, lời đọc và mô tả: **mọi thành viên**, trên kế hoạch của bất kỳ ai. Xem [tài liệu 09](09-ke-hoach-video.md).

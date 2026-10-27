@@ -72,6 +72,7 @@ Mọi collection có `createdAt` và `updatedAt` tự động (`timestamps: true
 | `passwordHash` | string | bắt buộc | bcrypt |
 | `displayName` | string | tuỳ chọn | Mặc định hiển thị `username` |
 | `lastLoginAt` | date | | Cập nhật mỗi lần đăng nhập |
+| `notifSeenAt` | date \| null | | Lần cuối mở chuông thông báo; hành động của người khác sau mốc này là chưa xem ([tài liệu 13](13-chat-thong-bao.md)) |
 
 **Chỉ mục:** `{ username: 1 }` duy nhất.
 
@@ -163,6 +164,18 @@ Mỗi người dùng một tài liệu, tạo khi lần đầu lưu cài đặt.
 | `customActions` | mảng `{ id, role, label, text }` | Động tác riêng; `role` là `open`, `mid` hoặc `end` |
 
 Để rỗng thay vì chép template mặc định vào cơ sở dữ liệu: khi app cập nhật template mặc định, những người chưa tự sửa sẽ nhận bản mới ngay.
+
+### 2.6 `chatmessages`
+
+Tin nhắn trong phòng chat chung của team ([tài liệu 13](13-chat-thong-bao.md)).
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `user` | ObjectId → users | Người gửi |
+| `text` | string, tối đa 2000 | |
+| `createdAt` | date | |
+
+**Chỉ mục:** `{ createdAt: 1 }` TTL 90 ngày: tin cũ hơn tự xoá.
 
 ## 3. Cấu trúc `settings` trong một prompt
 

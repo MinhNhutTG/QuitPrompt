@@ -3372,3 +3372,243 @@ select.status-select:disabled {
 .note .grow {
   flex: 1;
 }
+
+/* ---- realtime (components/Live.jsx): the bell with what the team did, the chat button and the room */
+.topbar-acts {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.side-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 12px;
+}
+.bell .icon-btn {
+  position: relative;
+}
+.bell-side .icon-btn {
+  color: var(--side-fg);
+}
+.bell-side .icon-btn:hover:not(:disabled) {
+  background: var(--side-hover);
+  color: #fff;
+}
+.dot-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: var(--danger);
+  color: #fff;
+  font: 700 11px/18px var(--font);
+  text-align: center;
+  pointer-events: none;
+}
+.notif-menu {
+  width: min(380px, calc(100vw - 24px));
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  align-content: start;
+}
+/* From the sidebar, which scrolls and would cut it off: beside the sidebar instead. */
+.bell-side .notif-menu {
+  position: fixed;
+  left: calc(var(--side-w) + 8px);
+  right: auto;
+  top: 16px;
+  color: var(--fg);
+}
+.notif-empty {
+  padding: 8px 10px;
+}
+.notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.notif-list li > * {
+  display: block;
+  padding: 8px 10px;
+  border-radius: var(--r);
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--fg);
+  text-decoration: none;
+}
+.notif-list a:hover {
+  background: var(--sunk);
+}
+.notif-list li.is-new > * {
+  background: var(--accent-soft);
+}
+.notif-who {
+  font-weight: 600;
+}
+.notif-time {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+.chat-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-fg);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+.chat-fab:hover {
+  filter: brightness(1.08);
+}
+.chat-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 55;
+  width: min(380px, calc(100vw - 32px));
+  height: min(560px, calc(100vh - 40px));
+  height: min(560px, calc(100dvh - 40px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 10px 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.chat-head > div {
+  display: grid;
+  min-width: 0;
+}
+.chat-head .hint {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.online-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.chat-list {
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.chat-older {
+  align-self: center;
+  margin-bottom: 6px;
+}
+.chat-empty {
+  margin: auto;
+  text-align: center;
+}
+.chat-msg {
+  display: grid;
+  justify-items: start;
+  max-width: 85%;
+}
+.chat-msg.is-first {
+  margin-top: 8px;
+}
+.chat-msg.is-mine {
+  align-self: flex-end;
+  justify-items: end;
+}
+.chat-msg p {
+  margin: 0;
+  padding: 7px 11px;
+  border-radius: 14px;
+  background: var(--sunk);
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.chat-msg.is-mine p {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.chat-who {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 0 0 2px 4px;
+}
+.chat-time {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 2px 4px 0;
+}
+.chat-form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 10px;
+  border-top: 1px solid var(--line);
+}
+.chat-form textarea {
+  resize: none;
+  max-height: 120px;
+  field-sizing: content;
+}
+/* With the chat button bottom right, toasts sit above it (phones already keep them above the tabs). */
+@media (min-width: 900px) {
+  .toast-host {
+    bottom: 84px;
+  }
+  /* Left of the open room, never over what is being typed. */
+  body.chat-open .toast-host {
+    right: 420px;
+    bottom: 20px;
+  }
+}
+@media (max-width: 899px) {
+  body.chat-open .toast-host {
+    bottom: auto;
+    top: calc(var(--top-h) + 70px);
+  }
+}
+@media (max-width: 899px) {
+  .chat-fab {
+    right: 16px;
+    bottom: calc(var(--tab-h) + var(--safe-b) + 12px);
+  }
+  .chat-panel {
+    right: 8px;
+    left: 8px;
+    width: auto;
+    top: calc(var(--top-h) + 8px);
+    bottom: calc(var(--tab-h) + var(--safe-b) + 8px);
+    height: auto;
+  }
+}

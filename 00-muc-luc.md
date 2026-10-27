@@ -16,6 +16,7 @@ Bộ tài liệu này mô tả việc nâng cấp **Xưởng Prompt Thời Trang
 | 10 | [Kho tài nguyên](10-kho-tai-nguyen.md) | Kho chung skill AI và prompt tạo ảnh chất lượng | Mọi người |
 | 11 | [Quản trị](11-quan-tri.md) | Quản lý tài khoản, nhật ký thao tác, số liệu tổng quát | Quản trị viên, lập trình viên |
 | 12 | [Google Drive của team](12-google-drive.md) | Kho file chung trên Google Drive: cài đặt, quyền, màn hình, API | Quản trị viên, mọi người |
+| 13 | [Chat và thông báo realtime](13-chat-thong-bao.md) | Phòng chat chung, thông báo hành động của thành viên ngay khi xảy ra, ai đang online | Mọi người, lập trình viên |
 
 ## Tóm tắt một đoạn
 

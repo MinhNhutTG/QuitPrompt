@@ -17,6 +17,8 @@ const schema = new mongoose.Schema(
     // Premium tier (lib/tiers.js) until the end of premiumUntil; no date = no end.
     premium: { type: Boolean, default: false },
     premiumUntil: { type: Date, default: null },
+    // Up to when they have seen the team's notifications (the bell); newer ones count as unread.
+    notifSeenAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

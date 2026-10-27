@@ -6,6 +6,7 @@ import { useClickOutside } from "../lib/util.js";
 import { useStandaloneDownloads } from "../lib/download.js";
 import { Skeleton } from "./ui.jsx";
 import { useToast } from "./Toast.jsx";
+import { Bell, ChatDock, LiveProvider } from "./Live.jsx";
 
 // Line icons, 24px grid, drawn with the text colour (tài liệu 05, mục 2).
 const ICONS = {
@@ -156,9 +157,12 @@ function Sidebar({ nav }) {
   const name = user.displayName || user.username;
   return (
     <aside className="sidebar">
-      <Link to="/" className="brand" aria-label="Xưởng Prompt Thời Trang, về trang tạo prompt">
-        Xưởng Prompt <span>Thời Trang</span>
-      </Link>
+      <div className="side-top">
+        <Link to="/" className="brand" aria-label="Xưởng Prompt Thời Trang, về trang tạo prompt">
+          Xưởng Prompt <span>Thời Trang</span>
+        </Link>
+        <Bell className="bell-side" />
+      </div>
       <Link to="/settings#account" className="side-user" title="Tài khoản và mật khẩu">
         <span className="side-avatar" aria-hidden="true">
           {name.charAt(0).toUpperCase()}
@@ -197,35 +201,41 @@ export default function Layout() {
   const nav = useNav();
   useStandaloneDownloads();
   return (
-    <div className="app">
-      <Sidebar nav={nav} />
+    <LiveProvider>
+      <div className="app">
+        <Sidebar nav={nav} />
 
-      {/* Phones only: brand and account menu on top, tabs at the bottom. */}
-      <header className="topbar">
-        <div className="topbar-in">
-          <Link to="/" className="brand" aria-label="Xưởng Prompt Thời Trang, về trang tạo prompt">
-            Xưởng Prompt <span>Thời Trang</span>
-          </Link>
-          <AccountMenu />
-        </div>
-      </header>
+        {/* Phones only: brand and account menu on top, tabs at the bottom. */}
+        <header className="topbar">
+          <div className="topbar-in">
+            <Link to="/" className="brand" aria-label="Xưởng Prompt Thời Trang, về trang tạo prompt">
+              Xưởng Prompt <span>Thời Trang</span>
+            </Link>
+            <span className="topbar-acts">
+              <Bell />
+              <AccountMenu />
+            </span>
+          </div>
+        </header>
 
-      <main className="main" id="main">
-        <Suspense fallback={<PageSkeleton />}>
-          <Outlet />
-        </Suspense>
-      </main>
+        <main className="main" id="main">
+          <Suspense fallback={<PageSkeleton />}>
+            <Outlet />
+          </Suspense>
+        </main>
 
-      <nav className="tabbar" aria-label="Điều hướng chính">
-        {nav.slice(0, TABS).map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.end} className="tab" {...warm(n.page)}>
-            <Icon name={n.page} />
-            <span>{n.short}</span>
-          </NavLink>
-        ))}
-        <MoreMenu />
-      </nav>
-    </div>
+        <nav className="tabbar" aria-label="Điều hướng chính">
+          {nav.slice(0, TABS).map((n) => (
+            <NavLink key={n.to} to={n.to} end={n.end} className="tab" {...warm(n.page)}>
+              <Icon name={n.page} />
+              <span>{n.short}</span>
+            </NavLink>
+          ))}
+          <MoreMenu />
+        </nav>
+        <ChatDock />
+      </div>
+    </LiveProvider>
   );
 }
 

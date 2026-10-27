@@ -20,6 +20,7 @@ import settingsRoutes from "./routes/settings.js";
 import transferRoutes from "./routes/transfer.js";
 import adminRoutes from "./routes/admin.js";
 import driveRoutes from "./routes/drive.js";
+import liveRoutes from "./routes/live.js";
 import { ActivityLog } from "./models/ActivityLog.js";
 import { ensureStarterRoles } from "./lib/permissions.js";
 import { ensureTiers } from "./lib/tiers.js";
@@ -44,7 +45,10 @@ app.use(
     crossOriginEmbedderPolicy: false,
   })
 );
-app.use(compression());
+// An event stream (GET /api/live) must reach the browser as it is written, never held back to compress. Asked
+// when the headers go out, so by its type: by then req.path is the router's own, not /api/live.
+const eventStream = (res) => String(res.getHeader("Content-Type") || "").startsWith("text/event-stream");
+app.use(compression({ filter: (req, res) => !eventStream(res) && compression.filter(req, res) }));
 app.use(express.json({ limit: "5mb" }));
 app.use(cookieParser());
 
@@ -108,6 +112,8 @@ app.use("/api/resources", requireAuth, resourceRoutes);
 app.use("/api/settings", requireAuth, settingsRoutes);
 app.use("/api/transfer", requireAuth, transferRoutes);
 app.use("/api/drive", requireAuth, driveRoutes);
+// Realtime: the event stream, the team chat and the notifications feed (routes/live.js).
+app.use("/api", liveRoutes);
 // Each route checks its own permission: admin.view to look, an admin to change accounts and roles.
 app.use("/api/admin", requireAuth, adminRoutes);
 app.use("/api", (req, res, next) => next(new HttpError(404, "Không có đường dẫn API này.")));
