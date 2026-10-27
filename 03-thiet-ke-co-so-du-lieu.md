@@ -172,10 +172,11 @@ Tin nhắn trong phòng chat chung của team ([tài liệu 13](13-chat-thong-ba
 | Trường | Kiểu | Ghi chú |
 |---|---|---|
 | `user` | ObjectId → users | Người gửi |
-| `text` | string, tối đa 2000 | |
+| `text` | string, tối đa 2000 | Rỗng khi đã thu hồi |
+| `recalledAt` | date \| null | Lúc người gửi thu hồi |
 | `createdAt` | date | |
 
-**Chỉ mục:** `{ createdAt: 1 }` TTL 90 ngày: tin cũ hơn tự xoá.
+**Chỉ mục:** `{ createdAt: 1 }` TTL 4 ngày: tin cũ hơn tự xoá. Máy chủ đồng bộ lại chỉ mục mỗi lần khởi động, vì MongoDB không tự đổi thời hạn của chỉ mục TTL đã có.
 
 ## 3. Cấu trúc `settings` trong một prompt
 

@@ -1,12 +1,12 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
-import { ah, parse } from "../lib/http.js";
+import { HttpError, ah, parse } from "../lib/http.js";
 import { requireAuth } from "../middleware/auth.js";
 import { connect, broadcast } from "../lib/live.js";
 import { notice, namesOf } from "../lib/audit.js";
 import { ActivityLog } from "../models/ActivityLog.js";
-import { ChatMessage } from "../models/ChatMessage.js";
+import { CHAT_KEEP_DAYS, ChatMessage } from "../models/ChatMessage.js";
 import { User } from "../models/User.js";
 
 // The team's realtime: the event stream, the one chat room, and the feed of what members just did. Mounted on
@@ -19,7 +19,14 @@ router.get("/live", requireAuth, ah(connect));
 
 const PAGE = 50;
 
-const message = (m, names) => ({ id: String(m._id), user: { id: String(m.user), displayName: names.get(String(m.user)) || "(tài khoản đã xoá)" }, text: m.text, at: m.createdAt });
+// A recalled message goes out without its text: { ..., text: "", recalled: true }.
+const message = (m, names) => ({
+  id: String(m._id),
+  user: { id: String(m.user), displayName: names.get(String(m.user)) || "(tài khoản đã xoá)" },
+  text: m.recalledAt ? "" : m.text,
+  recalled: Boolean(m.recalledAt),
+  at: m.createdAt,
+});
 
 // The newest messages, oldest first; ?before=<id> for the page before that message.
 router.get(
@@ -62,6 +69,27 @@ router.post(
     const item = message(m, await namesOf([req.userId]));
     broadcast("chat", item);
     res.status(201).json({ item });
+  })
+);
+
+// Recall: only the sender, any time while it is kept. The text is wiped, not just hidden, and every open page
+// shows the message as recalled.
+router.delete(
+  "/chat/:id",
+  requireAuth,
+  ah(async (req, res) => {
+    if (!/^[a-f0-9]{24}$/.test(req.params.id)) throw new HttpError(404, "Không tìm thấy tin nhắn.");
+    const m = await ChatMessage.findById(req.params.id);
+    if (!m) throw new HttpError(404, `Tin nhắn không còn (đã quá ${CHAT_KEEP_DAYS} ngày nên tự xoá).`);
+    if (String(m.user) !== String(req.userId)) throw new HttpError(403, "Chỉ người gửi mới thu hồi được tin nhắn.");
+    if (!m.recalledAt) {
+      m.recalledAt = new Date();
+      m.text = "";
+      await m.save();
+    }
+    const item = message(m, await namesOf([m.user]));
+    broadcast("chat-recall", item);
+    res.json({ item });
   })
 );
 

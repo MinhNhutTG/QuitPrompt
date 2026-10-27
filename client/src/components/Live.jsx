@@ -5,10 +5,11 @@ import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { fmtDateTime, useClickOutside } from "../lib/util.js";
 import { useToast } from "./Toast.jsx";
+import { ConfirmButton } from "./ui.jsx";
 
 // The team's realtime (server: lib/live.js, routes/live.js). One EventSource per tab on /api/live brings:
-// "hello"/"presence" (who has the app open), "chat" (a message in the team room) and "activity" (an action a
-// member just did). An action by someone else shows as a toast, refreshes the data it changed, and joins the
+// "hello"/"presence" (who has the app open), "chat" (a message in the team room), "chat-recall" (its sender took
+// it back) and "activity" (an action a member just did). Messages are kept 4 days. An action by someone else shows as a toast, refreshes the data it changed, and joins the
 // bell's list. The browser reconnects by itself when the stream drops (a sleeping or restarting server).
 
 const LiveCtx = createContext({ online: [], connected: false, chatUnread: 0, chatOpen: false, setChatOpen: () => {} });
@@ -100,6 +101,7 @@ export function LiveProvider({ children }) {
       if (open.current) markRead();
       else toast(`${m.user.displayName}: ${m.text.slice(0, 80)}`, { tone: "info", detail: "Tin nhắn trong phòng chat", action: { label: "Mở chat", onClick: () => setChatOpen(true) } });
     });
+    on("chat-recall", (m) => qc.setQueryData(["chat"], (old) => old && { ...old, items: old.items.map((x) => (x.id === m.id ? m : x)) }));
     on("activity", (n) => {
       qc.setQueryData(["notifications"], (old) => (old ? { ...old, items: [n, ...old.items.filter((x) => x.id !== n.id)].slice(0, 50) } : old));
       if (n.user.id === user.id) return;
@@ -111,7 +113,7 @@ export function LiveProvider({ children }) {
   }, [qc, toast, user.id, markRead, setChatOpen]);
 
   const items = chat.data?.items || [];
-  const chatUnread = chatOpen ? 0 : items.filter((m) => m.user.id !== user.id && (!lastRead || m.at > lastRead)).length;
+  const chatUnread = chatOpen ? 0 : items.filter((m) => m.user.id !== user.id && !m.recalled && (!lastRead || m.at > lastRead)).length;
 
   return <LiveCtx.Provider value={{ online, connected, chatUnread, chatOpen, setChatOpen }}>{children}</LiveCtx.Provider>;
 }
@@ -218,6 +220,12 @@ function ChatPanel({ online, onClose }) {
   const atBottom = useRef(true);
   const items = data?.items || [];
 
+  const recall = useMutation({
+    mutationFn: (id) => api.recallChat(id),
+    onSuccess: ({ item }) => qc.setQueryData(["chat"], (old) => old && { ...old, items: old.items.map((x) => (x.id === item.id ? item : x)) }),
+    onError: (e) => toast(e.message, { tone: "danger" }),
+  });
+
   const send = useMutation({
     mutationFn: (t) => api.sendChat(t),
     onSuccess: ({ item }) => qc.setQueryData(["chat"], (old) => (old ? { ...old, items: old.items.some((x) => x.id === item.id) ? old.items : [...old.items, item] } : old)),
@@ -264,6 +272,7 @@ function ChatPanel({ online, onClose }) {
             <span className="online-dot" aria-hidden="true" />
             {others.length ? `${others.map((o) => o.displayName).slice(0, 3).join(", ")}${others.length > 3 ? ` và ${others.length - 3} người khác` : ""} đang online` : "Chỉ có bạn đang online"}
           </span>
+          <span className="hint">Tin nhắn tự xoá sau 4 ngày</span>
         </div>
         <button type="button" className="icon-btn" onClick={onClose} aria-label="Đóng chat">
           <Svg d="M18 6 6 18M6 6l12 12" />
@@ -293,9 +302,16 @@ function ChatPanel({ online, onClose }) {
             const mine = m.user.id === user.id;
             const first = i === 0 || items[i - 1].user.id !== m.user.id;
             return (
-              <div key={m.id} className={`chat-msg ${mine ? "is-mine" : ""} ${first ? "is-first" : ""}`}>
+              <div key={m.id} data-id={m.id} className={`chat-msg ${mine ? "is-mine" : ""} ${first ? "is-first" : ""} ${m.recalled ? "is-recalled" : ""}`}>
                 {first && !mine && <span className="chat-who">{m.user.displayName}</span>}
-                <p title={fmtDateTime(m.at)}>{m.text}</p>
+                <div className="chat-bubble">
+                  {mine && !m.recalled && (
+                    <ConfirmButton className="chat-recall" confirmLabel="Thu hồi?" disabled={recall.isPending} onConfirm={() => recall.mutate(m.id)}>
+                      Thu hồi
+                    </ConfirmButton>
+                  )}
+                  <p title={fmtDateTime(m.at)}>{m.recalled ? (mine ? "Bạn đã thu hồi tin nhắn" : "Tin nhắn đã được thu hồi") : m.text}</p>
+                </div>
                 {first && <span className="chat-time">{fmtDateTime(m.at)}</span>}
               </div>
             );

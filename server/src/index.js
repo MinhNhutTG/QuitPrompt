@@ -22,6 +22,7 @@ import adminRoutes from "./routes/admin.js";
 import driveRoutes from "./routes/drive.js";
 import liveRoutes from "./routes/live.js";
 import { ActivityLog } from "./models/ActivityLog.js";
+import { ChatMessage } from "./models/ChatMessage.js";
 import { ensureStarterRoles } from "./lib/permissions.js";
 import { ensureTiers } from "./lib/tiers.js";
 
@@ -149,10 +150,12 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(config.port, () => console.log(`Xưởng Prompt: http://localhost:${config.port}`));
-// An existing TTL index keeps its old lifetime until rebuilt, so bring it in line with LOG_RETENTION_DAYS.
+// An existing TTL index keeps its old lifetime until rebuilt, so bring them in line: LOG_RETENTION_DAYS for the
+// log, CHAT_KEEP_DAYS for chat messages.
 connectDb(config.mongoUri).then(() =>
   Promise.all([
     ActivityLog.syncIndexes().catch((err) => console.error("Không cập nhật được chỉ mục nhật ký:", err.message)),
+    ChatMessage.syncIndexes().catch((err) => console.error("Không cập nhật được chỉ mục tin nhắn:", err.message)),
     ensureStarterRoles().catch((err) => console.error("Không tạo được vai trò mặc định:", err.message)),
     ensureTiers().catch((err) => console.error("Không tạo được hạng tài khoản:", err.message)),
   ])

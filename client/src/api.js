@@ -135,6 +135,7 @@ export const api = {
   // opened with EventSource on /api/live.
   chat: (before) => request("GET", "/chat" + qs({ before })),
   sendChat: (text) => request("POST", "/chat", { text }),
+  recallChat: (id) => request("DELETE", `/chat/${id}`),
   notifications: () => request("GET", "/notifications"),
   seenNotifications: () => request("POST", "/notifications/seen"),
 

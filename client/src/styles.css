@@ -3558,6 +3558,46 @@ select.status-select:disabled {
   background: var(--accent);
   color: var(--accent-fg);
 }
+/* "Thu hồi" beside the sender's own message: on hover or focus with a mouse, always on touch screens. */
+.chat-bubble {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.chat-recall {
+  flex: none;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  font: 500 12px var(--font);
+  cursor: pointer;
+  opacity: 0;
+}
+.chat-msg:hover .chat-recall,
+.chat-recall:focus-visible,
+.chat-recall.is-armed {
+  opacity: 1;
+}
+.chat-recall:hover,
+.chat-recall.is-armed {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+@media (hover: none) {
+  .chat-recall {
+    opacity: 1;
+  }
+}
+.chat-msg.is-recalled p,
+.chat-msg.is-mine.is-recalled p {
+  background: none;
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+  font-style: italic;
+}
 .chat-who {
   font-size: 12px;
   font-weight: 600;
