@@ -9,7 +9,7 @@ import { ConfirmButton, EmptyState, ErrorState, Field, Skeleton } from "../compo
 import LazyImage from "../components/LazyImage.jsx";
 import { useToast } from "../components/Toast.jsx";
 import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
-import { SLOTS, STATUS, progressOf } from "../lib/plans.js";
+import { SLOTS, STATUS, isFinished, progressOf } from "../lib/plans.js";
 import { saveFiles, standalone } from "../lib/download.js";
 
 function fmtSize(n) {
@@ -26,7 +26,7 @@ const SlotIcon = ({ kind }) => (
   </svg>
 );
 
-function FileSlot({ plan, slot, canWork, driveReady, onChanged }) {
+function FileSlot({ plan, slot, driveReady, onChanged }) {
   const toast = useToast();
   const input = useRef(null);
   const [progress, setProgress] = useState(null);
@@ -81,25 +81,21 @@ function FileSlot({ plan, slot, canWork, driveReady, onChanged }) {
             Tải về
           </a>
         )}
-        {canWork && (
-          <>
-            <input ref={input} type="file" accept={slot.accept} hidden onChange={(e) => (upload(e.target.files?.[0]), (e.target.value = ""))} />
-            <button type="button" className={`btn btn-sm ${file ? "" : "btn-primary"}`} disabled={busy || !driveReady} onClick={() => input.current?.click()}>
-              {busy ? `${Math.round(progress * 100)}%` : file ? "Thay" : "Tải lên"}
-            </button>
-            {file && !busy && (
-              <ConfirmButton className="btn btn-sm btn-danger-ghost" disabled={remove.isPending} onConfirm={() => remove.mutate()}>
-                Xoá
-              </ConfirmButton>
-            )}
-          </>
+        <input ref={input} type="file" accept={slot.accept} hidden onChange={(e) => (upload(e.target.files?.[0]), (e.target.value = ""))} />
+        <button type="button" className={`btn btn-sm ${file ? "" : "btn-primary"}`} disabled={busy || !driveReady} onClick={() => input.current?.click()}>
+          {busy ? `${Math.round(progress * 100)}%` : file ? "Thay" : "Tải lên"}
+        </button>
+        {file && !busy && (
+          <ConfirmButton className="btn btn-sm btn-danger-ghost" disabled={remove.isPending} onConfirm={() => remove.mutate()}>
+            Xoá
+          </ConfirmButton>
         )}
       </div>
     </li>
   );
 }
 
-function TextBlock({ plan, field, label, hint, canWork, onChanged }) {
+function TextBlock({ plan, field, label, hint, onChanged }) {
   const toast = useToast();
   const [value, setValue] = useState(plan[field] || "");
   useEffect(() => setValue(plan[field] || ""), [plan[field]]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -118,9 +114,9 @@ function TextBlock({ plan, field, label, hint, canWork, onChanged }) {
   }
   return (
     <Field label={label} hint={hint}>
-      <textarea className="input" rows={5} maxLength={5000} value={value} readOnly={!canWork} onChange={(e) => setValue(e.target.value)} placeholder={canWork ? "Nhập nội dung..." : ""} />
+      <textarea className="input" rows={5} maxLength={5000} value={value} onChange={(e) => setValue(e.target.value)} placeholder="Nhập nội dung..." />
       <div className="btns">
-        {canWork && dirty && (
+        {dirty && (
           <>
             <button type="button" className="btn btn-sm btn-primary" onClick={() => save.mutate()} disabled={save.isPending}>
               {save.isPending ? "Đang lưu..." : "Lưu"}
@@ -169,8 +165,8 @@ function Handoff({ plan }) {
   }
 
   return (
-    <section className={`card handoff ${plan.status === "done" ? "is-done" : ""}`}>
-      <div className="sec-h">{plan.status === "done" ? "Thành phẩm đã xong, lấy về để đăng" : "Lấy file và text"}</div>
+    <section className={`card handoff ${isFinished(plan.status) ? "is-done" : ""}`}>
+      <div className="sec-h">{plan.status === "posted" ? "Đã đăng bài" : plan.status === "done" ? "Thành phẩm đã xong, lấy về để đăng" : "Lấy file và text"}</div>
       <div className="btns">
         {files.map((s) => (
           <a key={s.key} className={`btn btn-sm ${s.key === "final" ? "btn-primary" : ""}`} href={api.driveDownloadUrl(s.file.id)} download={s.file.name}>
@@ -225,7 +221,7 @@ function StatusSelect({ plan, onChanged }) {
 // One plan: its details, its files (in the plan's own Drive folder) and the two texts.
 export default function PlanDetail() {
   const { id } = useParams();
-  const { user, can } = useAuth();
+  const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
   const { data, isLoading, error, refetch } = usePlan(id);
@@ -276,15 +272,13 @@ export default function PlanDetail() {
       </div>
     );
 
-  const canWork = plan.assignee.id === user?.id || can("plan.edit");
-  const isAssignee = plan.assignee.id === user?.id;
   const driveReady = Boolean(drive.data?.connected && drive.data?.folder);
   const { have, total } = progressOf(plan);
   const today = new Date().toLocaleDateString("en-CA");
-  const overdue = plan.status !== "done" && plan.dueDate && plan.dueDate < today;
+  const overdue = !isFinished(plan.status) && plan.dueDate && plan.dueDate < today;
   const productGone = plan.product.name.startsWith("(");
-  // QuickEdit starts from the two clips and the voice-over.
-  const editable = canWork && ["clip1", "clip2", "audio"].every((k) => plan.files?.[k]);
+  // QuickEdit starts from the two clips and the voice-over, or its text, which QuickEdit can read aloud.
+  const editable = plan.files?.clip1 && plan.files?.clip2 && (plan.files?.audio || plan.voiceText);
 
   return (
     <div className="page">
@@ -311,7 +305,7 @@ export default function PlanDetail() {
               Tạo prompt
             </Link>
             {editable && (
-              <button type="button" className="btn btn-primary" onClick={() => openEditor.mutate()} disabled={openEditor.isPending} title="Mở 2 video và lời đọc trong QuickEdit trên máy này để dựng video">
+              <button type="button" className="btn btn-primary" onClick={() => openEditor.mutate()} disabled={openEditor.isPending} title={plan.files?.audio ? "Mở 2 video và lời đọc trong QuickEdit trên máy này để dựng video" : "Mở 2 video trong QuickEdit trên máy này; QuickEdit đọc lời đọc thành giọng nói"}>
                 {openEditor.isPending ? "Đang mở..." : "Tạo video"}
               </button>
             )}
@@ -337,7 +331,9 @@ export default function PlanDetail() {
           </div>
           <div>
             <dt>Trạng thái</dt>
-            <dd>{isAssignee ? <StatusSelect plan={plan} onChanged={onChanged} /> : <span className={`status status-${STATUS[plan.status].tone}`}>{STATUS[plan.status].label}</span>}</dd>
+            <dd>
+              <StatusSelect plan={plan} onChanged={onChanged} />
+            </dd>
           </div>
           <div>
             <dt>Người tạo</dt>
@@ -352,7 +348,7 @@ export default function PlanDetail() {
             <dd>
               {plan.folder?.id ? (
                 <Link to={`/drive?folder=${plan.folder.id}`}>{plan.folder.name}</Link>
-              ) : canWork && driveReady ? (
+              ) : driveReady ? (
                 <button type="button" className="btn btn-sm" onClick={() => makeFolder.mutate()} disabled={makeFolder.isPending}>
                   {makeFolder.isPending ? "Đang tạo..." : "Tạo thư mục"}
                 </button>
@@ -373,14 +369,14 @@ export default function PlanDetail() {
         )}
         <ul className="slots">
           {SLOTS.map((s) => (
-            <FileSlot key={s.key} plan={plan} slot={s} canWork={canWork} driveReady={driveReady} onChanged={onChanged} />
+            <FileSlot key={s.key} plan={plan} slot={s} driveReady={driveReady} onChanged={onChanged} />
           ))}
         </ul>
       </section>
 
       <section className="card stack">
-        <TextBlock plan={plan} field="voiceText" label="Lời đọc" hint="Nội dung giọng đọc của video" canWork={canWork} onChanged={onChanged} />
-        <TextBlock plan={plan} field="caption" label="Mô tả khi đăng" hint="Caption, hashtag đăng kèm video" canWork={canWork} onChanged={onChanged} />
+        <TextBlock plan={plan} field="voiceText" label="Lời đọc" hint="Nội dung giọng đọc của video" onChanged={onChanged} />
+        <TextBlock plan={plan} field="caption" label="Mô tả khi đăng" hint="Caption, hashtag đăng kèm video" onChanged={onChanged} />
       </section>
     </div>
   );

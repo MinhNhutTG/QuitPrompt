@@ -9,7 +9,7 @@ import { EmptyState, ErrorState, Modal, Pager, Skeleton } from "../components/ui
 import ProductPicker from "../components/ProductPicker.jsx";
 import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
-import { STATUS, progressOf } from "../lib/plans.js";
+import { STATUS, isFinished, progressOf } from "../lib/plans.js";
 
 const NO_CATEGORY = "__none";
 
@@ -19,6 +19,7 @@ const STATUS_FILTERS = [
   { value: "todo", label: STATUS.todo.label },
   { value: "partial", label: STATUS.partial.label },
   { value: "done", label: STATUS.done.label },
+  { value: "posted", label: STATUS.posted.label },
 ];
 
 const DUE_FILTERS = [
@@ -81,7 +82,7 @@ const IconAct = ({ icon, label, className, ...props }) => (
 
 // One editable row. plan = null for a new, unsaved row.
 // A new row is filled in by whoever may add plans (status included). On a saved row, roles with plan.edit change
-// the details and only the assignee changes the status; roles with plan.delete may delete or select it.
+// the details and any member changes the status; roles with plan.delete may delete or select it.
 function PlanRow({ plan, members, me, today, onSaved, onDelete, onCopy, selected, onSelect, canEdit, canDelete }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -91,7 +92,6 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, onCopy, selected
   useEffect(() => setForm(formOf(plan, me, today)), [baseKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
   const dirty = !plan || FIELDS.some((k) => form[k] !== base[k]);
-  const canStatus = !plan || plan.assignee.id === me;
   const locked = Boolean(plan) && !canEdit;
 
   const save = useMutation({
@@ -110,15 +110,15 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, onCopy, selected
     if (!form.assignee) return toast("Chọn người thực hiện.", { tone: "danger" });
     // Without plan.edit only the status may change, so the rest is not sent.
     const body = locked ? {} : { assignee: form.assignee, dueDate: form.dueDate };
-    // A saved row only sends the status when it changed: others may edit the rest but not the status.
+    // A saved row only sends the status when it changed, so it never undoes an automatic change made meanwhile.
     if (!plan || form.status !== base.status) body.status = form.status;
     save.mutate(body);
   }
   const progress = plan && progressOf(plan);
 
-  const overdue = form.status !== "done" && form.dueDate && form.dueDate < today;
+  const overdue = !isFinished(form.status) && form.dueDate && form.dueDate < today;
   return (
-    <tr className={[!plan && "is-draft", plan?.status === "done" && "is-done", dirty && plan && "is-dirty", selected && "is-selected"].filter(Boolean).join(" ")}>
+    <tr className={[!plan && "is-draft", plan && isFinished(plan.status) && "is-done", dirty && plan && "is-dirty", selected && "is-selected"].filter(Boolean).join(" ")}>
       <td className="plan-check">
         {plan && canDelete && (
           <label>
@@ -151,12 +151,11 @@ function PlanRow({ plan, members, me, today, onSaved, onDelete, onCopy, selected
         </div>
       </td>
       <td data-label="Trạng thái">
-        <div className="status-edit" title={canStatus ? undefined : `Chỉ ${plan.assignee.displayName} cập nhật được trạng thái`}>
+        <div className="status-edit">
           <select
             className={`input status-select status-${STATUS[form.status].tone}`}
             aria-label="Trạng thái"
             value={form.status}
-            disabled={!canStatus}
             onChange={(e) => set("status")(e.target.value)}
           >
             {Object.entries(STATUS).map(([v, s]) => (
@@ -306,7 +305,9 @@ export default function Plans() {
     set({ page: n > 1 ? n : "" });
     top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-  const pct = sum?.plans ? Math.round((sum.finished / sum.plans) * 100) : 0;
+  // Posted plans are finished too.
+  const finished = (sum?.finished || 0) + (sum?.posted || 0);
+  const pct = sum?.plans ? Math.round((finished / sum.plans) * 100) : 0;
   const showTable = items.length > 0 || drafts.length > 0;
 
   return (
@@ -367,7 +368,7 @@ export default function Plans() {
         <div className="plan-sum" aria-live="polite">
           <div className="plan-sum-main">
             <span>
-              <b>{sum.plans}</b> kế hoạch · <b>{sum.finished}</b> đã hoàn thành ({pct}%)
+              <b>{sum.plans}</b> kế hoạch · <b>{finished}</b> đã hoàn thành ({pct}%)
             </span>
             <div className="meter" role="img" aria-label={`Đã hoàn thành ${pct}%`}>
               <span style={{ width: `${pct}%` }} />
@@ -382,6 +383,9 @@ export default function Plans() {
             </span>
             <span className="status status-done">
               {STATUS.done.label} {sum.finished}
+            </span>
+            <span className="status status-posted">
+              {STATUS.posted.label} {sum.posted || 0}
             </span>
             {sum.overdue > 0 && <span className="plan-overdue">Quá hạn {sum.overdue}</span>}
           </div>

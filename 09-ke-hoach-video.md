@@ -15,10 +15,10 @@ Cả nhóm nhìn chung một bảng để biết sản phẩm nào đang đượ
 | Text | Lời đọc và mô tả khi đăng lưu trong app (MongoDB), không lưu thành file trên Drive |
 | Drive chưa kết nối | Kế hoạch vẫn tạo được; thư mục được tạo khi tải file đầu tiên hoặc bấm "Tạo thư mục" trong trang chi tiết |
 | Xoá kế hoạch | Thư mục của kế hoạch vào thùng rác Drive (khôi phục được trong 30 ngày). Xoá sản phẩm cũng vậy với mọi kế hoạch của nó |
-| Tiến độ | **Tự cập nhật** theo số mục đã có (4 file + 2 đoạn text), mỗi khi tải lên, xoá file hoặc sửa text: 0 mục là Chưa thực hiện, có một phần là Còn thiếu, đủ 6/6 là Đã hoàn thành. Người thực hiện vẫn tự chọn được trạng thái, kể cả xác nhận Đã hoàn thành khi chưa đủ mục (giữ nguyên cho tới khi họ đổi). Bảng hiện thêm "Đã có x/6 mục" |
+| Tiến độ | **Tự cập nhật** theo số mục đã có (4 file + 2 đoạn text), mỗi khi tải lên, xoá file hoặc sửa text: 0 mục là Chưa thực hiện, có một phần là Còn thiếu, đủ 6/6 là Đã hoàn thành. Thành viên nào cũng tự chọn được trạng thái, kể cả xác nhận Đã hoàn thành khi chưa đủ mục (giữ nguyên cho tới khi có người đổi). **Đã đăng bài** chỉ chọn tay, sau đó tải/xoá file hay sửa text không làm đổi trạng thái nữa. Bảng hiện thêm "Đã có x/6 mục" |
 | Hiển thị | Luôn hiện kế hoạch của **cả team**; bộ lọc chỉ để thu hẹp, nút "Xem cả team" bỏ lọc |
-| Quyền | `plan.edit`: thêm, sửa sản phẩm, người thực hiện, hạn. `plan.delete`: xoá. Người thêm dòng chọn trạng thái ban đầu; sau khi lưu thì chỉ người thực hiện đổi được trạng thái. Tải file, xoá file, sửa lời đọc và mô tả: người thực hiện hoặc vai trò có `plan.edit`. Ai cũng xem và tải file về được |
-| Thứ tự | Kế hoạch chưa xong lên trước (hạn gần nhất trước, không có hạn ở cuối), **đã hoàn thành xuống cuối** |
+| Quyền | `plan.edit`: thêm, sao chép, sửa sản phẩm, người thực hiện, hạn, ghi chú. `plan.delete`: xoá. **Mọi thành viên** làm việc được trên kế hoạch của bất kỳ ai: đổi trạng thái, tải lên/xoá file, sửa lời đọc và mô tả, mở QuickEdit. Ai cũng xem và tải file về được |
+| Thứ tự | Kế hoạch chưa xong lên trước (hạn gần nhất trước, không có hạn ở cuối), **đã hoàn thành xuống cuối, đã đăng bài ở cuối cùng** |
 
 ## 3. Trạng thái
 
@@ -27,8 +27,9 @@ Cả nhóm nhìn chung một bảng để biết sản phẩm nào đang đượ
 | Chưa thực hiện | `todo` |
 | Còn thiếu | `partial` |
 | Đã hoàn thành | `done` |
+| Đã đăng bài | `posted` |
 
-Kế hoạch đang Đã hoàn thành nhờ đủ 6/6 mục mà bị xoá bớt mục thì lùi về Còn thiếu (hoặc Chưa thực hiện nếu không còn mục nào).
+Kế hoạch đang Đã hoàn thành nhờ đủ 6/6 mục mà bị xoá bớt mục thì lùi về Còn thiếu (hoặc Chưa thực hiện nếu không còn mục nào). Đã đăng bài là bước sau Đã hoàn thành: chọn tay khi video đã đăng, được tính là xong (tổng hợp % hoàn thành, không bao giờ quá hạn), có số đếm và bộ lọc riêng.
 
 **Quá hạn** không phải trạng thái riêng: là nhãn đỏ hiện thêm khi hạn đã qua mà chưa hoàn thành.
 
@@ -52,7 +53,7 @@ Kế hoạch cũ có trường mục tiêu (số video); trường này không c
 
 - Đầu trang: ảnh và tên sản phẩm (bấm để mở sản phẩm), "Đã có x/6 mục", nút Tạo prompt.
 - **Lấy file và text** (hiện khi đã có ít nhất một file hoặc text; viền xanh và tiêu đề "Thành phẩm đã xong" khi kế hoạch hoàn thành): nút tải từng file (video thành phẩm nổi bật), **Tải tất cả** (tải lần lượt từng file, trình duyệt có thể hỏi cho phép tải nhiều file), **Copy lời đọc**, **Copy mô tả khi đăng**. Mọi thành viên dùng được, kể cả khi kế hoạch đã hoàn thành.
-- **Thông tin:** người thực hiện, hạn nộp (kèm "Quá hạn"), trạng thái (người thực hiện đổi ngay tại đây), người tạo, ngày tạo, thư mục Drive (bấm để mở trong trang Google Drive của app).
+- **Thông tin:** người thực hiện, hạn nộp (kèm "Quá hạn"), trạng thái (thành viên nào cũng đổi ngay tại đây), người tạo, ngày tạo, thư mục Drive (bấm để mở trong trang Google Drive của app).
 - **File:** 4 mục Video 10s 1, Video 10s 2, Lời đọc (mp3), Video thành phẩm. Mỗi mục hiện tên file và dung lượng, nút **Tải về**, **Tải lên** (chưa có) hoặc **Thay** (đã có), **Xoá** (bấm hai lần). Tải lên có thanh phần trăm; file đi thẳng từ trình duyệt lên Google như trang Drive.
 - **Lời đọc** và **Mô tả khi đăng:** ô nhập nhiều dòng (tối đa 5000 ký tự), nút Lưu và Huỷ sửa khi có thay đổi, nút Copy khi đã lưu.
 - Drive chưa kết nối: hiện thông báo, nút tải lên bị khoá; vẫn xem và sửa text được.
@@ -64,11 +65,12 @@ Kế hoạch cũ có trường mục tiêu (số video); trường này không c
 
 ## 7. Dựng video bằng QuickEdit
 
-- Trang chi tiết có nút **Tạo video** khi kế hoạch đã có Video 10s 1, Video 10s 2 và Lời đọc, cho người thực hiện hoặc vai trò có `plan.edit`.
+- Trang chi tiết có nút **Tạo video** khi kế hoạch đã có Video 10s 1, Video 10s 2 và **Lời đọc (file mp3 hoặc đoạn text lời đọc)**, cho mọi thành viên.
 - Bấm nút: máy chủ cấp một mã cho riêng kế hoạch đó (`POST /api/plans/:id/quickedit` → `{ token, expiresAt }`), trình duyệt mở `quickedit://open?site=<địa chỉ app>&token=<mã>`, tức app QuickEdit trên máy (app desktop, cài riêng). Máy chưa có QuickEdit thì không có gì xảy ra.
 - Mã sống 12 giờ, chỉ dùng được với kế hoạch đó, mất hiệu lực khi người dùng đổi mật khẩu, bị khoá hoặc đăng xuất mọi nơi; không dùng thay cookie đăng nhập được.
-- QuickEdit dùng mã ở header `Authorization: Bearer` với `/api/quickedit`: `GET /plan` (tên sản phẩm, ngày, lời đọc, mô tả, danh sách file), `GET /files/:slot` (tải file từ Drive), `POST /uploads` `{ size }` (mở phiên tải lên “Video thành phẩm.mp4” vào thư mục kế hoạch), `POST /files` `{ fileId }` (đặt file vào mục Video thành phẩm, tiến độ tự cập nhật). Mỗi lần gọi đều kiểm tra người dùng vẫn được làm kế hoạch đó.
-- Nhật ký ghi “Mở kế hoạch trong QuickEdit” và “Gửi video thành phẩm từ QuickEdit”.
+- QuickEdit dùng mã ở header `Authorization: Bearer` với `/api/quickedit`: `GET /plan` (tên sản phẩm, ngày, lời đọc, mô tả, danh sách file, `accepts`: các mục QuickEdit được gửi lên), `GET /files/:slot` (tải file từ Drive), `POST /uploads` `{ slot, size }` (mở phiên tải lên vào thư mục kế hoạch: `slot` là `final` cho “Video thành phẩm.mp4”, mặc định, hoặc `audio` cho “Lời đọc.mp3”), `POST /files` `{ slot, fileId }` (đặt file vào mục đó, file cũ vào thùng rác, tiến độ tự cập nhật). Mỗi lần gọi đều kiểm tra người dùng vẫn được làm kế hoạch đó.
+- **Giọng đọc (text to speech):** kế hoạch chỉ có text lời đọc thì QuickEdit mở ở tab **Giọng**, đọc text thành mp3 ngay trên máy (VieNeu-TTS, giọng clone từ ghi âm mẫu hoặc giọng có sẵn), nút “Gửi lên kế hoạch” đưa mp3 vào mục Lời đọc. Không tốn phí và không qua máy chủ QuickPrompt.
+- Nhật ký ghi “Mở kế hoạch trong QuickEdit” và “Gửi file từ QuickEdit” (kèm tên mục: Video thành phẩm hoặc Lời đọc).
 
 ## 8. Để sau
 

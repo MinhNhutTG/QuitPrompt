@@ -8,7 +8,7 @@ import { Role } from "../models/Role.js";
 import { Tier } from "../models/Tier.js";
 import { Product } from "../models/Product.js";
 import { Prompt } from "../models/Prompt.js";
-import { VideoPlan } from "../models/VideoPlan.js";
+import { VideoPlan, FINISHED_STATUSES } from "../models/VideoPlan.js";
 import { Resource } from "../models/Resource.js";
 import { ActivityLog } from "../models/ActivityLog.js";
 import { ACTIONS, ACTION_GROUPS } from "../lib/audit.js";
@@ -132,8 +132,8 @@ router.get(
               plans: { $sum: 1 },
               target: { $sum: "$target" },
               done: { $sum: "$done" },
-              finished: { $sum: { $cond: [{ $eq: ["$status", "done"] }, 1, 0] } },
-              overdue: { $sum: { $cond: [{ $and: [{ $ne: ["$status", "done"] }, { $gt: ["$dueDate", ""] }, { $lt: ["$dueDate", today] }] }, 1, 0] } },
+              finished: { $sum: { $cond: [{ $in: ["$status", FINISHED_STATUSES] }, 1, 0] } },
+              overdue: { $sum: { $cond: [{ $and: [{ $not: [{ $in: ["$status", FINISHED_STATUSES] }] }, { $gt: ["$dueDate", ""] }, { $lt: ["$dueDate", today] }] }, 1, 0] } },
             },
           },
         ]),

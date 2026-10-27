@@ -2,7 +2,11 @@ export const STATUS = {
   todo: { label: "Chưa thực hiện", tone: "todo" },
   partial: { label: "Còn thiếu", tone: "partial" },
   done: { label: "Đã hoàn thành", tone: "done" },
+  posted: { label: "Đã đăng bài", tone: "posted" },
 };
+
+// Made or already posted: the end of the list, never overdue.
+export const isFinished = (status) => status === "done" || status === "posted";
 
 // What every plan collects. The labels match the file names the server gives them in Drive.
 export const SLOTS = [

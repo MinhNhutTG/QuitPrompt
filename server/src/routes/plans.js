@@ -2,7 +2,7 @@ import { Readable } from "node:stream";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
-import { VideoPlan, PLAN_SLOTS, PLAN_STATUSES } from "../models/VideoPlan.js";
+import { VideoPlan, PLAN_SLOTS, PLAN_STATUSES, FINISHED_STATUSES } from "../models/VideoPlan.js";
 import { Product } from "../models/Product.js";
 import { User } from "../models/User.js";
 import { config } from "../config.js";
@@ -27,7 +27,6 @@ const createSchema = z.object({
   assignee: id("người thực hiện"),
   dueDate: day.optional().default(""),
   note: text("ghi chú", 1000).optional().default(""),
-  // Whoever adds the row may set the starting status; afterwards only the assignee changes it.
   status: z.enum(PLAN_STATUSES, { errorMap: () => ({ message: "Trạng thái không hợp lệ." }) }).optional().default("todo"),
   done: z.number().int().min(0).max(999).optional().default(0),
 });
@@ -43,9 +42,9 @@ const patchSchema = z.object({
   caption: text("mô tả khi đăng", 5000).optional(),
 });
 
-// The assignee does the work, so besides roles with plan.edit they may also fill in texts and files.
+// The team works on every plan, whoever it is for: any member changes the status, the texts and the files.
+// The rest (assignee, due day, note) needs plan.edit.
 const WORK_FIELDS = new Set(["status", "done", "voiceText", "caption"]);
-const canWork = (req, plan) => String(plan.assignee) === String(req.userId) || req.permissions.has("plan.edit");
 
 async function loadPlan(planId) {
   assertId(planId, "kế hoạch");
@@ -54,11 +53,7 @@ async function loadPlan(planId) {
   return plan;
 }
 
-async function loadWorkablePlan(req) {
-  const plan = await loadPlan(req.params.id);
-  if (!canWork(req, plan)) throw new HttpError(403, "Chỉ người thực hiện hoặc người được quyền sửa kế hoạch mới thay đổi được file.");
-  return plan;
-}
+const loadWorkablePlan = (req) => loadPlan(req.params.id);
 
 const productName = async (plan) => (await Product.findById(plan.product, { name: 1 }).lean())?.name || "";
 
@@ -93,7 +88,7 @@ async function assertMember(userId) {
 // Keeps done consistent with the chosen status.
 function settle(plan) {
   if (plan.status === "todo") plan.done = 0;
-  else if (plan.status === "done") plan.done = plan.target;
+  else if (FINISHED_STATUSES.includes(plan.status)) plan.done = plan.target;
   else plan.done = Math.min(Math.max(plan.done || 0, 0), Math.max(plan.target - 1, 0));
 }
 
@@ -102,9 +97,14 @@ const ITEM_COUNT = Object.keys(PLAN_SLOTS).length + 2;
 const filled = (plan) => Object.keys(PLAN_SLOTS).filter((s) => plan.files?.[s]?.id).length + (plan.voiceText ? 1 : 0) + (plan.caption ? 1 : 0);
 
 // After a file or text changes, the status follows what is in: none → todo, some → partial, all → done.
-// A plan the assignee marked done before it was full stays done; one that was done only because it was full drops back.
+// A plan marked done by hand before it was full stays done; one that was done only because it was full drops back.
+// A posted plan stays posted whatever changes.
 function autoStatus(plan, before) {
   const n = filled(plan);
+  if (plan.status === "posted") {
+    settle(plan);
+    return;
+  }
   if (n === ITEM_COUNT) plan.status = "done";
   else if (plan.status !== "done" || before === ITEM_COUNT) plan.status = n ? "partial" : "todo";
   settle(plan);
@@ -112,7 +112,7 @@ function autoStatus(plan, before) {
 
 // Filters: assignee, status ("open" = todo + partial), category, q (product name or sku),
 // dueFrom/dueTo (inclusive days), overdue=1 with today (the viewer's local day, "YYYY-MM-DD").
-// Unfinished first, done last; within each, by due day (none last), then newest. Returns one numbered page plus a summary of the whole filter.
+// Unfinished first, then done, posted last; within each, by due day (none last), then newest. Returns one numbered page plus a summary of the whole filter.
 router.get(
   "/",
   ah(async (req, res) => {
@@ -160,8 +160,9 @@ router.get(
           todo: { $sum: { $cond: [{ $eq: ["$status", "todo"] }, 1, 0] } },
           partial: { $sum: { $cond: [{ $eq: ["$status", "partial"] }, 1, 0] } },
           finished: { $sum: { $cond: [{ $eq: ["$status", "done"] }, 1, 0] } },
+          posted: { $sum: { $cond: [{ $eq: ["$status", "posted"] }, 1, 0] } },
           overdue: {
-            $sum: { $cond: [{ $and: [{ $ne: ["$status", "done"] }, { $gt: ["$dueDate", ""] }, { $lt: ["$dueDate", today] }] }, 1, 0] },
+            $sum: { $cond: [{ $and: [{ $not: [{ $in: ["$status", FINISHED_STATUSES] }] }, { $gt: ["$dueDate", ""] }, { $lt: ["$dueDate", today] }] }, 1, 0] },
           },
         },
       },
@@ -171,13 +172,14 @@ router.get(
     const page = Math.min(Math.max(Math.floor(Number(req.query.page)) || 1, 1), pages);
     const rows = await VideoPlan.aggregate([
       { $match: match },
-      { $addFields: { isDone: { $eq: ["$status", "done"] }, noDue: { $eq: ["$dueDate", ""] } } },
-      { $sort: { isDone: 1, noDue: 1, dueDate: 1, _id: -1 } },
+      // -1 unfinished, 0 done, 1 posted.
+      { $addFields: { finish: { $indexOfArray: [FINISHED_STATUSES, "$status"] }, noDue: { $eq: ["$dueDate", ""] } } },
+      { $sort: { finish: 1, noDue: 1, dueDate: 1, _id: -1 } },
       { $skip: (page - 1) * limit },
       { $limit: limit },
-      { $project: { isDone: 0, noDue: 0 } },
+      { $project: { finish: 0, noDue: 0 } },
     ]);
-    const { _id, plans, ...counts } = summary || { target: 0, done: 0, todo: 0, partial: 0, finished: 0, overdue: 0 };
+    const { _id, plans, ...counts } = summary || { target: 0, done: 0, todo: 0, partial: 0, finished: 0, posted: 0, overdue: 0 };
     res.json({ items: await decorate(rows), total, page, pages, limit, today, summary: { plans: total, ...counts } });
   })
 );
@@ -225,19 +227,12 @@ router.get(
   })
 );
 
-// Target, assignee, due day and note need plan.edit; the status is the assignee's alone, whatever their role.
-// The voice-over text and caption: the assignee or plan.edit.
+// Target, assignee, due day and note need plan.edit; the status and the two texts are anyone's.
 router.patch(
   "/:id",
   ah(async (req, res) => {
     const data = parse(patchSchema, req.body);
     const plan = await loadPlan(req.params.id);
-    if ((data.status !== undefined || data.done !== undefined) && String(plan.assignee) !== String(req.userId)) {
-      throw new HttpError(403, "Chỉ người thực hiện mới cập nhật được trạng thái.");
-    }
-    if ((data.voiceText !== undefined || data.caption !== undefined) && !canWork(req, plan)) {
-      throw new HttpError(403, "Chỉ người thực hiện hoặc người được quyền sửa kế hoạch mới sửa được lời đọc và mô tả.");
-    }
     if (Object.keys(data).some((k) => !WORK_FIELDS.has(k)) && !req.permissions.has("plan.edit")) {
       throw new HttpError(403, deniedMessage("plan.edit"));
     }
@@ -378,14 +373,15 @@ router.post(
 // ---- QuickEdit (the desktop editor). "Tạo video" asks for a token here and hands it to QuickEdit with a
 // quickedit:// link; QuickEdit then uses the routes in quickeditRoutes below with that token.
 
-// The files QuickEdit starts from.
-const SOURCE_SLOTS = ["clip1", "clip2", "audio"];
+// QuickEdit starts from the two clips and the voice-over, or the voice-over's text: it can read that aloud itself.
+const SOURCE_SLOTS = ["clip1", "clip2"];
 
 router.post(
   "/:id/quickedit",
   ah(async (req, res) => {
     const plan = await loadWorkablePlan(req);
     const missing = SOURCE_SLOTS.filter((s) => !plan.files?.[s]?.id).map((s) => PLAN_SLOTS[s]);
+    if (!plan.files?.audio?.id && !plan.voiceText) missing.push(PLAN_SLOTS.audio);
     if (missing.length) throw new HttpError(400, `Kế hoạch còn thiếu ${missing.join(", ")}.`);
     res.locals.audit = { label: await productName(plan) };
     res.status(201).json({ token: signHandoff(req.userId, req.session.v || 0, plan._id), expiresAt: new Date(Date.now() + HANDOFF_HOURS * 3600e3) });
@@ -394,12 +390,8 @@ router.post(
 
 export const quickeditRoutes = Router();
 
-// The token's plan, while its user may still work on it.
-async function handoffPlan(req) {
-  const plan = await loadPlan(req.planId);
-  if (!canWork(req, plan)) throw new HttpError(403, "Bạn không còn là người thực hiện kế hoạch này.");
-  return plan;
-}
+// The token's plan (its user's account is checked with the token, see middleware/auth.js).
+const handoffPlan = (req) => loadPlan(req.planId);
 
 // What QuickEdit needs to build the video: names and texts, and which files there are.
 quickeditRoutes.get(
@@ -415,6 +407,8 @@ quickeditRoutes.get(
       voiceText: plan.voiceText,
       caption: plan.caption,
       files: Object.fromEntries(Object.keys(PLAN_SLOTS).filter((s) => plan.files?.[s]?.id).map((s) => [s, { name: plan.files[s].name, size: plan.files[s].size }])),
+      // The slots QuickEdit may send into; a server from before this list only took the finished video.
+      accepts: Object.keys(SENT),
     });
   })
 );
@@ -438,14 +432,19 @@ quickeditRoutes.get(
   })
 );
 
-// The finished video: an upload session into the plan's folder (QuickEdit sends the bytes straight to Google),
-// then POST /files with the new file's id puts it in the "Video thành phẩm" slot.
+// What QuickEdit sends back: the finished video, and the voice-over it read aloud.
+const SENT = { final: { ext: ".mp4", mimeType: "video/mp4" }, audio: { ext: ".mp3", mimeType: "audio/mpeg" } };
+const sentSlot = z.enum(Object.keys(SENT), { errorMap: () => ({ message: "Mục file không hợp lệ." }) }).default("final");
+
+// An upload session into the plan's folder (QuickEdit sends the bytes straight to Google), then POST /files with
+// the new file's id puts it in its slot.
 quickeditRoutes.post(
   "/uploads",
   ah(async (req, res) => {
     const max = config.driveMaxUploadMb;
     const data = parse(
       z.object({
+        slot: sentSlot,
         size: z.number({ invalid_type_error: "Dung lượng file không hợp lệ." }).int().min(1).max(max * 1024 * 1024, `Mỗi file tối đa ${max} MB.`),
       }),
       req.body
@@ -454,8 +453,8 @@ quickeditRoutes.post(
     const folder = await ensurePlanFolder(plan, await productName(plan));
     const uploadUrl = await openUpload({
       parent: folder,
-      name: `${PLAN_SLOTS.final}.mp4`,
-      mimeType: "video/mp4",
+      name: PLAN_SLOTS[data.slot] + SENT[data.slot].ext,
+      mimeType: SENT[data.slot].mimeType,
       size: data.size,
       appProperties: await stamp(req),
       origin: config.clientOrigin || new URL(config.googleRedirectUri).origin,
@@ -468,8 +467,8 @@ quickeditRoutes.post(
 quickeditRoutes.post(
   "/files",
   ah(async (req, res) => {
-    const { fileId } = parse(z.object({ fileId: fileIdSchema }), req.body);
-    await putFile(req, res, await handoffPlan(req), "final", fileId);
+    const { slot, fileId } = parse(z.object({ slot: sentSlot, fileId: fileIdSchema }), req.body);
+    await putFile(req, res, await handoffPlan(req), slot, fileId);
   })
 );
 

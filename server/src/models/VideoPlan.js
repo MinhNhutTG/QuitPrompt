@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 
-export const PLAN_STATUSES = ["todo", "partial", "done"];
+export const PLAN_STATUSES = ["todo", "partial", "done", "posted"];
+// The video is made (done) or already posted: these sit at the end of the list and are never overdue.
+export const FINISHED_STATUSES = ["done", "posted"];
 
 // The files every plan collects, each kept in the plan's own Drive folder.
 export const PLAN_SLOTS = {
@@ -29,7 +31,8 @@ const schema = new mongoose.Schema(
     // Older plans counted videos; a plan is now one finished video, so these only remain for old rows.
     target: { type: Number, min: 1, max: 999, default: 1 },
     assignee: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    // Chosen by the assignee, never computed: todo = chưa thực hiện, partial = còn thiếu, done = đã hoàn thành.
+    // todo = chưa thực hiện, partial = còn thiếu, done = đã hoàn thành (follow the files and texts, see autoStatus),
+    // posted = đã đăng bài (only ever chosen by hand). Any member may change it.
     status: { type: String, enum: PLAN_STATUSES, default: "todo" },
     done: { type: Number, min: 0, max: 999, default: 0 },
     // "YYYY-MM-DD" or "": a calendar day, so it never shifts with time zones.

@@ -1929,6 +1929,10 @@ select.input {
   background: color-mix(in srgb, var(--ok) 15%, transparent);
   color: var(--ok);
 }
+.status-posted {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
 .status-edit {
   display: flex;
   flex-wrap: wrap;

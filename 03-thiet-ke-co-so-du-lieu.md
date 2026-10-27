@@ -136,7 +136,7 @@ Kế hoạch làm video, mỗi tài liệu là một dòng "sản phẩm × ngư
 | `product` | ObjectId → products | bắt buộc | Xoá sản phẩm thì xoá luôn kế hoạch |
 | `target` | int | 1–999 | Chỉ còn ở kế hoạch cũ; kế hoạch mới luôn là 1 (một kế hoạch = một video) |
 | `assignee` | ObjectId → users | bắt buộc | Người thực hiện |
-| `status` | string | `todo`, `partial`, `done` | Chưa thực hiện, Còn thiếu, Đã hoàn thành. Người thực hiện tự chọn, app không tự đếm |
+| `status` | string | `todo`, `partial`, `done`, `posted` | Chưa thực hiện, Còn thiếu, Đã hoàn thành (tự theo số mục đã có, thành viên nào cũng chọn tay được), Đã đăng bài (chỉ chọn tay, không tự đổi) |
 | `done` | int | 0–999 | Chỉ còn ở kế hoạch cũ; tự chỉnh theo trạng thái |
 | `dueDate` | string | `"YYYY-MM-DD"` hoặc `""` | Ngày theo lịch, không lệch múi giờ |
 | `day` | string | `"YYYY-MM-DD"` | Ngày tạo theo giờ Việt Nam, đặt tên thư mục ngày trên Drive |

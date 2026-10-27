@@ -231,15 +231,15 @@ Trả toàn bộ dữ liệu của tài khoản (sản phẩm kèm URL ảnh, pr
 
 ## 7. Kế hoạch video `/api/plans`
 
-Kế hoạch dùng chung cho cả nhóm, mỗi kế hoạch là một video và có thư mục riêng trên Google Drive. `plan.edit` lập và sửa người thực hiện, hạn, ghi chú; `plan.delete` xoá; **chỉ người thực hiện** đổi được trạng thái. File, lời đọc và mô tả: người thực hiện hoặc `plan.edit`. Xem [tài liệu 09](09-ke-hoach-video.md).
+Kế hoạch dùng chung cho cả nhóm, mỗi kế hoạch là một video và có thư mục riêng trên Google Drive. `plan.edit` lập và sửa người thực hiện, hạn, ghi chú; `plan.delete` xoá. Trạng thái, file, lời đọc và mô tả: **mọi thành viên**, trên kế hoạch của bất kỳ ai. Xem [tài liệu 09](09-ke-hoach-video.md).
 
 ### `GET /api/plans?assignee=&status=&category=&q=&dueFrom=&dueTo=&overdue=&today=&page=&limit=`
 - `assignee`: id người thực hiện.
-- `status`: `todo`, `partial`, `done`, hoặc `open` (= `todo` + `partial`).
+- `status`: `todo`, `partial`, `done`, `posted`, hoặc `open` (= `todo` + `partial`).
 - `category`: loại sản phẩm (`__none` là chưa phân loại). `q`: tên hoặc mã sản phẩm.
 - `dueFrom`, `dueTo`: ngày `YYYY-MM-DD`, tính cả hai đầu. `overdue=1`: hạn trước `today` và chưa hoàn thành.
 - `today`: ngày hôm nay theo máy người xem, dùng để tính quá hạn (thiếu thì lấy ngày UTC của máy chủ).
-- Sắp xếp: chưa hoàn thành trước, `done` ở cuối; trong mỗi nhóm hạn gần nhất trước, không có hạn ở cuối. Mặc định 20 mỗi trang, tối đa 50.
+- Sắp xếp: chưa hoàn thành trước, rồi `done`, `posted` ở cuối cùng; trong mỗi nhóm hạn gần nhất trước, không có hạn ở cuối. Mặc định 20 mỗi trang, tối đa 50.
 
 ```json
 200 {
@@ -253,7 +253,7 @@ Kế hoạch dùng chung cho cả nhóm, mỗi kế hoạch là một video và 
       "createdAt": "...", "updatedAt": "..." }
   ],
   "total": 12, "page": 1, "pages": 1, "limit": 20, "today": "2026-10-21",
-  "summary": { "plans": 12, "target": 12, "done": 3, "todo": 4, "partial": 5, "finished": 3, "overdue": 2 }
+  "summary": { "plans": 12, "target": 12, "done": 3, "todo": 4, "partial": 5, "finished": 3, "posted": 1, "overdue": 2 }
 }
 ```
 `summary` tính trên toàn bộ kết quả lọc, không chỉ trang đang xem.
@@ -272,8 +272,8 @@ Lỗi: sản phẩm hoặc người thực hiện không tồn tại → 404.
 ### `PATCH /api/plans/:id`
 ```json
 { "assignee": "...", "dueDate": "", "note": "..." }     // plan.edit
-{ "status": "partial" }                                  // chỉ người thực hiện, người khác → 403
-{ "voiceText": "...", "caption": "..." }                 // người thực hiện hoặc plan.edit
+{ "status": "posted" }                                   // mọi thành viên
+{ "voiceText": "...", "caption": "..." }                 // mọi thành viên
 200 { "item": { ... } }
 ```
 
