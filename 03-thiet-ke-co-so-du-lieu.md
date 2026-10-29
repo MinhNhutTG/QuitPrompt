@@ -89,6 +89,7 @@ Sản phẩm **dùng chung cho cả nhóm**: thành viên nào cũng xem, sửa,
 | `note` | string | tối đa 2000 | Ghi chú tự do |
 | `extraNeg` | string | tối đa 1000 | Lỗi riêng cần chặn, cách nhau bằng dấu phẩy |
 | `closed` | bool | mặc định `true` | "Áo luôn đóng, không mở" |
+| `hot` | bool | mặc định `false` | Team đánh dấu "Đang hot" ở trang sản phẩm: hiện 🔥 trước tên ở mọi nơi (sản phẩm, prompt, kế hoạch, ô chọn sản phẩm) và lên đầu danh sách |
 | `images` | mảng `Image` | tối đa 12 | Phần tử đầu tiên là ảnh đại diện |
 | `promptCount` | number | mặc định 0 | Đếm sẵn để hiện trên thẻ sản phẩm, khỏi đếm lại |
 | `lastPromptAt` | date | | Lần lưu prompt gần nhất |

@@ -1,5 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 
+// A product's name, with 🔥 in front while the team marks it as hot.
+export function ProductName({ product }) {
+  return (
+    <>
+      {product.hot && (
+        <span className="hot-mark" role="img" aria-label="Đang hot" title="Sản phẩm đang hot">
+          🔥
+        </span>
+      )}
+      {product.name}
+    </>
+  );
+}
+
 export function Skeleton({ h = 16, w = "100%", r, className = "" }) {
   return <div className={`skel ${className}`} style={{ height: h, width: w, borderRadius: r }} aria-hidden="true" />;
 }

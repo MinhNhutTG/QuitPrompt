@@ -5,7 +5,7 @@ import { api } from "../api.js";
 import { usePlans, usePromptFilters } from "../lib/queries.js";
 import { uid, useDebounce } from "../lib/util.js";
 import { useAuth } from "../auth.jsx";
-import { EmptyState, ErrorState, Modal, Pager, Skeleton } from "../components/ui.jsx";
+import { EmptyState, ErrorState, Modal, Pager, ProductName, Skeleton } from "../components/ui.jsx";
 import ProductPicker from "../components/ProductPicker.jsx";
 import LazyImage from "../components/LazyImage.jsx";
 import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
@@ -179,7 +179,7 @@ function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selecte
             <span className="hint">{plan.product.name}</span>
           ) : (
             <Link className="note-title" to={`/plans/${plan._id}`} title={plan.product.name}>
-              {plan.product.name}
+              <ProductName product={plan.product} />
             </Link>
           )}
           {progress && (

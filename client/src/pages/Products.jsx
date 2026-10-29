@@ -5,7 +5,7 @@ import { api } from "../api.js";
 import { useCan } from "../auth.jsx";
 import { putProduct, useProducts } from "../lib/queries.js";
 import { norm, useDebounce } from "../lib/util.js";
-import { EmptyState, ErrorState, Field, Modal, Skeleton } from "../components/ui.jsx";
+import { EmptyState, ErrorState, Field, Modal, ProductName, Skeleton } from "../components/ui.jsx";
 import LazyImage from "../components/LazyImage.jsx";
 import { DropZone, JobList, useImageCap, useUploads } from "../components/Uploader.jsx";
 import { useToast } from "../components/Toast.jsx";
@@ -167,7 +167,9 @@ export default function Products() {
   const items = useMemo(() => {
     const all = data?.items || [];
     const n = norm(dq);
-    return n ? all.filter((p) => norm(p.name).includes(n) || norm(p.sku).includes(n)) : all;
+    const found = n ? all.filter((p) => norm(p.name).includes(n) || norm(p.sku).includes(n)) : all;
+    // Hot products first, each part in its usual order.
+    return [...found.filter((p) => p.hot), ...found.filter((p) => !p.hot)];
   }, [data, dq]);
 
   return (
@@ -212,10 +214,13 @@ export default function Products() {
       ) : (
         <div className="pgrid">
           {items.map((p, i) => (
-            <Link key={p._id} to={`/products/${p._id}`} className="pcard">
+            <Link key={p._id} to={`/products/${p._id}`} className={`pcard ${p.hot ? "is-hot" : ""}`}>
               <LazyImage image={p.images?.[0]} width={240} ratio="3 / 4" eager={i < 8} alt="" />
+              {p.hot && <span className="hot-badge">🔥 HOT</span>}
               <div className="pcard-body">
-                <b>{p.name}</b>
+                <b>
+                  <ProductName product={p} />
+                </b>
                 <span className="hint">
                   {p.category ? `${p.category} · ` : ""}
                   {p.sku ? `${p.sku} · ` : ""}

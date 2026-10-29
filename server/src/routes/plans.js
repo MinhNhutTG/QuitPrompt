@@ -60,11 +60,11 @@ const productName = async (plan) => (await Product.findById(plan.product, { name
 
 const slotKey = z.enum(Object.keys(PLAN_SLOTS), { errorMap: () => ({ message: "Mục file không hợp lệ." }) });
 
-const PRODUCT_FIELDS = { name: 1, sku: 1, category: 1, images: { $slice: 1 } };
+const PRODUCT_FIELDS = { name: 1, sku: 1, category: 1, hot: 1, images: { $slice: 1 } };
 const GONE_PRODUCT = { name: "(sản phẩm đã xoá)", images: [] };
 const GONE_USER = { id: "", displayName: "(tài khoản đã xoá)" };
 
-// Attaches product { _id, name, sku, category, images: [cover] }, assignee and createdBy { id, displayName }.
+// Attaches product { _id, name, sku, category, hot, images: [cover] }, assignee and createdBy { id, displayName }.
 async function decorate(plans) {
   const productIds = [...new Set(plans.map((p) => String(p.product)))];
   const userIds = [...new Set(plans.flatMap((p) => [String(p.assignee), String(p.createdBy)]))];

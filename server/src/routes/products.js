@@ -19,6 +19,7 @@ const createSchema = z.object({
   note: text("ghi chú", 2000).optional(),
   extraNeg: text("lỗi riêng cần chặn", 1000).optional(),
   closed: z.boolean({ invalid_type_error: "Ô “Áo luôn đóng” không hợp lệ." }).optional(),
+  hot: z.boolean({ invalid_type_error: "Ô “Đang hot” không hợp lệ." }).optional(),
 });
 const patchSchema = createSchema.partial();
 

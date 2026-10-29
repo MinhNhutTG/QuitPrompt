@@ -5,7 +5,7 @@ import { api } from "../api.js";
 import { useCan } from "../auth.jsx";
 import { mapCachedPrompts } from "../lib/queries.js";
 import { fmtDateTime, fmtDateTimeFull } from "../lib/util.js";
-import { Field, Modal } from "./ui.jsx";
+import { Field, Modal, ProductName } from "./ui.jsx";
 import { ToolInput } from "./PromptFields.jsx";
 import LazyImage from "./LazyImage.jsx";
 import { useCopy, withNegative } from "./PromptPanel.jsx";
@@ -146,7 +146,7 @@ export default function PromptCard({ item, showProduct = false }) {
           </Link>
           <div className="pc-title">
             <Link to={`/products/${product._id}`} className="pc-name">
-              {product.name}
+              <ProductName product={product} />
               {product.sku && <small className="hint"> · {product.sku}</small>}
             </Link>
             {meta}

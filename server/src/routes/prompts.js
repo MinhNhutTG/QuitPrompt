@@ -31,7 +31,7 @@ const patchSchema = z.object({
   negative: text("negative", 5000).optional(),
 });
 
-const PRODUCT_FIELDS = { name: 1, sku: 1, category: 1, images: { $slice: 1 } };
+const PRODUCT_FIELDS = { name: 1, sku: 1, category: 1, hot: 1, images: { $slice: 1 } };
 
 // Sent as ?category= to find prompts whose product has no category yet.
 const NO_CATEGORY = "__none";
@@ -52,7 +52,7 @@ async function savedByMap(prompts) {
 
 const GONE = { username: "", displayName: "(tài khoản đã xoá)" };
 
-// Attaches product { _id, name, sku, category, images: [cover] }, savedBy { username, displayName } and mine
+// Attaches product { _id, name, sku, category, hot, images: [cover] }, savedBy { username, displayName } and mine
 // (whether the viewer saved it, so may edit it); drops the raw owner id.
 async function decorate(viewer, prompts) {
   const ids = [...new Set(prompts.map((p) => String(p.product)))];

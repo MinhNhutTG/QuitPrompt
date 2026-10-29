@@ -5,7 +5,7 @@ import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { useDriveStatus, usePlan } from "../lib/queries.js";
 import { copyText, fmtDate, fmtDateTimeFull } from "../lib/util.js";
-import { ConfirmButton, EmptyState, ErrorState, Field, Skeleton } from "../components/ui.jsx";
+import { ConfirmButton, EmptyState, ErrorState, Field, ProductName, Skeleton } from "../components/ui.jsx";
 import LazyImage from "../components/LazyImage.jsx";
 import { useToast } from "../components/Toast.jsx";
 import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
@@ -289,7 +289,9 @@ export default function PlanDetail() {
       <div className="plan-head">
         <LazyImage image={plan.product.images?.[0]} width={64} ratio="1 / 1" />
         <div className="plan-head-text">
-          <h1>{productGone ? plan.product.name : <Link to={`/products/${plan.product._id}`}>{plan.product.name}</Link>}</h1>
+          <h1>{productGone ? plan.product.name : <Link to={`/products/${plan.product._id}`}>
+            <ProductName product={plan.product} />
+          </Link>}</h1>
           <p className="hint">
             {plan.product.sku ? `${plan.product.sku} · ` : ""}Đã có {have}/{total} mục
           </p>

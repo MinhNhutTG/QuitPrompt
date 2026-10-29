@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { useProducts } from "../lib/queries.js";
 import { norm, useClickOutside } from "../lib/util.js";
 import LazyImage from "./LazyImage.jsx";
+import { ProductName } from "./ui.jsx";
 
 // Searchable product combobox with thumbnails, arrow-key navigation and inline "create".
 // value: product id · pendingName: a not-yet-created name to show as selected
@@ -34,7 +35,9 @@ export default function ProductPicker({
 
   const options = useMemo(() => {
     const n = norm(q);
-    const found = n ? items.filter((p) => norm(p.name).includes(n) || norm(p.sku).includes(n)) : items;
+    const matched = n ? items.filter((p) => norm(p.name).includes(n) || norm(p.sku).includes(n)) : items;
+    // Hot products first.
+    const found = [...matched.filter((p) => p.hot), ...matched.filter((p) => !p.hot)];
     const exact = n && items.some((p) => norm(p.name) === n);
     return [
       ...(allowClear && !n ? [{ type: "clear" }] : []),
@@ -78,7 +81,7 @@ export default function ProductPicker({
     <>
       <LazyImage image={selected.images?.[0]} width={32} ratio="1 / 1" className="pick-thumb" eager />
       <span className="pick-name">
-        {selected.name}
+        <ProductName product={selected} />
         {selected.sku && <small> · {selected.sku}</small>}
       </span>
     </>
@@ -138,7 +141,7 @@ export default function ProductPicker({
                   <>
                     <LazyImage image={o.p.images?.[0]} width={40} ratio="1 / 1" className="pick-thumb" />
                     <span className="pick-name">
-                      {o.p.name}
+                      <ProductName product={o.p} />
                       <small>
                         {o.p.sku ? `${o.p.sku} · ` : ""}
                         {o.p.promptCount || 0} prompt

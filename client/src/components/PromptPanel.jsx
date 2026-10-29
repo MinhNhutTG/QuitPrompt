@@ -2,6 +2,7 @@ import { useState } from "react";
 import { copyText } from "../lib/util.js";
 import { useToast } from "./Toast.jsx";
 import LazyImage from "./LazyImage.jsx";
+import { ProductName } from "./ui.jsx";
 
 export const withNegative = (prompt, negative) => `${prompt}\n\nNegative prompt: ${negative}`;
 
@@ -29,7 +30,9 @@ export default function PromptPanel({ product, result, onSave }) {
         <div className="slate-product">
           <LazyImage image={product.images?.[0]} width={56} ratio="3 / 4" eager />
           <div>
-            <b>{product.name}</b>
+            <b>
+              <ProductName product={product} />
+            </b>
             <span className="hint">{product.sku ? `Mã ${product.sku} · ` : ""}đối chiếu với ảnh tham chiếu trước khi tạo video</span>
           </div>
         </div>

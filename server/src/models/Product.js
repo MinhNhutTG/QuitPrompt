@@ -17,6 +17,8 @@ const schema = new mongoose.Schema(
     note: { type: String, maxlength: 2000, default: "" },
     extraNeg: { type: String, maxlength: 1000, default: "" },
     closed: { type: Boolean, default: true },
+    // Marked by the team as selling well right now: shown with 🔥 before its name and listed first.
+    hot: { type: Boolean, default: false },
     // First image is the cover.
     images: { type: [imageSchema], default: [], validate: [(v) => v.length <= MAX_IMAGES, "Tối đa 12 ảnh mỗi sản phẩm."] },
     promptCount: { type: Number, default: 0 },

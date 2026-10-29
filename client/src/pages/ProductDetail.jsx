@@ -5,7 +5,7 @@ import { api } from "../api.js";
 import { useCan } from "../auth.jsx";
 import { dropProduct, putProduct, usePrompts } from "../lib/queries.js";
 import { fmtDate } from "../lib/util.js";
-import { ConfirmButton, EmptyState, ErrorState, Field, Modal, Skeleton } from "../components/ui.jsx";
+import { ConfirmButton, EmptyState, ErrorState, Field, Modal, ProductName, Skeleton } from "../components/ui.jsx";
 import LazyImage from "../components/LazyImage.jsx";
 import PromptCard from "../components/PromptCard.jsx";
 import { EMPTY_EXTERNAL, ExternalPromptFields, externalBody } from "../components/PromptFields.jsx";
@@ -261,6 +261,18 @@ export default function ProductDetail() {
     },
   });
 
+  // 🔥 shows wherever the product's name does: on prompts and plans too.
+  const hot = useMutation({
+    mutationFn: (on) => api.updateProduct(id, { hot: on }),
+    onSuccess: ({ item }) => {
+      putProduct(qc, item);
+      qc.invalidateQueries({ queryKey: ["prompts"] });
+      qc.invalidateQueries({ queryKey: ["plans"] });
+      toast(item.hot ? "Đã đánh dấu sản phẩm đang hot" : "Đã bỏ đánh dấu hot");
+    },
+    onError: (e) => toast(e.message, { tone: "danger" }),
+  });
+
   const remove = useMutation({
     mutationFn: () => api.deleteProduct(id),
     onSuccess: () => {
@@ -302,16 +314,32 @@ export default function ProductDetail() {
       </Link>
       <div className="page-head">
         <div>
-          <h1>{p.name}</h1>
+          <h1>
+            <ProductName product={p} />
+          </h1>
           <p>
             {p.category ? `${p.category} · ` : ""}
             {p.sku ? `Mã: ${p.sku} · ` : ""}
             {nPrompts} prompt tốt · cập nhật {fmtDate(p.updatedAt)}
           </p>
         </div>
-        <Link className="btn btn-primary" to={`/?product=${p._id}`}>
-          Tạo prompt cho sản phẩm này
-        </Link>
+        <div className="head-actions">
+          {can("product.edit") && (
+            <button
+              type="button"
+              className={`btn hot-toggle ${p.hot ? "is-on" : ""}`}
+              onClick={() => hot.mutate(!p.hot)}
+              disabled={hot.isPending}
+              aria-pressed={Boolean(p.hot)}
+              title={p.hot ? "Bỏ đánh dấu đang hot" : "Đánh dấu sản phẩm đang hot: hiện 🔥 trước tên và lên đầu danh sách"}
+            >
+              🔥 {p.hot ? "Đang hot" : "Đánh dấu hot"}
+            </button>
+          )}
+          <Link className="btn btn-primary" to={`/?product=${p._id}`}>
+            Tạo prompt cho sản phẩm này
+          </Link>
+        </div>
       </div>
 
       <div className="grid-2 detail">
