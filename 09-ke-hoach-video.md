@@ -55,7 +55,7 @@ Kế hoạch cũ có trường mục tiêu (số video); trường này không c
 - Đầu trang: ảnh và tên sản phẩm (bấm để mở sản phẩm), "Đã có x/6 mục", nút Tạo prompt.
 - **Lấy file và text** (hiện khi đã có ít nhất một file hoặc text; viền xanh và tiêu đề "Thành phẩm đã xong" khi kế hoạch hoàn thành): nút tải từng file (video thành phẩm nổi bật), **Tải tất cả** (tải lần lượt từng file, trình duyệt có thể hỏi cho phép tải nhiều file), **Copy lời đọc**, **Copy mô tả khi đăng**. Mọi thành viên dùng được, kể cả khi kế hoạch đã hoàn thành.
 - **Thông tin:** người thực hiện, hạn nộp (kèm "Quá hạn"), trạng thái (thành viên nào cũng đổi ngay tại đây), người tạo, ngày tạo, thư mục Drive (bấm để mở trong trang Google Drive của app).
-- **File:** 4 mục Video 10s 1, Video 10s 2, Lời đọc (mp3), Video thành phẩm. Mỗi mục hiện tên file và dung lượng, nút **Tải về**, **Tải lên** (chưa có) hoặc **Thay** (đã có), **Xoá** (bấm hai lần). Tải lên có thanh phần trăm; file đi thẳng từ trình duyệt lên Google như trang Drive.
+- **File:** 4 mục Video 10s 1, Video 10s 2, Lời đọc (mp3), Video thành phẩm. Mỗi mục hiện tên file và dung lượng, nút **Tải về**, **Tải lên** (chưa có) hoặc **Thay** (đã có), **Xoá** (bấm hai lần). Riêng mục Lời đọc (mp3) có thêm nút **ElevenLabs**: mở trang Text to Speech của ElevenLabs ở tab mới và copy sẵn text lời đọc của kế hoạch (nếu có) để dán vào. Tải lên có thanh phần trăm; file đi thẳng từ trình duyệt lên Google như trang Drive.
 - **Lời đọc** và **Mô tả khi đăng:** ô nhập nhiều dòng (tối đa 5000 ký tự), nút Lưu và Huỷ sửa khi có thay đổi, nút Copy khi đã lưu.
 - Drive chưa kết nối: hiện thông báo, nút tải lên bị khoá; vẫn xem và sửa text được.
 

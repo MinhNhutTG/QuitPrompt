@@ -27,6 +27,8 @@ const SlotIcon = ({ kind }) => (
   </svg>
 );
 
+const ELEVENLABS_TTS = "https://elevenlabs.io/app/speech-synthesis/text-to-speech";
+
 function FileSlot({ plan, slot, driveReady, onChanged }) {
   const toast = useToast();
   const input = useRef(null);
@@ -77,6 +79,23 @@ function FileSlot({ plan, slot, driveReady, onChanged }) {
         )}
       </div>
       <div className="slot-acts">
+        {slot.key === "audio" && (
+          <a
+            className="btn btn-sm btn-ghost"
+            href={ELEVENLABS_TTS}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Mở ElevenLabs Text to Speech trong tab mới để tạo file mp3 lời đọc"
+            onClick={async () => {
+              // The voice-over text goes to the clipboard first, ready to paste into ElevenLabs.
+              if (!plan.voiceText) return;
+              const ok = await copyText(plan.voiceText);
+              toast(ok ? "Đã copy lời đọc, dán vào ElevenLabs" : "Đã mở ElevenLabs", { tone: ok ? "ok" : "info" });
+            }}
+          >
+            ElevenLabs
+          </a>
+        )}
         {file && !busy && (
           <a className="btn btn-sm" href={api.driveDownloadUrl(file.id)} download={file.name}>
             Tải về
