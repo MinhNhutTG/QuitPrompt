@@ -5,6 +5,7 @@ import { z } from "zod";
 import { VideoPlan, PLAN_SLOTS, PLAN_STATUSES, FINISHED_STATUSES } from "../models/VideoPlan.js";
 import { Product } from "../models/Product.js";
 import { User } from "../models/User.js";
+import { Script } from "../models/Script.js";
 import { config } from "../config.js";
 import { ah, parse, assertId, isId, escapeRegex, text, HttpError } from "../lib/http.js";
 import { HANDOFF_HOURS, can, signHandoff } from "../middleware/auth.js";
@@ -29,6 +30,8 @@ const createSchema = z.object({
   note: text("ghi chú", 1000).optional().default(""),
   status: z.enum(PLAN_STATUSES, { errorMap: () => ({ message: "Trạng thái không hợp lệ." }) }).optional().default("todo"),
   done: z.number().int().min(0).max(999).optional().default(0),
+  // A saved voice-over and caption of one of the chosen products: its texts go into that product's plan.
+  script: id("lời đọc").optional(),
 });
 
 const patchSchema = z.object({
@@ -41,11 +44,24 @@ const patchSchema = z.object({
   voiceText: text("lời đọc", 5000).optional(),
   caption: text("mô tả khi đăng", 5000).optional(),
   pinned: z.boolean({ invalid_type_error: "Ghim không hợp lệ." }).optional(),
+  // A saved voice-over and caption of the plan's product: replaces both texts.
+  script: id("lời đọc").optional(),
 });
 
 // The team works on every plan, whoever it is for: any member changes the status, the texts and the files, and
 // pins it. The rest (assignee, due day, note) needs plan.edit.
-const WORK_FIELDS = new Set(["status", "done", "voiceText", "caption", "pinned"]);
+const WORK_FIELDS = new Set(["status", "done", "voiceText", "caption", "pinned", "script"]);
+
+// A saved voice-over and caption, checked to belong to the product.
+async function loadScript(scriptId, productId) {
+  const script = await Script.findById(scriptId);
+  if (!script) throw new HttpError(404, "Không tìm thấy lời đọc đã chọn. Có thể nó vừa bị xoá.");
+  if (String(script.product) !== String(productId)) throw new HttpError(400, "Lời đọc đã chọn không thuộc sản phẩm này.");
+  return script;
+}
+
+// The plan took this voice-over and caption: it is marked used.
+const markUsed = (script, planId) => Script.updateOne({ _id: script._id }, { used: true, usedAt: new Date(), usedPlan: planId });
 
 async function loadPlan(planId) {
   assertId(planId, "kế hoạch");
@@ -199,14 +215,24 @@ router.post(
     const productIds = [...new Set(data.products)];
     const [found] = await Promise.all([Product.countDocuments({ _id: { $in: productIds } }), assertMember(data.assignee)]);
     if (found !== productIds.length) throw new HttpError(404, "Có sản phẩm không còn tồn tại. Tải lại trang rồi chọn lại.");
+    const script = data.script ? await Script.findById(data.script) : null;
+    if (data.script && !script) throw new HttpError(404, "Không tìm thấy lời đọc đã chọn. Có thể nó vừa bị xoá.");
+    if (script && !productIds.includes(String(script.product))) throw new HttpError(400, "Lời đọc đã chọn không thuộc sản phẩm nào của kế hoạch.");
     const day = vnDay();
     const docs = await VideoPlan.insertMany(
       productIds.map((product) => {
         const plan = { product, target: data.target, assignee: data.assignee, dueDate: data.dueDate, note: data.note, status: data.status, done: data.done, day, createdBy: req.userId };
+        if (script && String(script.product) === product) {
+          plan.voiceText = script.voiceText;
+          plan.caption = script.caption;
+          // Left at "chưa thực hiện", the status follows the texts it now has.
+          if (plan.status === "todo") autoStatus(plan, 0);
+        }
         settle(plan);
         return plan;
       })
     );
+    if (script) await markUsed(script, docs.find((d) => String(d.product) === String(script.product))._id);
     // Each plan gets its Drive folder now. Without Drive (or if Google fails) the plan is still saved
     // and the folder is made on its first upload.
     let driveWarning = "";
@@ -245,13 +271,16 @@ router.patch(
     }
     if (data.assignee) await assertMember(data.assignee);
     const before = filled(plan);
-    const { pinned, ...fields } = data;
+    const { pinned, script: scriptId, ...fields } = data;
+    const script = scriptId ? await loadScript(scriptId, plan.product) : null;
     plan.set(fields);
+    if (script) plan.set({ voiceText: script.voiceText, caption: script.caption });
     if (pinned !== undefined) plan.pinnedAt = pinned ? new Date() : null;
     // A status chosen in the same request wins over the automatic one.
-    if (data.status === undefined && (data.voiceText !== undefined || data.caption !== undefined)) autoStatus(plan, before);
+    if (data.status === undefined && (data.voiceText !== undefined || data.caption !== undefined || script)) autoStatus(plan, before);
     settle(plan);
     await plan.save();
+    if (script) await markUsed(script, plan._id);
     const [item] = await decorate([plan.toObject()]);
     res.json({ item });
   })

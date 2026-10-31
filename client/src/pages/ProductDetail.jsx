@@ -12,6 +12,7 @@ import { EMPTY_EXTERNAL, ExternalPromptFields, externalBody } from "../component
 import { DropZone, JobList, useImageCap, useUploads } from "../components/Uploader.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { CategoryInput } from "../components/CategoryInput.jsx";
+import { ProductScripts } from "../components/Scripts.jsx";
 
 const FIELDS = ["name", "sku", "category", "closed", "extraNeg", "note"];
 const formOf = (p) => ({ name: p.name || "", sku: p.sku || "", category: p.category || "", closed: p.closed !== false, extraNeg: p.extraNeg || "", note: p.note || "" });
@@ -348,6 +349,8 @@ export default function ProductDetail() {
           <InfoForm product={p} editable={can("product.edit")} />
         </div>
       </div>
+
+      <ProductScripts productId={p._id} />
 
       <ProductPrompts productId={p._id} />
 

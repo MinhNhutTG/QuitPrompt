@@ -3690,3 +3690,70 @@ select.status-select:disabled {
     height: auto;
   }
 }
+
+/* ---- saved voice-overs and captions (components/Scripts.jsx) */
+.scripts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.script {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+.script.is-used {
+  background: var(--sunk);
+}
+.script.is-used .script-text p {
+  color: var(--muted);
+}
+.script-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.script-head .hint a {
+  color: inherit;
+}
+.badge.script-status {
+  font-size: 12px;
+}
+.script-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.script-text-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.script-text-h .btn {
+  min-height: 26px;
+  padding: 0 8px;
+}
+.script-text p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.script-text p.is-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.script-form {
+  gap: 12px;
+}

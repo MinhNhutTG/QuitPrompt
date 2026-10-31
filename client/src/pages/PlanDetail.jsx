@@ -5,7 +5,8 @@ import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { useDriveStatus, usePlan } from "../lib/queries.js";
 import { copyText, fmtDate, fmtDateTimeFull } from "../lib/util.js";
-import { ConfirmButton, EmptyState, ErrorState, Field, ProductName, Skeleton } from "../components/ui.jsx";
+import { ConfirmButton, EmptyState, ErrorState, Field, Modal, ProductName, Skeleton } from "../components/ui.jsx";
+import { PickScript } from "../components/Scripts.jsx";
 import LazyImage from "../components/LazyImage.jsx";
 import { useToast } from "../components/Toast.jsx";
 import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
@@ -228,6 +229,7 @@ export default function PlanDetail() {
   const drive = useDriveStatus();
   const plan = data?.item;
   const [copying, setCopying] = useState(false);
+  const [picking, setPicking] = useState(false);
 
   const onChanged = (item) => {
     qc.setQueryData(["plans", "one", id], { item });
@@ -376,7 +378,18 @@ export default function PlanDetail() {
         </ul>
       </section>
 
+      <Modal open={picking} onClose={() => setPicking(false)} title="Chọn lời đọc và mô tả đã lưu" wide>
+        {picking && <PickScript plan={plan} onPicked={onChanged} onClose={() => setPicking(false)} />}
+      </Modal>
       <section className="card stack">
+        {!productGone && (
+          <div className="sec-h">
+            Lời đọc và mô tả
+            <button type="button" className="btn btn-sm" onClick={() => setPicking(true)}>
+              Chọn từ lời đọc đã lưu
+            </button>
+          </div>
+        )}
         <TextBlock plan={plan} field="voiceText" label="Lời đọc" hint="Nội dung giọng đọc của video" onChanged={onChanged} />
         <TextBlock plan={plan} field="caption" label="Mô tả khi đăng" hint="Caption, hashtag đăng kèm video" onChanged={onChanged} />
       </section>

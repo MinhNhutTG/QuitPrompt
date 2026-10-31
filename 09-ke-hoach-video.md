@@ -73,7 +73,18 @@ Kế hoạch cũ có trường mục tiêu (số video); trường này không c
 - **Giọng đọc (text to speech):** kế hoạch chỉ có text lời đọc thì QuickEdit mở ở tab **Giọng**, đọc text thành mp3 ngay trên máy (VieNeu-TTS, giọng clone từ ghi âm mẫu hoặc giọng có sẵn), nút “Gửi lên kế hoạch” đưa mp3 vào mục Lời đọc. Không tốn phí và không qua máy chủ QuickPrompt.
 - Nhật ký ghi “Mở kế hoạch trong QuickEdit” và “Gửi file từ QuickEdit” (kèm tên mục: Video thành phẩm hoặc Lời đọc).
 
-## 8. Để sau
+## 8. Lời đọc và mô tả video đã lưu
+
+Mỗi lần viết lời đọc thường ra nhiều bản nhưng chỉ dùng một. Các bản còn lại được lưu ở sản phẩm để kế hoạch sau chọn lại, không phải viết lại.
+
+- **Trang chi tiết sản phẩm**, mục **Lời đọc & mô tả video**: mỗi mục là một cặp *lời đọc + mô tả video*, hoặc *chỉ mô tả video* (mô tả bắt buộc, lời đọc để trống được). Nút **+ Thêm lời đọc** mở form; lưu xong form vẫn mở để nhập tiếp bản khác.
+- Trạng thái **Chưa dùng** / **Đã dùng**, lọc theo trạng thái (mặc định Chưa dùng). Mỗi thẻ: Copy lời đọc, Copy mô tả, Đánh dấu đã dùng/chưa dùng, Sửa, Xoá (bấm hai lần). Thẻ đã dùng ghi ngày dùng và link tới kế hoạch đã dùng nó.
+- **Tạo kế hoạch:** chọn sản phẩm xong, tờ ghi chú có thêm ô **Lời đọc** liệt kê các cặp của sản phẩm (Chưa dùng trước). Chọn một cặp thì kế hoạch mới có sẵn lời đọc và mô tả khi đăng (trạng thái chuyển "Còn thiếu" nếu để "Chưa thực hiện"), cặp đó tự chuyển **Đã dùng**.
+- **Chi tiết kế hoạch:** nút **Chọn từ lời đọc đã lưu** thay cả hai text của kế hoạch bằng một cặp đã lưu, và đánh dấu cặp đó đã dùng.
+- Thêm, sửa, đánh dấu, xoá cần quyền "Thêm, sửa sản phẩm và ảnh"; ai cũng xem được. Xoá sản phẩm thì xoá luôn các lời đọc của nó.
+- Dữ liệu: collection `scripts` `{ product, voiceText, caption, used, usedAt, usedPlan, createdBy }`. API: `GET/POST /api/products/:id/scripts`, `PATCH/DELETE /api/products/:id/scripts/:sid` (`PATCH` nhận `voiceText`, `caption`, `used`); `POST /api/plans` và `PATCH /api/plans/:id` nhận thêm `script` (id cặp của đúng sản phẩm đó).
+
+## 9. Để sau
 
 - Hiện kế hoạch đang chạy ngay trong trang chi tiết sản phẩm.
 - Lịch sử ai đổi trạng thái lúc nào; thống kê theo người, theo tuần.

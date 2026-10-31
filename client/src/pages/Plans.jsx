@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, Modal, Pager, ProductName, Skeleton } from "../
 import ProductPicker from "../components/ProductPicker.jsx";
 import LazyImage from "../components/LazyImage.jsx";
 import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
+import { ScriptSelect } from "../components/Scripts.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { STATUS, isFinished, progressOf } from "../lib/plans.js";
 
@@ -63,7 +64,7 @@ function MemberSelect({ value, onChange, members, me, emptyLabel, label, disable
 const formOf = (plan, me, today) =>
   plan
     ? { product: plan.product._id, assignee: plan.assignee.id, dueDate: plan.dueDate || "", status: plan.status }
-    : { product: null, assignee: me || "", dueDate: today || "", status: "todo" };
+    : { product: null, assignee: me || "", dueDate: today || "", status: "todo", script: "" };
 
 const FIELDS = ["product", "assignee", "dueDate", "status"];
 
@@ -108,6 +109,8 @@ function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selecte
     mutationFn: (body) => (plan ? api.updatePlan(plan._id, body) : api.createPlans({ ...body, products: [form.product] })),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["plans"] });
+      // The chosen voice-over is now marked used on the product page.
+      if (!plan && form.script) qc.invalidateQueries({ queryKey: ["product", form.product, "scripts"] });
       if (res.driveWarning) toast("Đã thêm kế hoạch", { tone: "danger", detail: res.driveWarning });
       else toast(plan ? "Đã lưu kế hoạch" : "Đã thêm kế hoạch");
       onSaved?.();
@@ -130,6 +133,7 @@ function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selecte
     const body = locked ? {} : { assignee: form.assignee, dueDate: form.dueDate };
     // A saved note only sends the status when it changed, so it never undoes an automatic change made meanwhile.
     if (!plan || form.status !== base.status) body.status = form.status;
+    if (!plan && form.script) body.script = form.script;
     save.mutate(body);
   }
   const progress = plan && progressOf(plan);
@@ -174,7 +178,7 @@ function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selecte
         {plan && <LazyImage image={plan.product.images?.[0]} width={44} ratio="1 / 1" />}
         <div className="note-product-text">
           {!plan ? (
-            <ProductPicker value={form.product} onChange={(p) => set("product")(p?._id || null)} placeholder="Chọn sản phẩm" label="Sản phẩm" />
+            <ProductPicker value={form.product} onChange={(p) => setForm((f) => ({ ...f, product: p?._id || null, script: "" }))} placeholder="Chọn sản phẩm" label="Sản phẩm" />
           ) : gone ? (
             <span className="hint">{plan.product.name}</span>
           ) : (
@@ -191,6 +195,14 @@ function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selecte
       </div>
 
       <dl className="note-fields">
+        {!plan && form.product && (
+          <div>
+            <dt>Lời đọc</dt>
+            <dd>
+              <ScriptSelect productId={form.product} value={form.script} onChange={set("script")} />
+            </dd>
+          </div>
+        )}
         <div>
           <dt>Người làm</dt>
           <dd>

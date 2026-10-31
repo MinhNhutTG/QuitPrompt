@@ -64,3 +64,8 @@ export function mapCachedPrompts(qc, fn) {
     return { ...old, items: fn(old.items) };
   });
 }
+
+// The voice-overs and captions saved for one product, not used yet first. Under ["product"], so a team member's change
+// to them (a product action) refreshes it here too.
+export const useScripts = (productId) =>
+  useQuery({ queryKey: ["product", productId, "scripts"], queryFn: () => api.scripts(productId), enabled: Boolean(productId) });

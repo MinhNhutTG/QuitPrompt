@@ -4,6 +4,8 @@ import { z } from "zod";
 import { Product, MAX_IMAGES } from "../models/Product.js";
 import { Prompt } from "../models/Prompt.js";
 import { VideoPlan } from "../models/VideoPlan.js";
+import { Script } from "../models/Script.js";
+import { User } from "../models/User.js";
 import { ah, parse, assertId, escapeRegex, text, HttpError } from "../lib/http.js";
 import { requireCloudinary, uploadBuffer, destroyImages } from "../lib/cloudinary.js";
 import { can } from "../middleware/auth.js";
@@ -89,7 +91,7 @@ router.delete(
   ah(async (req, res) => {
     const item = await findProduct(req);
     const plans = await VideoPlan.find({ product: item._id }, { folder: 1 }).lean();
-    await Promise.all([Prompt.deleteMany({ product: item._id }), VideoPlan.deleteMany({ product: item._id })]);
+    await Promise.all([Prompt.deleteMany({ product: item._id }), VideoPlan.deleteMany({ product: item._id }), Script.deleteMany({ product: item._id })]);
     await item.deleteOne();
     await destroyImages(item.images.map((i) => i.publicId));
     await trashPlanFolders(plans);
@@ -191,6 +193,88 @@ router.post(
     item.images.unshift(img);
     await item.save();
     res.json({ item });
+  })
+);
+
+// ---- voice-overs and captions kept for the product (Script). The caption is required, the voice-over optional.
+// Anyone may read them; adding, changing, marking and deleting need product.edit. A plan made with one marks it used.
+
+const scriptSchema = z.object({
+  voiceText: text("lời đọc", 5000).optional().default(""),
+  caption: text("mô tả video", 5000, 1),
+});
+const scriptPatchSchema = z.object({
+  voiceText: text("lời đọc", 5000).optional(),
+  caption: text("mô tả video", 5000, 1).optional(),
+  used: z.boolean({ invalid_type_error: "Trạng thái không hợp lệ." }).optional(),
+});
+
+// Adds createdBy { id, displayName }.
+export async function decorateScripts(rows) {
+  const ids = [...new Set(rows.map((r) => String(r.createdBy)))];
+  const users = await User.find({ _id: { $in: ids } }, { username: 1, displayName: 1 }).lean();
+  const names = new Map(users.map((u) => [String(u._id), u.displayName || u.username]));
+  return rows.map(({ __v, ...r }) => ({ ...r, createdBy: { id: String(r.createdBy), displayName: names.get(String(r.createdBy)) || "(tài khoản đã xoá)" } }));
+}
+
+async function findScript(req) {
+  assertId(req.params.sid, "lời đọc");
+  const item = await Script.findOne({ _id: req.params.sid, product: req.params.id });
+  if (!item) throw new HttpError(404, "Không tìm thấy lời đọc này.");
+  return item;
+}
+
+// Not used yet first, then used; newest first within each.
+router.get(
+  "/:id/scripts",
+  ah(async (req, res) => {
+    const product = await findProduct(req);
+    const rows = await Script.find({ product: product._id }).sort({ used: 1, _id: -1 }).limit(500).lean();
+    res.json({ items: await decorateScripts(rows) });
+  })
+);
+
+router.post(
+  "/:id/scripts",
+  can("product.edit"),
+  ah(async (req, res) => {
+    const data = parse(scriptSchema, req.body);
+    const product = await findProduct(req);
+    const doc = await Script.create({ ...data, product: product._id, createdBy: req.userId });
+    res.locals.audit = { label: product.name };
+    const [item] = await decorateScripts([doc.toObject()]);
+    res.status(201).json({ item });
+  })
+);
+
+router.patch(
+  "/:id/scripts/:sid",
+  can("product.edit"),
+  ah(async (req, res) => {
+    const data = parse(scriptPatchSchema, req.body);
+    const doc = await findScript(req);
+    const { used, ...fields } = data;
+    doc.set(fields);
+    if (used !== undefined && used !== doc.used) {
+      doc.used = used;
+      doc.usedAt = used ? new Date() : null;
+      doc.usedPlan = null;
+    }
+    await doc.save();
+    res.locals.audit = { label: (await Product.findById(doc.product, { name: 1 }).lean())?.name || "" };
+    const [item] = await decorateScripts([doc.toObject()]);
+    res.json({ item });
+  })
+);
+
+router.delete(
+  "/:id/scripts/:sid",
+  can("product.edit"),
+  ah(async (req, res) => {
+    const doc = await findScript(req);
+    await doc.deleteOne();
+    res.locals.audit = { label: (await Product.findById(doc.product, { name: 1 }).lean())?.name || "" };
+    res.json({ ok: true });
   })
 );
 
