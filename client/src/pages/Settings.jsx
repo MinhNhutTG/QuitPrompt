@@ -41,7 +41,7 @@ function TemplateBlock() {
   return (
     <section className="card form" id="template">
       <h2>Template prompt</h2>
-      <p className="hint">Sửa template đổi mọi prompt tạo từ nay về sau. Prompt đã lưu giữ nguyên văn.</p>
+      <p className="hint">Sửa template đổi mọi prompt kiểu “Trình diễn” tạo từ nay về sau (kiểu “Selfie che mặt” dùng template cố định). Prompt đã lưu giữ nguyên văn.</p>
       <Field label="Template">
         <textarea className="input mono" rows={18} value={template} maxLength={30000} spellCheck={false} onChange={(e) => setTemplate(e.target.value)} />
       </Field>

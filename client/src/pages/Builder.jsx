@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { useCan } from "../auth.jsx";
 import { buildIndex } from "../lib/actions.js";
-import { buildPrompt, DEFAULT_STATE, DURATIONS, normalizeSettings, sanitizeIds } from "../lib/prompt.js";
+import { buildPrompt, DEFAULT_STATE, DURATIONS, KINDS, normalizeSettings, sanitizeIds } from "../lib/prompt.js";
 import { putProduct, useProducts, useSettings } from "../lib/queries.js";
 import { store } from "../lib/util.js";
 import { Field, Seg } from "../components/ui.jsx";
@@ -112,6 +112,13 @@ export default function Builder() {
             <h2 className="sec-h">
               <span className="sec-n" aria-hidden="true">2</span>Người mẫu và thời lượng
             </h2>
+            <div className="row">
+              <span className="row-label">Kiểu video</span>
+              <Seg name="kind" label="Kiểu video" value={state.kind} onChange={(kind) => set({ kind })} options={KINDS} />
+            </div>
+            {state.kind === "selfie" && (
+              <p className="hint">Người mẫu cầm điện thoại tay phải che kín mặt suốt clip, chỉ tay trái cử động. Template này cố định, không sửa trong Cài đặt.</p>
+            )}
             <div className="row">
               <span className="row-label">Người mẫu</span>
               <Seg

@@ -33,6 +33,50 @@ Platform: TikTok and TikTok Shop.
 Motion: smooth, natural, realistic.
 Priority: accurately showcase the original {{garment}} while preserving the reference model and setting.`;
 
+// Option 2: mirror-selfie showcase, the phone hides the face in every frame.
+export const SELFIE_TEMPLATE = `{{continue}}The {{person}} from the reference image, wearing the product shown in it, performs one continuous {{duration}}-second mirror-selfie style product showcase in the same setting as the reference image. ONE SINGLE UNBROKEN TAKE, no cuts, no scene changes.
+
+FACE COVERED BY PHONE (mandatory, every frame): {{Pronoun}} holds a plain black smartphone vertically in {{possessive}} right hand directly in front of {{possessive}} face, its back with the camera lenses facing the viewer, exactly like a mirror selfie. The phone fully covers {{possessive}} face from forehead to chin in every single frame, from the first frame to the last. The phone never lowers, never moves aside, and {{possessive}} face is never visible. {{Possessive}} right hand stays fixed holding the phone; all movement comes from {{possessive}} body, legs and {{possessive}} relaxed left arm. The phone has no logo and no text.
+
+Product: reproduce the product exactly as in the reference image, with no changes to color, material, pattern, print, cut or details.
+
+Action — one continuous chain of movements, each gesture flowing into the next:
+{{actions}}
+
+Motion quality: every movement is slow, fluid and graceful, like a high-end fashion film. Each gesture flows into the next without stopping, with natural weight shifts and a steady unhurried pace. No sudden, jerky or fast movements. Every hand gesture above is made with the left hand only; the right hand never leaves the phone. {{Possessive}} hands never touch, pull, smooth or adjust the {{garment}}; {{possessive}} left hand stays relaxed away from it. The {{garment}} moves only with {{possessive}} body movements.
+
+PRODUCT FIDELITY CONSTRAINTS
+The {{garment}} is a real product. Keep it exactly as shown in the reference image in every frame: same color, same material and texture, same pattern size and spacing, same buttons, same closures, same length and same cut. Any print, text or logo already on the {{garment}} stays exactly the same in every frame: same color, same position, same size, same spelling; the letters never change, blur, warp or rearrange. Do not add any new detail: no pockets, zippers, extra buttons, belts, straps, logos, labels, text, patches, prints, embroidery, trims or lining.{{closed_line}} The pattern and print stay fixed on the material, moving only with it. Accessories stay exactly as shown.
+
+Environment: the same setting as in the reference image, unchanged, with soft lighting that stays consistent throughout. No signs, no store name, no readable text in the background, no logos, no other people.
+
+Style: photorealistic lifestyle fashion commercial, natural skin texture on hands and arms, true-to-life colors, the colors of the {{garment}} accurate and crisp.
+
+Camera: locked-off tripod at chest height, no pan, no zoom, no camera movement. The framing changes only because {{pronoun}} walks toward and away from the camera. Focus stays on {{object}}. One continuous take from the first frame to the last.
+
+Quality: 1080p, 24fps, smooth natural motion, sharp detail on the fabric texture and any print. {{Possessive}} hair, the phone position and the {{garment}} stay identical throughout. Natural hands with five fingers. {{Pronoun}} does not speak.
+
+Audio: {{audio}}
+
+No visible face, no lowering the phone, no phone logo, no horizontal video, no 16:9, no square format, no scene cuts, no transitions, no sudden zooms, no camera shake, no product redesign, no changing {{garment}} color, no changing pattern or print, no missing details, no fabric flickering, no distorted seams{{extra_neg}}, no hands touching the {{garment}}, no deformed hands, no extra fingers, no sudden pose changes, no clothing changes, no background changes, no added logos, no subtitles, no text overlays, no watermarks.
+
+FINAL REQUIREMENTS
+
+Duration: exactly {{duration}} seconds.
+Aspect ratio: 9:16 vertical.
+Platform: TikTok and TikTok Shop.
+Motion: smooth, natural, realistic.
+Priority: accurately showcase the original {{garment}} while the phone keeps the face hidden.`;
+
+export const KINDS = [
+  { value: "show", label: "Trình diễn" },
+  { value: "selfie", label: "Selfie che mặt" },
+];
+
+// Actions that need the phone hand or show the face: kept out of random selfie chains, warned when picked.
+const NO_SELFIE = new Set(["t5", "t6", "p3", "e6"]);
+export const selfieUnfit = (a) => a && !a.custom && (a.cat === "head" || NO_SELFIE.has(a.id));
+
 export const DEFAULT_NEGATIVE =
   "wind, breeze, fluttering, camera cut, jump cut, scene change, zoom, camera pan, back view, extra people, pockets, zipper, logo, label, text, extra buttons, opened garment, changed pattern, hand touching garment, hands pulling fabric, morphing, jerky motion, watermark";
 
@@ -48,6 +92,7 @@ const DEFAULT_MID_COUNT = { 10: 3, 15: 4, 20: 6 };
 
 export const DEFAULT_STATE = {
   productId: null,
+  kind: "show",
   gender: "f",
   dur: 10,
   style: "bold",
@@ -73,6 +118,7 @@ export function normalizeSettings(raw) {
   }
   const id = (v, fallback) => (typeof v === "string" && v ? LEGACY_IDS[v] || v : fallback);
   return {
+    kind: s.kind === "selfie" ? "selfie" : "show",
     gender: s.gender === "m" ? "m" : "f",
     dur: DURATIONS.includes(Number(s.dur)) ? Number(s.dur) : 10,
     style: s.style === "soft" ? "soft" : "bold",
@@ -166,19 +212,23 @@ export function buildPrompt(state, index, { template, negative } = {}) {
   v.extra_neg = extraNegList(state.extraNeg).map((x) => ", " + x).join("");
   v.audio = state.audio === "amb" ? "soft quiet ambience only, no music, no speech." : "none.";
 
-  // Unknown variables stay visible as {{...}} so a broken template is easy to spot.
-  let prompt = (template || DEFAULT_TEMPLATE).replace(/\{\{(\w+)\}\}/g, (m, k) => (k in v ? v[k] : m));
+  // Settings edit only the first template; the selfie one is fixed. Unknown variables stay visible as {{...}}.
+  const selfie = state.kind === "selfie";
+  let prompt = (selfie ? SELFIE_TEMPLATE : template || DEFAULT_TEMPLATE).replace(/\{\{(\w+)\}\}/g, (m, k) => (k in v ? v[k] : m));
   if (state.cont) prompt = prompt.replace("Continue exactly from the provided image: The ", "Continue exactly from the provided image: the ");
 
   const baseNeg = negative || DEFAULT_NEGATIVE;
   const needsBack = beats.some((b) => b.action.conds.includes("B"));
-  const negativeOut = needsBack
+  let negativeOut = needsBack
     ? baseNeg.split(",").map((x) => x.trim()).filter((x) => x && x.toLowerCase() !== "back view").join(", ")
     : baseNeg;
+  if (selfie) negativeOut += ", visible face, lowered phone, phone moving away from face, phone logo";
 
   const warnings = [];
   for (const b of beats) {
     for (const c of b.action.conds) warnings.push({ id: b.action.id + c, text: `“${b.action.label}” (${FLAGS[c].label}): ${FLAGS[c].warn}` });
+    if (selfie && selfieUnfit(b.action))
+      warnings.push({ id: b.action.id + "selfie", text: `“${b.action.label}”: mặt bị điện thoại che, tay phải cầm máy, nên động tác này dễ lỗi. Chọn động tác khác.` });
   }
   const k = state.mid.length;
   const perMid = k ? (state.dur - 2 - (state.endOn ? 2 : 0)) / k : 0;
@@ -198,8 +248,8 @@ export function buildPrompt(state, index, { template, negative } = {}) {
 
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
-function pools(style) {
-  const safe = ACTIONS.filter((a) => a.conds.length === 0 && !(style === "soft" && a.bold));
+function pools(style, kind) {
+  const safe = ACTIONS.filter((a) => a.conds.length === 0 && !(style === "soft" && a.bold) && !(kind === "selfie" && selfieUnfit(a)));
   return {
     open: safe.filter((a) => a.roles.includes("o")),
     mid: safe.filter((a) => a.roles.includes("m") && a.cat !== "end"),
@@ -215,7 +265,7 @@ function midCandidates(list, used) {
 }
 
 export function shuffleChain(state) {
-  const p = pools(state.style);
+  const p = pools(state.style, state.kind);
   const bold = state.style !== "soft";
   const k = state.mid.length || DEFAULT_MID_COUNT[state.dur] || 3;
   const used = new Set();
@@ -241,7 +291,7 @@ export function shuffleChain(state) {
 
 // One more safe middle action that fits the current chain.
 export function nextMid(state) {
-  const p = pools(state.style);
+  const p = pools(state.style, state.kind);
   const used = new Set([state.open, ...state.mid]);
   const list = midCandidates(p.mid, used);
   return pick(list.length ? list : p.mid).id;

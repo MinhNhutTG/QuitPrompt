@@ -61,6 +61,14 @@ Priority: accurately showcase the original {{garment}} while preserving the refe
 wind, breeze, fluttering, camera cut, jump cut, scene change, zoom, camera pan, back view, extra people, pockets, zipper, logo, label, text, extra buttons, opened garment, changed pattern, hand touching garment, hands pulling fabric, morphing, jerky motion, watermark
 ```
 
+### 2.1 Kiểu video thứ hai: Selfie che mặt
+
+Ở mục 2 của trang tạo prompt có lựa chọn **Kiểu video**: "Trình diễn" (template ở trên) hoặc "Selfie che mặt" (`SELFIE_TEMPLATE` trong `client/src/lib/prompt.js`). Kiểu selfie: người mẫu cầm điện thoại bằng tay phải che kín mặt suốt clip như chụp gương, chỉ thân, chân và tay trái cử động. Template này dùng cùng bảng biến, nhưng cố định trong code: Cài đặt chỉ sửa template "Trình diễn".
+
+- Negative đầu ra được nối thêm: `visible face, lowered phone, phone moving away from face, phone logo`.
+- Động tác nhóm "Đầu & biểu cảm" cùng `t5`, `t6`, `p3`, `e6` (cần hai tay, tay gần mặt, hoặc khoe mặt) không vào chuỗi ngẫu nhiên, và hiện cảnh báo nếu người dùng tự chọn.
+- Kiểu video (`kind`) được lưu cùng prompt; prompt cũ không có `kind` thì mặc định "Trình diễn".
+
 ## 3. Bảng biến
 
 | Biến | Giá trị | Nguồn |
