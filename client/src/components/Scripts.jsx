@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
@@ -159,8 +159,79 @@ const FILTERS = [
   { value: "all", label: "Tất cả" },
 ];
 
+// "Nhập Excel" and "Tải file mẫu": the template has two columns, Lời đọc and Mô tả video, one pair per row.
+function ExcelButtons({ productId, productName, canImport }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const input = useRef(null);
+  const [busy, setBusy] = useState("");
+
+  async function template() {
+    setBusy("template");
+    try {
+      const { downloadTemplate } = await import("../lib/scriptExcel.js");
+      await downloadTemplate(productName);
+    } catch (e) {
+      toast("Không tạo được file mẫu.", { tone: "danger", detail: e.message });
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function importFile(file) {
+    setBusy("import");
+    try {
+      const { readScripts } = await import("../lib/scriptExcel.js");
+      let read;
+      try {
+        read = await readScripts(file);
+      } catch {
+        throw new Error("Không đọc được file. Chọn file Excel .xlsx (có thể bấm “Tải file mẫu” để lấy file đúng dạng).");
+      }
+      const { items, missing, tooLong } = read;
+      const notes = [
+        missing.length && `Bỏ qua dòng ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? "…" : ""}: thiếu mô tả video.`,
+        tooLong.length && `Bỏ qua dòng ${tooLong.slice(0, 10).join(", ")}${tooLong.length > 10 ? "…" : ""}: dài quá 5000 ký tự.`,
+      ].filter(Boolean);
+      if (!items.length) throw new Error(["File không có dòng nào để nhập.", ...notes].join(" "));
+      if (items.length > 500) throw new Error(`File có ${items.length} dòng, mỗi lần nhập tối đa 500 dòng.`);
+      const res = await api.importScripts(productId, items);
+      refresh(qc, productId);
+      if (res.skipped) notes.unshift(`${res.skipped} dòng đã có sẵn nên không thêm lại.`);
+      toast(`Đã nhập ${res.items.length} lời đọc`, { tone: notes.length ? "info" : "ok", detail: notes.join(" ") || undefined });
+    } catch (e) {
+      toast(e.message, { tone: "danger" });
+    } finally {
+      setBusy("");
+      if (input.current) input.current.value = "";
+    }
+  }
+
+  return (
+    <>
+      <button type="button" className="btn btn-ghost" onClick={template} disabled={Boolean(busy)}>
+        {busy === "template" ? "Đang tạo..." : "Tải file mẫu"}
+      </button>
+      {canImport && (
+        <>
+          <input
+            ref={input}
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            hidden
+            onChange={(e) => e.target.files?.[0] && importFile(e.target.files[0])}
+          />
+          <button type="button" className="btn" onClick={() => input.current?.click()} disabled={Boolean(busy)}>
+            {busy === "import" ? "Đang nhập..." : "Nhập Excel"}
+          </button>
+        </>
+      )}
+    </>
+  );
+}
+
 // The section on the product page.
-export function ProductScripts({ productId }) {
+export function ProductScripts({ productId, productName }) {
   const { data, isLoading, error, refetch } = useScripts(productId);
   const editable = useCan()("product.edit");
   const [adding, setAdding] = useState(false);
@@ -183,7 +254,10 @@ export function ProductScripts({ productId }) {
             {items.length ? `${items.length - nUsed} chưa dùng · ${nUsed} đã dùng. ` : ""}Lưu sẵn để khi tạo kế hoạch chỉ cần chọn, không phải viết lại.
           </p>
         </div>
-        {addButton}
+        <div className="btns">
+          <ExcelButtons productId={productId} productName={productName} canImport={editable} />
+          {addButton}
+        </div>
       </div>
       {adding && (
         <div className="card">

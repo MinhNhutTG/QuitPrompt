@@ -247,6 +247,26 @@ router.post(
   })
 );
 
+// Many at once, from an Excel file read in the browser. Pairs the product already has (same voice-over and caption)
+// and repeats inside the file are skipped.
+router.post(
+  "/:id/scripts/import",
+  can("product.edit"),
+  ah(async (req, res) => {
+    const { items } = parse(
+      z.object({ items: z.array(scriptSchema, { required_error: "File không có dòng nào." }).min(1, "File không có dòng nào.").max(500, "Mỗi lần nhập tối đa 500 dòng.") }),
+      req.body
+    );
+    const product = await findProduct(req);
+    const key = (s) => JSON.stringify([s.voiceText, s.caption]);
+    const seen = new Set((await Script.find({ product: product._id }, { voiceText: 1, caption: 1 }).lean()).map(key));
+    const fresh = items.filter((s) => !seen.has(key(s)) && seen.add(key(s)));
+    const docs = fresh.length ? await Script.insertMany(fresh.map((s) => ({ ...s, product: product._id, createdBy: req.userId }))) : [];
+    res.locals.audit = { label: product.name };
+    res.status(201).json({ items: await decorateScripts(docs.map((d) => d.toObject())), skipped: items.length - docs.length });
+  })
+);
+
 router.patch(
   "/:id/scripts/:sid",
   can("product.edit"),

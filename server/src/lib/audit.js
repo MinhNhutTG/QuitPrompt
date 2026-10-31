@@ -15,6 +15,7 @@ const RULES = [
   ["DELETE", /^\/api\/products\/(\w+)\/images$/, "product.images.delete", "Xoá ảnh sản phẩm", "product"],
   ["POST", /^\/api\/products\/(\w+)\/cover$/, "product.cover", "Đổi ảnh bìa", "product"],
   ["POST", /^\/api\/products\/(\w+)\/scripts$/, "product.script.create", "Lưu lời đọc, mô tả video", "product"],
+  ["POST", /^\/api\/products\/(\w+)\/scripts\/import$/, "product.script.import", "Nhập lời đọc từ Excel", "product"],
   ["PATCH", /^\/api\/products\/(\w+)\/scripts\/\w+$/, "product.script.update", "Sửa lời đọc, mô tả video", "product"],
   ["DELETE", /^\/api\/products\/(\w+)\/scripts\/\w+$/, "product.script.delete", "Xoá lời đọc, mô tả video", "product"],
   ["POST", /^\/api\/prompts$/, "prompt.create", "Lưu prompt", "prompt"],

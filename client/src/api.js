@@ -125,6 +125,7 @@ export const api = {
   updateProduct: (id, body) => request("PATCH", `/products/${id}`, body),
   scripts: (productId) => request("GET", `/products/${productId}/scripts`),
   createScript: (productId, body) => request("POST", `/products/${productId}/scripts`, body),
+  importScripts: (productId, items) => request("POST", `/products/${productId}/scripts/import`, { items }),
   updateScript: (productId, id, body) => request("PATCH", `/products/${productId}/scripts/${id}`, body),
   deleteScript: (productId, id) => request("DELETE", `/products/${productId}/scripts/${id}`),
   deleteProduct: (id) => request("DELETE", `/products/${id}`),
