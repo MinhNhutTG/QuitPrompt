@@ -21,6 +21,7 @@ import transferRoutes from "./routes/transfer.js";
 import adminRoutes from "./routes/admin.js";
 import driveRoutes from "./routes/drive.js";
 import liveRoutes from "./routes/live.js";
+import { pcAdminRoutes, agentRoutes } from "./routes/pc.js";
 import { ActivityLog } from "./models/ActivityLog.js";
 import { ChatMessage } from "./models/ChatMessage.js";
 import { ensureStarterRoles } from "./lib/permissions.js";
@@ -116,6 +117,9 @@ app.use("/api/drive", requireAuth, driveRoutes);
 // Realtime: the event stream, the team chat and the notifications feed (routes/live.js).
 app.use("/api", liveRoutes);
 // Each route checks its own permission: admin.view to look, an admin to change accounts and roles.
+// Tắt máy tính từ xa (tài liệu 15): the admin's buttons, and the program on the computer (its own token).
+app.use("/api/admin/pc", requireAuth, pcAdminRoutes);
+app.use("/api/agent", agentRoutes);
 app.use("/api/admin", requireAuth, adminRoutes);
 app.use("/api", (req, res, next) => next(new HttpError(404, "Không có đường dẫn API này.")));
 

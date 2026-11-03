@@ -177,6 +177,12 @@ export const api = {
   adminCreateRole: (body) => request("POST", "/admin/roles", body),
   adminUpdateRole: (key, body) => request("PATCH", `/admin/roles/${key}`, body),
   adminDeleteRole: (key) => request("DELETE", `/admin/roles/${key}`),
+  // Tắt máy tính từ xa (Quản trị → Máy tính).
+  pcStatus: () => request("GET", "/admin/pc"),
+  pcPair: () => request("POST", "/admin/pc/pair"),
+  pcUnpair: () => request("DELETE", "/admin/pc"),
+  pcShutdown: (minutes) => request("POST", "/admin/pc/shutdown", { minutes }),
+  pcCancel: () => request("POST", "/admin/pc/cancel"),
   adminTiers: () => request("GET", "/admin/tiers"),
   adminUpdateTier: (key, body) => request("PATCH", `/admin/tiers/${key}`, body),
 

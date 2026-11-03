@@ -50,6 +50,10 @@ const RULES = [
   ["POST", /^\/api\/admin\/roles$/, "admin.role.create", "Admin: tạo vai trò", "admin"],
   ["PATCH", /^\/api\/admin\/roles\/(\w+)$/, "admin.role.update", "Admin: sửa vai trò", "admin"],
   ["DELETE", /^\/api\/admin\/roles\/(\w+)$/, "admin.role.delete", "Admin: xoá vai trò", "admin"],
+  ["POST", /^\/api\/admin\/pc\/pair$/, "admin.pc.pair", "Admin: kết nối máy tính", "admin"],
+  ["DELETE", /^\/api\/admin\/pc$/, "admin.pc.unpair", "Admin: ngắt kết nối máy tính", "admin"],
+  ["POST", /^\/api\/admin\/pc\/shutdown$/, "admin.pc.shutdown", "Admin: tắt máy tính", "admin"],
+  ["POST", /^\/api\/admin\/pc\/cancel$/, "admin.pc.cancel", "Admin: huỷ tắt máy tính", "admin"],
   ["PATCH", /^\/api\/admin\/tiers\/(\w+)$/, "admin.tier.update", "Admin: sửa hạng tài khoản", "admin"],
 ];
 

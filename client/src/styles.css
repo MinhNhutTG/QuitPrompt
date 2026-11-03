@@ -3757,3 +3757,62 @@ select.status-select:disabled {
 .script-form {
   gap: 12px;
 }
+
+/* ---------- Quản trị → Máy tính */
+.pc-card {
+  display: grid;
+  gap: 16px;
+}
+.pc-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pc-head h2 {
+  font-size: 18px;
+}
+.pc-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 99px;
+  background: var(--line-strong);
+}
+.pc-dot.is-on {
+  background: var(--ok);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 25%, transparent);
+}
+.pc-alert {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 14px;
+}
+.pc-actions {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+.pc-steps {
+  display: grid;
+  gap: 10px;
+  padding-left: 20px;
+  margin: 0;
+}
+.pc-code {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--sunk);
+  border: 1px solid var(--line);
+}
+.pc-code code {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12.5px;
+}

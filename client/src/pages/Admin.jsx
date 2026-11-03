@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { useAdminLogs, useAdminRoles, useAdminStats, useAdminTiers, useAdminUsers } from "../lib/queries.js";
 import { addDays, fmtDate, fmtDateTime, fmtDateTimeFull, useDebounce, vnDay } from "../lib/util.js";
-import { ConfirmButton, EmptyState, ErrorState, Field, Modal, Pager, Skeleton } from "../components/ui.jsx";
+import { ConfirmButton, EmptyState, ErrorState, Field, Modal, Pager, Seg, Skeleton } from "../components/ui.jsx";
 import { useToast } from "../components/Toast.jsx";
 
 const TABS = [
   { value: "overview", label: "Tổng quan" },
   { value: "users", label: "Thành viên" },
   { value: "roles", label: "Phân quyền & hạng" },
+  { value: "pc", label: "Máy tính" },
   { value: "logs", label: "Nhật ký" },
 ];
 
@@ -785,6 +786,211 @@ function Tiers() {
   );
 }
 
+// ---- Tắt máy tính từ xa (tài liệu 15)
+
+const PC_KEY = ["admin", "pc"];
+
+function useNow(ms) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), ms);
+    return () => clearInterval(t);
+  }, [ms]);
+  return now;
+}
+
+const mmss = (ms) => {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
+
+function PairSteps({ token, onDone }) {
+  const toast = useToast();
+  const origin = window.location.origin;
+  const setup = `node agent.mjs setup ${origin} ${token}`;
+  const copy = async (t) => {
+    try {
+      await navigator.clipboard.writeText(t);
+      toast("Đã copy");
+    } catch {
+      toast("Trình duyệt chặn copy. Bôi đen rồi nhấn Ctrl+C.", { tone: "danger" });
+    }
+  };
+  return (
+    <div className="form">
+      <p>
+        Mã kết nối chỉ hiện <b>một lần</b>. Làm 3 bước trên máy tính cần tắt (cần có Node, máy đang chạy QuickEdit là có):
+      </p>
+      <ol className="pc-steps">
+        <li>
+          Mở PowerShell trong thư mục <code>tools\pc-agent</code> của QuickPrompt (hoặc chép thư mục đó sang máy kia).
+        </li>
+        <li>
+          Lưu mã:
+          <div className="pc-code">
+            <code>{setup}</code>
+            <button type="button" className="btn btn-sm" onClick={() => copy(setup)}>
+              Copy
+            </button>
+          </div>
+        </li>
+        <li>
+          Cho nó tự chạy mỗi khi mở máy và chạy luôn bây giờ:
+          <div className="pc-code">
+            <code>powershell -ExecutionPolicy Bypass -File install.ps1</code>
+            <button type="button" className="btn btn-sm" onClick={() => copy("powershell -ExecutionPolicy Bypass -File install.ps1")}>
+              Copy
+            </button>
+          </div>
+        </li>
+      </ol>
+      <p className="hint">Vài giây sau, trang này hiện “Đang bật”. Gỡ: chạy uninstall.ps1 trong cùng thư mục.</p>
+      <div className="btns btns-end">
+        <button type="button" className="btn btn-primary" onClick={onDone}>
+          Xong
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PcPanel() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  // Every few seconds, so "đang bật" and the countdown stay true while the tab is open.
+  const { data, isLoading, error, refetch } = useQuery({ queryKey: PC_KEY, queryFn: api.pcStatus, refetchInterval: 4000 });
+  const now = useNow(1000);
+  const [minutes, setMinutes] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const [token, setToken] = useState("");
+
+  async function act(fn, ok) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await fn();
+      if (r?.token) setToken(r.token);
+      if (r) qc.setQueryData(PC_KEY, r);
+      if (ok) toast(ok);
+    } catch (e) {
+      toast(e.message, { tone: "danger" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (isLoading) return <Skeleton h={200} r={12} />;
+  if (error) return <ErrorState error={error} onRetry={refetch} />;
+
+  const pairModal = (
+    <Modal open={Boolean(token)} onClose={() => setToken("")} title="Kết nối máy tính">
+      {token && <PairSteps token={token} onDone={() => setToken("")} />}
+    </Modal>
+  );
+
+  if (!data.paired)
+    return (
+      <section className="stack">
+        <EmptyState
+          title="Chưa kết nối máy tính nào"
+          action={
+            isAdmin && (
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => act(api.pcPair)}>
+                Kết nối máy tính
+              </button>
+            )
+          }
+        >
+          Cài một chương trình nhỏ lên máy tính để tắt nó từ trang này, kể cả khi bạn đang ở xa (trên điện thoại).
+        </EmptyState>
+        {pairModal}
+      </section>
+    );
+
+  const pending = data.pending;
+  const off = data.shutdownAt ? new Date(data.shutdownAt).getTime() : 0;
+  const shuttingDown = off && off > now;
+  const failed = data.result && !data.result.ok;
+
+  return (
+    <section className="stack">
+      <div className="card pc-card">
+        <div className="pc-head">
+          <span className={`pc-dot ${data.online ? "is-on" : ""}`} aria-hidden="true" />
+          <div>
+            <h2>{data.name || "Máy tính"}</h2>
+            <p className="hint">
+              {data.online ? "Đang bật, sẵn sàng nhận lệnh" : data.lastSeenAt ? `Không kết nối. Lần cuối: ${fmtDateTime(data.lastSeenAt)}` : "Chưa thấy máy kết nối lần nào"}
+            </p>
+          </div>
+        </div>
+
+        {shuttingDown ? (
+          <div className="pc-alert" role="status">
+            Máy sẽ tắt lúc <b>{new Date(off).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</b>, còn <b>{mmss(off - now)}</b>.
+          </div>
+        ) : pending ? (
+          <div className="pc-alert" role="status">
+            {pending.kind === "shutdown" ? "Đang gửi lệnh tắt máy..." : "Đang gửi lệnh huỷ..."}
+          </div>
+        ) : null}
+        {failed && !pending && (
+          <p className="error" role="alert">
+            Lệnh {data.result.kind === "shutdown" ? "tắt máy" : "huỷ"} lúc {fmtDateTime(data.result.at)} không chạy được: {data.result.message || "không rõ lý do"}.
+          </p>
+        )}
+
+        {isAdmin ? (
+          <div className="pc-actions">
+            <Seg
+              name="pc-delay"
+              label="Tắt sau"
+              value={minutes}
+              onChange={setMinutes}
+              options={data.delays.map((m) => ({ value: m, label: m < 60 ? `${m} phút` : "1 giờ" }))}
+            />
+            <div className="btns">
+              <ConfirmButton
+                className="btn btn-danger"
+                confirmLabel={`Bấm lần nữa để ${shuttingDown ? "đổi thành" : "tắt"} sau ${minutes < 60 ? `${minutes} phút` : "1 giờ"}`}
+                disabled={busy || !data.online || Boolean(pending)}
+                onConfirm={() => act(() => api.pcShutdown(minutes), "Đã gửi lệnh tắt máy")}
+              >
+                {shuttingDown ? "Đổi giờ tắt" : "Tắt máy"}
+              </ConfirmButton>
+              {(shuttingDown || pending?.kind === "shutdown") && (
+                <button type="button" className="btn" disabled={busy || !data.online} onClick={() => act(api.pcCancel, "Đã gửi lệnh huỷ tắt máy")}>
+                  Huỷ tắt máy
+                </button>
+              )}
+            </div>
+            {!data.online && <p className="hint">Máy đang không kết nối nên chưa gửi lệnh được (đã tắt, ngủ hoặc mất mạng).</p>}
+          </div>
+        ) : (
+          <p className="hint">Chỉ quản trị viên mới tắt được máy.</p>
+        )}
+      </div>
+
+      {isAdmin && (
+        <div className="sec-row">
+          <p className="muted">Kết nối từ {fmtDateTime(data.pairedAt)}. Tạo mã mới thì chương trình đang chạy trên máy phải nhập lại mã.</p>
+          <div className="btns">
+            <ConfirmButton className="btn btn-sm" confirmLabel="Bấm lần nữa để tạo mã mới" disabled={busy} onConfirm={() => act(api.pcPair)}>
+              Tạo mã mới
+            </ConfirmButton>
+            <ConfirmButton className="btn btn-sm btn-danger-ghost" confirmLabel="Bấm lần nữa để ngắt" disabled={busy} onConfirm={() => act(api.pcUnpair, "Đã ngắt kết nối máy tính")}>
+              Ngắt kết nối
+            </ConfirmButton>
+          </div>
+        </div>
+      )}
+      {pairModal}
+    </section>
+  );
+}
+
 // ---- activity log
 
 function metaText(log) {
@@ -988,6 +1194,7 @@ export default function Admin() {
       {tab === "overview" && <Overview />}
       {tab === "users" && <Users onShowLogs={(user) => setParams({ tab: "logs", user })} />}
       {tab === "roles" && <Roles />}
+      {tab === "pc" && <PcPanel />}
       {tab === "logs" && <Logs params={logParams} set={set} />}
     </div>
   );

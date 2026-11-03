@@ -3,3 +3,5 @@ dist/
 .env
 *.log
 .DS_Store
+# Mã kết nối máy tính: bí mật, mỗi máy một file
+tools/pc-agent/config.json
