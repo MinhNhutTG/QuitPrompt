@@ -944,7 +944,10 @@ function TtsKeys() {
                   <tr key={k.id} className={k.active ? "" : "is-off"}>
                     <td>
                       <b>{k.name}</b>
-                      <span className="hint key-mask">…{k.last4}</span>
+                      <span className="hint key-mask">
+                        …{k.last4}
+                        {k.tier && ` · gói ${k.tier === "free" ? "Free" : k.tier.charAt(0).toUpperCase() + k.tier.slice(1)}`}
+                      </span>
                     </td>
                     <td data-label="Credit tháng này">
                       <KeyCredit k={k} />

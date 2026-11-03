@@ -29,7 +29,8 @@ function Body({ plan, onChanged, onClose }) {
   const models = data?.models || [];
   // A remembered choice that is gone from the account falls back: Eleven v3 when there, else the first.
   useEffect(() => {
-    if (voices.length && !voices.some((v) => v.id === voiceId)) setVoiceId(voices[0].id);
+    const ok = voices.filter((v) => !v.paidOnly);
+    if (ok.length && !ok.some((v) => v.id === voiceId)) setVoiceId(ok[0].id);
     if (models.length && !models.some((m) => m.id === modelId)) setModelId((models.find((m) => m.id === "eleven_v3") || models[0]).id);
   }, [voices, models]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -138,11 +139,12 @@ function Body({ plan, onChanged, onClose }) {
             {groups.map(([label, list]) => (
               <optgroup key={label} label={label}>
                 {list.map((v) => (
-                  <option key={v.id} value={v.id}>
+                  <option key={v.id} value={v.id} disabled={v.paidOnly}>
                     {v.name}
                     {[v.gender === "female" ? "nữ" : v.gender === "male" ? "nam" : "", v.accent].filter(Boolean).length
                       ? ` (${[v.gender === "female" ? "nữ" : v.gender === "male" ? "nam" : "", v.accent].filter(Boolean).join(", ")})`
                       : ""}
+                    {v.paidOnly ? " — cần tài khoản trả phí" : ""}
                   </option>
                 ))}
               </optgroup>
@@ -166,6 +168,9 @@ function Body({ plan, onChanged, onClose }) {
         </div>
       )}
       {!models.length && <p className="error">Tài khoản ElevenLabs không có model nào đọc được tiếng Việt.</p>}
+      {voices.some((v) => v.paidOnly) && (
+        <p className="hint">Giọng ghi “cần tài khoản trả phí” lấy từ Voice Library: ElevenLabs không cho tài khoản gói Free dùng chúng qua API.</p>
+      )}
 
       <p className="hint">
         {data.credits?.limit > 0 && `Còn ${nf.format(data.credits.left)} / ${nf.format(data.credits.limit)} ký tự trên ${data.credits.keys} key. `}

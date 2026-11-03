@@ -12,6 +12,8 @@ const schema = new mongoose.Schema(
     // ok | empty (out of credit) | invalid (refused by ElevenLabs) | error (could not check)
     status: { type: String, default: "ok" },
     statusText: { type: String, default: "" },
+    // ElevenLabs plan: "free" may not read with Voice Library voices through the API.
+    tier: { type: String, default: "" },
     used: { type: Number, default: 0 },
     limit: { type: Number, default: 0 },
     resetAt: { type: Date, default: null },

@@ -18,7 +18,7 @@ export const keyBox = sealer("elevenlabs");
 class KeyProblem extends Error {
   constructor(kind, message) {
     super(message);
-    this.kind = kind; // quota | auth
+    this.kind = kind; // quota | auth (the key is marked) | voice (this voice only: the key stays usable)
   }
 }
 
@@ -32,10 +32,14 @@ const PERMS = {
 
 function elError(status, data) {
   const d = data?.detail;
-  const code = d?.status || d?.code || "";
+  // ElevenLabs puts its reason in status, code or both ({ status: "payment_required", code: "paid_plan_required" }).
+  const codes = new Set([d?.status, d?.code].filter(Boolean));
   const msg = typeof d === "string" ? d : d?.message || "";
-  if (code === "quota_exceeded" || status === 402) return new KeyProblem("quota", "Hết credit");
-  if (code === "missing_permissions") {
+  // 402 is also "paid plan required" (a Free account and a Voice Library voice): not out of credit.
+  if (codes.has("paid_plan_required")) return new KeyProblem("voice", "tài khoản Free không dùng được giọng Voice Library qua API");
+  if (codes.has("quota_exceeded")) return new KeyProblem("quota", "Hết credit");
+  if (status === 402) return new HttpError(402, `ElevenLabs từ chối vì gói tài khoản${msg ? `: ${msg}` : "."}`);
+  if (codes.has("missing_permissions")) {
     // "The API key you used is missing the permission voices_read to execute this operation."
     const perm = /permission (\w+)/.exec(msg)?.[1] || "";
     return new KeyProblem("auth", `Key thiếu quyền ${PERMS[perm] || perm || "cần thiết"}. Sửa quyền của key trên ElevenLabs (Developers → API Keys)`);
@@ -83,6 +87,7 @@ export async function inspectKey(apiKey) {
     return {
       status: empty ? "empty" : "ok",
       statusText: empty ? "Hết credit tháng này" : "",
+      tier: sub.tier || "",
       used,
       limit,
       resetAt: sub.next_character_count_reset_unix ? new Date(sub.next_character_count_reset_unix * 1000) : null,
@@ -97,7 +102,7 @@ export async function inspectKey(apiKey) {
 // ---- the pool
 
 // The environment key has no row; its state lives here.
-let envState = { checkedAt: null, lastUsedAt: null, status: "ok", statusText: "", used: 0, limit: 0, resetAt: null, voices: [] };
+let envState = { checkedAt: null, lastUsedAt: null, status: "ok", statusText: "", tier: "", used: 0, limit: 0, resetAt: null, voices: [] };
 
 // [{ id, name, apiKey, state, save(changes) }] for every active key.
 async function pool() {
@@ -147,6 +152,10 @@ async function freshPool(force = false) {
 
 export const ttsConfigured = async () => Boolean(config.elevenLabsKey) || Boolean(await TtsKey.exists({ active: true }));
 
+// A Free account may only read with ElevenLabs' own voices and its own ones through the API, not Voice Library voices.
+const OWN_KINDS = new Set(["premade", "cloned", "generated"]);
+const canRead = (s, v) => s.state.tier !== "free" || OWN_KINDS.has(v.category);
+
 const left = (s) => (s.state.limit ? Math.max(0, s.state.limit - s.state.used) : Infinity);
 const usable = (s) => s.state.status !== "invalid" && s.state.status !== "empty";
 
@@ -157,14 +166,17 @@ export async function overview() {
   const byId = new Map();
   for (const s of slots)
     for (const v of s.state.voices || []) {
-      const cur = byId.get(v.id) || { ...(v.toObject?.() || v), best: 0 };
-      cur.best = Math.max(cur.best, left(s));
+      const cur = byId.get(v.id) || { ...(v.toObject?.() || v), best: 0, paidOnly: true };
+      if (canRead(s, v)) {
+        cur.best = Math.max(cur.best, left(s));
+        cur.paidOnly = false;
+      }
       byId.set(v.id, cur);
     }
   const own = (v) => (v.category === "premade" ? 1 : 0);
   const voices = [...byId.values()]
-    .map((v) => ({ ...v, best: Number.isFinite(v.best) ? v.best : null }))
-    .sort((a, b) => own(a) - own(b) || a.name.localeCompare(b.name));
+    .map((v) => ({ ...v, best: v.paidOnly ? 0 : Number.isFinite(v.best) ? v.best : null }))
+    .sort((a, b) => a.paidOnly - b.paidOnly || own(a) - own(b) || a.name.localeCompare(b.name));
   const finite = slots.filter((s) => s.state.limit);
   return {
     voices,
@@ -195,8 +207,10 @@ export const stripTags = (s) => s.replace(/\[[^\]\n]{1,40}\]/g, "").replace(/[ \
 
 // Reads text aloud with the voice; returns { mp3: Buffer, keyName }. Throws 402 when no key can pay for it.
 export async function speak({ text, voiceId, modelId }) {
-  const slots = (await freshPool()).filter((s) => usable(s) && (s.state.voices || []).some((v) => v.id === voiceId));
-  if (!slots.length) throw new HttpError(400, "Không key nào còn dùng được có giọng này. Chọn giọng khác hoặc nhờ quản trị viên thêm key.");
+  const withVoice = (await freshPool()).filter((s) => usable(s) && (s.state.voices || []).some((v) => v.id === voiceId));
+  if (!withVoice.length) throw new HttpError(400, "Không key nào còn dùng được có giọng này. Chọn giọng khác hoặc nhờ quản trị viên thêm key.");
+  const slots = withVoice.filter((s) => canRead(s, s.state.voices.find((v) => v.id === voiceId)));
+  if (!slots.length) throw new HttpError(402, "Giọng này lấy từ Voice Library: tài khoản ElevenLabs gói Free không dùng được qua API. Chọn giọng khác hoặc thêm key của tài khoản trả phí.");
   const enough = slots.filter((s) => left(s) >= text.length).sort((a, b) => left(b) - left(a));
   if (!enough.length) throw new HttpError(402, `Không key nào có giọng này còn đủ ${text.length} ký tự credit. Nhờ quản trị viên thêm key hoặc chờ credit làm mới.`);
 
@@ -215,9 +229,9 @@ export async function speak({ text, voiceId, modelId }) {
       return { mp3, keyName: s.name };
     } catch (err) {
       if (!(err instanceof KeyProblem)) throw err;
-      // This key cannot pay: mark it and go on with the next one.
-      await s.save({ status: err.kind === "quota" ? "empty" : "invalid", statusText: err.message, checkedAt: new Date() });
-      tried.push(`${s.name}: ${err.message.toLowerCase()}`);
+      // This key cannot pay: mark it (unless only this voice is refused) and go on with the next one.
+      if (err.kind !== "voice") await s.save({ status: err.kind === "quota" ? "empty" : "invalid", statusText: err.message, checkedAt: new Date() });
+      tried.push(`${s.name}: ${err.message.charAt(0).toLowerCase() + err.message.slice(1)}`);
     }
   }
   throw new HttpError(402, `Không key nào tạo được lời đọc (${tried.join("; ")}). Nhờ quản trị viên kiểm tra key ở Quản trị → ElevenLabs.`);
@@ -233,6 +247,7 @@ const publicKey = (id, name, s, extra) => ({
   fromEnv: id === ENV_ID,
   status: s.status,
   statusText: s.statusText || "",
+  tier: s.tier || "",
   used: s.used || 0,
   limit: s.limit || 0,
   resetAt: s.resetAt || null,
