@@ -3757,3 +3757,19 @@ select.status-select:disabled {
 .script-form {
   gap: 12px;
 }
+
+/* ---------- Tạo lời đọc bằng ElevenLabs (components/TtsDialog.jsx) */
+.tts-text {
+  max-height: 180px;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--sunk);
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.tts-audio {
+  width: 100%;
+}
