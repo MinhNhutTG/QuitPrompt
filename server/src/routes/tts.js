@@ -52,7 +52,7 @@ ttsKeyRoutes.post(
     }
     // Checked before it is kept: a wrong key never enters the pool.
     const state = await inspectKey(data.key);
-    if (state.status === "invalid") throw new HttpError(400, "ElevenLabs từ chối key này. Kiểm tra lại key và quyền: Text to Speech, Voices (đọc), Models (đọc), User (đọc).");
+    if (state.status === "invalid") throw new HttpError(400, `${state.statusText}. Key cần các quyền: Text to Speech, Voices: Read, Models: Read, User: Read.`);
     if (state.status === "error") throw new HttpError(502, `Chưa kiểm tra được key: ${state.statusText}`);
     const doc = await TtsKey.create({ name: data.name, secret: keyBox.seal(data.key), last4, ...state, checkedAt: new Date(), createdBy: req.userId });
     res.status(201).json({ item: publicKeyOf(doc) });

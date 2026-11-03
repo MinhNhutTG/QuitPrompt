@@ -22,12 +22,25 @@ class KeyProblem extends Error {
   }
 }
 
+// ElevenLabs' permission names, as its key settings page shows them.
+const PERMS = {
+  voices_read: "Voices: Read",
+  user_read: "User: Read",
+  models_read: "Models: Read",
+  text_to_speech: "Text to Speech: Access",
+};
+
 function elError(status, data) {
   const d = data?.detail;
   const code = d?.status || d?.code || "";
   const msg = typeof d === "string" ? d : d?.message || "";
   if (code === "quota_exceeded" || status === 402) return new KeyProblem("quota", "Hết credit");
-  if (status === 401 || status === 403) return new KeyProblem("auth", "ElevenLabs từ chối key (sai, đã xoá hoặc thiếu quyền)");
+  if (code === "missing_permissions") {
+    // "The API key you used is missing the permission voices_read to execute this operation."
+    const perm = /permission (\w+)/.exec(msg)?.[1] || "";
+    return new KeyProblem("auth", `Key thiếu quyền ${PERMS[perm] || perm || "cần thiết"}. Sửa quyền của key trên ElevenLabs (Developers → API Keys)`);
+  }
+  if (status === 401 || status === 403) return new KeyProblem("auth", "ElevenLabs từ chối key (sai hoặc đã xoá)");
   if (status === 429) return new HttpError(429, "ElevenLabs đang bận hoặc đang tạo quá nhiều cùng lúc. Chờ một chút rồi thử lại.");
   if (status === 404) return new HttpError(400, "Không tìm thấy giọng hoặc model này trên ElevenLabs. Chọn giọng khác.");
   if (status === 400 || status === 422) return new HttpError(400, `ElevenLabs không nhận yêu cầu${msg ? `: ${msg}` : "."}`);
