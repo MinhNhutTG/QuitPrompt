@@ -51,6 +51,10 @@ const RULES = [
   ["POST", /^\/api\/admin\/roles$/, "admin.role.create", "Admin: tạo vai trò", "admin"],
   ["PATCH", /^\/api\/admin\/roles\/(\w+)$/, "admin.role.update", "Admin: sửa vai trò", "admin"],
   ["DELETE", /^\/api\/admin\/roles\/(\w+)$/, "admin.role.delete", "Admin: xoá vai trò", "admin"],
+  ["POST", /^\/api\/admin\/tts-keys$/, "admin.ttskey.create", "Admin: thêm key ElevenLabs", "admin"],
+  ["PATCH", /^\/api\/admin\/tts-keys\/(\w+)$/, "admin.ttskey.update", "Admin: sửa key ElevenLabs", "admin"],
+  ["POST", /^\/api\/admin\/tts-keys\/(\w+)\/check$/, "admin.ttskey.check", "Admin: kiểm tra key ElevenLabs", "admin"],
+  ["DELETE", /^\/api\/admin\/tts-keys\/(\w+)$/, "admin.ttskey.delete", "Admin: xoá key ElevenLabs", "admin"],
   ["PATCH", /^\/api\/admin\/tiers\/(\w+)$/, "admin.tier.update", "Admin: sửa hạng tài khoản", "admin"],
 ];
 
@@ -78,7 +82,7 @@ export const ACTION_GROUPS = {
 };
 
 // Body fields never written to the log, whatever the route.
-const SECRET = new Set(["password", "current", "next", "passwordHash"]);
+const SECRET = new Set(["password", "current", "next", "passwordHash", "key"]);
 
 const clip = (s, n) => (typeof s === "string" ? s.slice(0, n) : "");
 

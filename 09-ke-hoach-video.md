@@ -91,15 +91,19 @@ Mỗi lần viết lời đọc thường ra nhiều bản nhưng chỉ dùng m�
 
 | Vấn đề | Quyết định |
 |---|---|
-| API key | Một key cho cả team, biến môi trường `ELEVENLABS_API_KEY` trên máy chủ, không bao giờ gửi xuống trình duyệt. Key cần quyền Text to Speech, Voices (đọc), Models (đọc), User (đọc, để hiện credit còn lại). Không có key thì nút chỉ mở trang ElevenLabs |
+| API key | **Nhiều key** (thường là nhiều tài khoản ElevenLabs), quản trị viên thêm ở **Quản trị → ElevenLabs**: nhập tên và key, key được kiểm tra với ElevenLabs trước khi lưu, lưu **mã hoá** (AES-256-GCM, khoá suy ra từ `JWT_SECRET`) và không bao giờ gửi xuống trình duyệt, chỉ hiện 4 ký tự cuối. Đổi `JWT_SECRET` thì phải nhập lại key. Biến môi trường `ELEVENLABS_API_KEY` vẫn dùng được, hiện như một key không sửa được trên web. Key cần quyền Text to Speech, Voices (đọc), Models (đọc), User (đọc). Không có key nào thì nút chỉ mở trang ElevenLabs |
+| Chọn key | Mỗi lần tạo, dùng key **còn nhiều credit nhất** trong các key đang bật, còn dùng được và **có giọng được chọn** (giọng clone chỉ nằm trong tài khoản đã tạo nó), bỏ qua key không đủ ký tự cho lời đọc. ElevenLabs báo hết credit hoặc từ chối key thì key đó được đánh dấu "Hết credit" hay "Key hỏng" và **tự chuyển sang key kế tiếp**. Số credit đọc lại từ ElevenLabs sau mỗi 10 phút; "Kiểm tra" đọc lại ngay (key được nạp thêm credit sẽ dùng lại được) |
+| Quản trị → ElevenLabs | Bảng key: tên, 4 ký tự cuối, credit đã dùng / giới hạn và ngày làm mới, trạng thái (Dùng được, Hết credit, Key hỏng, Chưa kiểm tra được, Đã tắt), số giọng, lần dùng cuối, ô Bật. Ai xem được Quản trị thì xem được bảng; thêm, bật/tắt, kiểm tra, xoá chỉ quản trị viên. Tối đa 30 key |
 | Quyền | `plan.tts` "Tạo lời đọc bằng ElevenLabs (tốn credit)", nhóm Kế hoạch. Quản trị viên có sẵn. Vai trò đã có từ trước thì quản trị viên phải tick thêm |
 | Giọng và model | Hỏi thẳng tài khoản ElevenLabs (lưu tạm 10 phút): giọng của team (clone, tự tạo) xếp trước giọng có sẵn. Chỉ hiện model đọc được tiếng Việt. Mặc định Eleven v3. Lựa chọn lần trước được nhớ trên trình duyệt |
 | Thẻ cảm xúc | Eleven v3 trở lên hiểu `[excited]`, `[pause]`... Model cũ hơn thì thẻ `[ ]` được bỏ trước khi đọc, để không bị đọc thành tiếng |
-| Kiểm tra trước khi tốn credit | Có lời đọc, giọng và model còn trong tài khoản, không vượt số ký tự tối đa của model, **thư mục Drive của kế hoạch tạo được**. Mỗi kế hoạch chỉ một lượt tạo cùng lúc. Hộp thoại khoá nút khi credit còn lại không đủ |
+| Kiểm tra trước khi tốn credit | Có lời đọc, model còn và đọc được tiếng Việt, không vượt số ký tự tối đa của model, **thư mục Drive của kế hoạch tạo được**, có key có giọng đó và còn đủ credit. Mỗi kế hoạch chỉ một lượt tạo cùng lúc. Hộp thoại khoá nút khi key nhiều credit nhất có giọng đó cũng không đủ |
 | File | `Lời đọc.mp3`, mp3 44,1 kHz 128 kbps, máy chủ gửi thẳng lên Drive rồi gắn vào mục như một lần tải lên. Xong thì hộp thoại phát luôn file để nghe |
 | Lỗi | Hết credit, key sai, ElevenLabs bận hoặc quá lâu (chờ tối đa 2 phút), Drive chưa kết nối: đều báo bằng câu tiếng Việt |
 
-API: `GET /api/tts` → `{ configured, voices: [{ id, name, category, gender, accent, previewUrl }], models: [{ id, name, maxChars, tags }], credits: { used, limit, resetAt } | null }`. `POST /api/plans/:id/tts` `{ voiceId, modelId }` → `{ item }` (kế hoạch sau khi gắn file). 409 khi kế hoạch đang được tạo lời đọc. Ghi nhật ký "Tạo lời đọc bằng ElevenLabs" kèm model và số ký tự.
+API: `GET /api/tts` → `{ configured, voices: [{ id, name, category, gender, accent, previewUrl, best }], models: [{ id, name, maxChars, tags }], credits: { keys, left, limit } }` (`best`: số ký tự nhiều nhất một key có giọng đó còn). `POST /api/plans/:id/tts` `{ voiceId, modelId }` → `{ item }` (kế hoạch sau khi gắn file). 409 khi kế hoạch đang được tạo lời đọc, 402 khi không key nào trả được. Ghi nhật ký kèm model, số ký tự và tên key đã dùng.
+
+Key: `GET /api/admin/tts-keys[?check=1]` → `{ items: [{ id, name, last4, active, fromEnv, status, statusText, used, limit, resetAt, voices, checkedAt, lastUsedAt }] }` (quyền `admin.view`; `check=1` đọc lại mọi key). Chỉ quản trị viên: `POST /api/admin/tts-keys` `{ name, key }` (400 key bị từ chối, 409 trùng), `PATCH /:id` `{ name?, active? }`, `POST /:id/check`, `DELETE /:id`. Collection `ttskeys`.
 
 ## 9. Để sau
 

@@ -21,7 +21,7 @@ import transferRoutes from "./routes/transfer.js";
 import adminRoutes from "./routes/admin.js";
 import driveRoutes from "./routes/drive.js";
 import liveRoutes from "./routes/live.js";
-import ttsRoutes from "./routes/tts.js";
+import { ttsRoutes, ttsKeyRoutes } from "./routes/tts.js";
 import { ActivityLog } from "./models/ActivityLog.js";
 import { ChatMessage } from "./models/ChatMessage.js";
 import { ensureStarterRoles } from "./lib/permissions.js";
@@ -121,6 +121,7 @@ app.use("/api/tts", requireAuth, ttsRoutes);
 // Realtime: the event stream, the team chat and the notifications feed (routes/live.js).
 app.use("/api", liveRoutes);
 // Each route checks its own permission: admin.view to look, an admin to change accounts and roles.
+app.use("/api/admin/tts-keys", requireAuth, ttsKeyRoutes);
 app.use("/api/admin", requireAuth, adminRoutes);
 app.use("/api", (req, res, next) => next(new HttpError(404, "Không có đường dẫn API này.")));
 

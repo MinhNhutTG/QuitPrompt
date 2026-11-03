@@ -38,8 +38,9 @@ function Body({ plan, onChanged, onClose }) {
   const raw = (plan.voiceText || "").trim();
   const speech = model && !model.tags ? stripTags(raw) : raw;
   const tooLong = model && speech.length > model.maxChars;
-  const left = data?.credits ? Math.max(0, data.credits.limit - data.credits.used) : null;
-  const short = left !== null && speech.length > left;
+  // One read is paid by one key, so what counts is the most credit a single key with this voice has left.
+  const best = voice?.best ?? null;
+  const short = best !== null && speech.length > best;
   const hasTags = /\[[^\]\n]{1,40}\]/.test(raw);
 
   const groups = useMemo(() => {
@@ -87,7 +88,7 @@ function Body({ plan, onChanged, onClose }) {
   if (!data.configured)
     return (
       <div className="form">
-        <p>Máy chủ chưa có API key ElevenLabs nên chưa tạo tự động được. Quản trị viên đặt biến <code>ELEVENLABS_API_KEY</code> trên máy chủ là dùng được.</p>
+        <p>Chưa có API key ElevenLabs nào nên chưa tạo tự động được. Quản trị viên thêm key ở Quản trị → ElevenLabs là dùng được.</p>
         <p className="hint">Trong lúc chờ, bạn có thể mở ElevenLabs, tạo mp3 bằng tay rồi bấm “Tải lên”.</p>
         <div className="btns btns-end">
           <a className="btn btn-primary" href={ELEVENLABS_TTS} target="_blank" rel="noopener noreferrer">
@@ -167,7 +168,7 @@ function Body({ plan, onChanged, onClose }) {
       {!models.length && <p className="error">Tài khoản ElevenLabs không có model nào đọc được tiếng Việt.</p>}
 
       <p className="hint">
-        {data.credits && `Còn ${nf.format(left)} / ${nf.format(data.credits.limit)} ký tự tháng này. `}
+        {data.credits?.limit > 0 && `Còn ${nf.format(data.credits.left)} / ${nf.format(data.credits.limit)} ký tự trên ${data.credits.keys} key. `}
         Lần này dùng khoảng {nf.format(speech.length)} ký tự.
         {plan.files?.audio && " File lời đọc hiện có sẽ được thay (file cũ vào thùng rác Drive)."}
       </p>
@@ -178,7 +179,7 @@ function Body({ plan, onChanged, onClose }) {
       )}
       {short && !tooLong && (
         <p className="error" role="alert">
-          Không đủ credit ElevenLabs cho lời đọc này.
+          Không key nào có giọng này còn đủ credit (key nhiều nhất còn {nf.format(best)} ký tự). Chọn giọng khác hoặc nhờ quản trị viên thêm key.
         </p>
       )}
       {fail && (

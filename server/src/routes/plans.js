@@ -13,7 +13,7 @@ import { deniedMessage } from "../lib/permissions.js";
 import { vnDay } from "../lib/tiers.js";
 import { driveConfigured, gapi, getLink, openUpload, stamp, trash } from "../lib/drive.js";
 import { ensurePlanFolder, trashPlanFolders } from "../lib/planDrive.js";
-import { listModels, listVoices, speak, stripTags } from "../lib/elevenlabs.js";
+import { overview, speak, stripTags } from "../lib/elevenlabs.js";
 
 const router = Router();
 
@@ -425,9 +425,9 @@ router.post(
       req.body
     );
     const plan = await loadWorkablePlan(req);
-    const model = (await listModels()).find((m) => m.id === data.modelId);
+    const { models } = await overview();
+    const model = models.find((m) => m.id === data.modelId);
     if (!model) throw new HttpError(400, "Model này không đọc được tiếng Việt hoặc không còn trên ElevenLabs.");
-    if (!(await listVoices()).some((v) => v.id === data.voiceId)) throw new HttpError(400, "Giọng đọc này không còn trong tài khoản ElevenLabs.");
     // Older models would read [excited] or [pause] out loud.
     const speech = model.tags ? plan.voiceText.trim() : stripTags(plan.voiceText);
     if (!speech) throw new HttpError(400, "Kế hoạch chưa có lời đọc. Viết và lưu lời đọc trước.");
@@ -439,7 +439,7 @@ router.post(
     try {
       // Drive first: if it is not connected, nothing is read and no credit is spent.
       const folder = await ensurePlanFolder(plan, await productName(plan));
-      const mp3 = await speak({ text: speech, voiceId: data.voiceId, modelId: model.id });
+      const { mp3, keyName } = await speak({ text: speech, voiceId: data.voiceId, modelId: model.id });
       // Server to Google in one resumable session (the same kind the browser uses for its uploads).
       const uploadUrl = await openUpload({
         parent: folder,
@@ -454,7 +454,7 @@ router.post(
       if (!put.ok) throw new HttpError(502, `Google Drive không nhận file mp3 (mã ${put.status}). Thử lại.`);
       const f = await put.json();
       await putFile(req, res, plan, "audio", f.id);
-      res.locals.audit = { label: `Lời đọc: ${model.name}, ${speech.length} ký tự` };
+      res.locals.audit = { label: `Lời đọc: ${model.name}, ${speech.length} ký tự, key ${keyName}` };
     } finally {
       ttsBusy.delete(key);
     }

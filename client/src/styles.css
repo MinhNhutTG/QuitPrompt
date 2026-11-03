@@ -3773,3 +3773,21 @@ select.status-select:disabled {
 .tts-audio {
   width: 100%;
 }
+
+.key-credit {
+  display: grid;
+  gap: 4px;
+  min-width: 160px;
+}
+.key-mask,
+.key-why {
+  display: block;
+  font-size: 12px;
+}
+.key-acts {
+  white-space: nowrap;
+  text-align: right;
+}
+tr.is-off > td {
+  opacity: 0.6;
+}
