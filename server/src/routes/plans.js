@@ -13,7 +13,6 @@ import { deniedMessage } from "../lib/permissions.js";
 import { vnDay } from "../lib/tiers.js";
 import { driveConfigured, gapi, getLink, openUpload, stamp, trash } from "../lib/drive.js";
 import { ensurePlanFolder, trashPlanFolders } from "../lib/planDrive.js";
-import { overview, speak, stripTags } from "../lib/elevenlabs.js";
 
 const router = Router();
 
@@ -406,58 +405,6 @@ router.post(
   ah(async (req, res) => {
     const data = parse(z.object({ slot: slotKey, fileId: fileIdSchema }), req.body);
     await putFile(req, res, await loadWorkablePlan(req), data.slot, data.fileId);
-  })
-);
-
-// ---- ElevenLabs: reads the plan's saved voice-over aloud and puts the mp3 in its "Lời đọc" slot, replacing what
-// was there (the old file goes to Drive's bin). Spends the team's ElevenLabs credit, hence its own permission.
-const ttsBusy = new Set(); // plan ids being read, so a double click does not pay twice
-
-router.post(
-  "/:id/tts",
-  can("plan.tts"),
-  ah(async (req, res) => {
-    const data = parse(
-      z.object({
-        voiceId: z.string({ required_error: "Chưa chọn giọng đọc." }).regex(/^[\w-]{5,64}$/, "Giọng đọc không hợp lệ."),
-        modelId: z.string({ required_error: "Chưa chọn model." }).regex(/^[\w.-]{3,64}$/, "Model không hợp lệ."),
-      }),
-      req.body
-    );
-    const plan = await loadWorkablePlan(req);
-    const { models } = await overview();
-    const model = models.find((m) => m.id === data.modelId);
-    if (!model) throw new HttpError(400, "Model này không đọc được tiếng Việt hoặc không còn trên ElevenLabs.");
-    // Older models would read [excited] or [pause] out loud.
-    const speech = model.tags ? plan.voiceText.trim() : stripTags(plan.voiceText);
-    if (!speech) throw new HttpError(400, "Kế hoạch chưa có lời đọc. Viết và lưu lời đọc trước.");
-    if (speech.length > model.maxChars) throw new HttpError(400, `Lời đọc dài ${speech.length} ký tự, model ${model.name} chỉ nhận tối đa ${model.maxChars}. Rút gọn hoặc chọn model khác.`);
-
-    const key = String(plan._id);
-    if (ttsBusy.has(key)) throw new HttpError(409, "Đang tạo lời đọc cho kế hoạch này, chờ xong đã.");
-    ttsBusy.add(key);
-    try {
-      // Drive first: if it is not connected, nothing is read and no credit is spent.
-      const folder = await ensurePlanFolder(plan, await productName(plan));
-      const { mp3, keyName } = await speak({ text: speech, voiceId: data.voiceId, modelId: model.id });
-      // Server to Google in one resumable session (the same kind the browser uses for its uploads).
-      const uploadUrl = await openUpload({
-        parent: folder,
-        name: PLAN_SLOTS.audio + ".mp3",
-        mimeType: "audio/mpeg",
-        size: mp3.length,
-        appProperties: await stamp(req),
-        origin: req.get("origin") || config.clientOrigin || "https://localhost",
-        fields: "id,name,size,mimeType",
-      });
-      const put = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": "audio/mpeg" }, body: mp3 });
-      if (!put.ok) throw new HttpError(502, `Google Drive không nhận file mp3 (mã ${put.status}). Thử lại.`);
-      const f = await put.json();
-      await putFile(req, res, plan, "audio", f.id);
-      res.locals.audit = { label: `Lời đọc: ${model.name}, ${speech.length} ký tự, key ${keyName}` };
-    } finally {
-      ttsBusy.delete(key);
-    }
   })
 );
 

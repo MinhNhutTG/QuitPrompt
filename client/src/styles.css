@@ -3757,37 +3757,3 @@ select.status-select:disabled {
 .script-form {
   gap: 12px;
 }
-
-/* ---------- Tạo lời đọc bằng ElevenLabs (components/TtsDialog.jsx) */
-.tts-text {
-  max-height: 180px;
-  overflow: auto;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--sunk);
-  white-space: pre-wrap;
-  font-size: 14px;
-  line-height: 1.5;
-}
-.tts-audio {
-  width: 100%;
-}
-
-.key-credit {
-  display: grid;
-  gap: 4px;
-  min-width: 160px;
-}
-.key-mask,
-.key-why {
-  display: block;
-  font-size: 12px;
-}
-.key-acts {
-  white-space: nowrap;
-  text-align: right;
-}
-tr.is-off > td {
-  opacity: 0.6;
-}

@@ -12,7 +12,6 @@ import { useToast } from "../components/Toast.jsx";
 import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
 import { SLOTS, STATUS, isFinished, progressOf } from "../lib/plans.js";
 import { saveFiles, standalone } from "../lib/download.js";
-import TtsDialog, { ELEVENLABS_TTS } from "../components/TtsDialog.jsx";
 
 function fmtSize(n) {
   if (!n) return "";
@@ -28,12 +27,12 @@ const SlotIcon = ({ kind }) => (
   </svg>
 );
 
+const ELEVENLABS_TTS = "https://elevenlabs.io/app/speech-synthesis/text-to-speech";
+
 function FileSlot({ plan, slot, driveReady, onChanged }) {
   const toast = useToast();
-  const { can } = useAuth();
   const input = useRef(null);
   const [progress, setProgress] = useState(null);
-  const [tts, setTts] = useState(false);
   const file = plan.files?.[slot.key];
 
   async function upload(f) {
@@ -80,18 +79,7 @@ function FileSlot({ plan, slot, driveReady, onChanged }) {
         )}
       </div>
       <div className="slot-acts">
-        {slot.key === "audio" && can("plan.tts") && (
-          <button
-            type="button"
-            className="btn btn-sm btn-ghost"
-            disabled={busy || !driveReady}
-            title="Đọc lời đọc đã lưu bằng giọng ElevenLabs và lưu mp3 vào đây"
-            onClick={() => setTts(true)}
-          >
-            Tạo bằng ElevenLabs
-          </button>
-        )}
-        {slot.key === "audio" && !can("plan.tts") && (
+        {slot.key === "audio" && (
           <a
             className="btn btn-sm btn-ghost"
             href={ELEVENLABS_TTS}
@@ -123,7 +111,6 @@ function FileSlot({ plan, slot, driveReady, onChanged }) {
           </ConfirmButton>
         )}
       </div>
-      {slot.key === "audio" && <TtsDialog open={tts} onClose={() => setTts(false)} plan={plan} onChanged={onChanged} />}
     </li>
   );
 }

@@ -21,7 +21,6 @@ import transferRoutes from "./routes/transfer.js";
 import adminRoutes from "./routes/admin.js";
 import driveRoutes from "./routes/drive.js";
 import liveRoutes from "./routes/live.js";
-import { ttsRoutes, ttsKeyRoutes } from "./routes/tts.js";
 import { ActivityLog } from "./models/ActivityLog.js";
 import { ChatMessage } from "./models/ChatMessage.js";
 import { ensureStarterRoles } from "./lib/permissions.js";
@@ -41,8 +40,6 @@ app.use(
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         // Drive uploads go from the browser straight to Google.
         connectSrc: ["'self'", "https://www.googleapis.com"],
-        // ElevenLabs keeps its voice samples on Google Cloud Storage (Tạo lời đọc).
-        mediaSrc: ["'self'", "blob:", "https://storage.googleapis.com"],
         scriptSrc: ["'self'"],
       },
     },
@@ -116,12 +113,9 @@ app.use("/api/resources", requireAuth, resourceRoutes);
 app.use("/api/settings", requireAuth, settingsRoutes);
 app.use("/api/transfer", requireAuth, transferRoutes);
 app.use("/api/drive", requireAuth, driveRoutes);
-// ElevenLabs voices and models for a plan's voice-over (tài liệu 09).
-app.use("/api/tts", requireAuth, ttsRoutes);
 // Realtime: the event stream, the team chat and the notifications feed (routes/live.js).
 app.use("/api", liveRoutes);
 // Each route checks its own permission: admin.view to look, an admin to change accounts and roles.
-app.use("/api/admin/tts-keys", requireAuth, ttsKeyRoutes);
 app.use("/api/admin", requireAuth, adminRoutes);
 app.use("/api", (req, res, next) => next(new HttpError(404, "Không có đường dẫn API này.")));
 
@@ -152,7 +146,7 @@ app.use((err, req, res, next) => {
   }
   const status = err instanceof HttpError ? err.status : err.status === 404 ? 404 : 500;
   if (status >= 500) console.error(err);
-  // An HttpError is written for the user (Drive not connected, ElevenLabs out of credit...), whatever its status;
+  // An HttpError is written for the user (Drive not connected, Cloudinary not set up...), whatever its status;
   // anything else is a bug whose details stay in the server log.
   res.status(status).json({ error: err instanceof HttpError ? err.message : "Máy chủ gặp lỗi. Thử lại sau ít phút." });
 });

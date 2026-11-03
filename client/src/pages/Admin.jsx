@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { useAdminLogs, useAdminRoles, useAdminStats, useAdminTiers, useAdminUsers } from "../lib/queries.js";
@@ -12,7 +12,6 @@ const TABS = [
   { value: "overview", label: "Tổng quan" },
   { value: "users", label: "Thành viên" },
   { value: "roles", label: "Phân quyền & hạng" },
-  { value: "tts", label: "ElevenLabs" },
   { value: "logs", label: "Nhật ký" },
 ];
 
@@ -786,223 +785,6 @@ function Tiers() {
   );
 }
 
-// ---- ElevenLabs API keys (tài liệu 09, mục 8b)
-
-const TTS_KEYS = ["admin", "tts-keys"];
-const nf = new Intl.NumberFormat("vi-VN");
-const KEY_STATUS = {
-  ok: { label: "Dùng được", cls: "" },
-  empty: { label: "Hết credit", cls: "badge-danger" },
-  invalid: { label: "Key hỏng", cls: "badge-danger" },
-  error: { label: "Chưa kiểm tra được", cls: "badge-soft" },
-};
-
-function AddKeyForm({ onDone }) {
-  const qc = useQueryClient();
-  const toast = useToast();
-  const [name, setName] = useState("");
-  const [key, setKey] = useState("");
-  const add = useMutation({
-    mutationFn: () => api.addTtsKey({ name: name.trim(), key: key.trim() }),
-    onSuccess: ({ item }) => {
-      qc.setQueryData(TTS_KEYS, (old) => old && { ...old, items: [...old.items.filter((k) => !k.fromEnv), item, ...old.items.filter((k) => k.fromEnv)] });
-      qc.invalidateQueries({ queryKey: ["tts"] });
-      toast(`Đã thêm key ${item.name}`);
-      onDone();
-    },
-  });
-  return (
-    <form
-      className="form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        add.mutate();
-      }}
-    >
-      <Field label="Tên để nhận ra" hint="Ví dụ tên tài khoản ElevenLabs: Acc Nhựt 1">
-        <input className="input" value={name} maxLength={60} required autoFocus onChange={(e) => setName(e.target.value)} />
-      </Field>
-      <Field label="API key" hint="elevenlabs.io → Developers → API Keys. Cần quyền Text to Speech, Voices (đọc), Models (đọc), User (đọc).">
-        <input className="input" type="password" autoComplete="off" spellCheck={false} value={key} required onChange={(e) => setKey(e.target.value)} placeholder="sk_..." />
-      </Field>
-      <p className="hint">Key được kiểm tra với ElevenLabs trước khi lưu, lưu mã hoá trên máy chủ và không bao giờ hiện lại, kể cả với quản trị viên.</p>
-      {add.error && (
-        <p className="error" role="alert">
-          {add.error.message}
-        </p>
-      )}
-      <div className="btns btns-end">
-        <button type="button" className="btn btn-ghost" onClick={onDone} disabled={add.isPending}>
-          Huỷ
-        </button>
-        <button type="submit" className="btn btn-primary" disabled={add.isPending}>
-          {add.isPending ? "Đang kiểm tra key..." : "Thêm key"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function KeyCredit({ k }) {
-  if (!k.limit) return <span className="hint">Chưa rõ</span>;
-  const left = Math.max(0, k.limit - k.used);
-  return (
-    <div className="key-credit">
-      <div className="meter" role="img" aria-label={`Đã dùng ${pct(k.used, k.limit)}%`}>
-        <span style={{ width: `${Math.min(100, pct(k.used, k.limit))}%` }} />
-      </div>
-      <span className="hint">
-        Còn <b>{nf.format(left)}</b> / {nf.format(k.limit)}
-        {k.resetAt && ` · làm mới ${fmtDate(k.resetAt)}`}
-      </span>
-    </div>
-  );
-}
-
-function TtsKeys() {
-  const qc = useQueryClient();
-  const toast = useToast();
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
-  const { data, isLoading, error, refetch } = useQuery({ queryKey: TTS_KEYS, queryFn: () => api.ttsKeys() });
-  const [adding, setAdding] = useState(false);
-  const [busy, setBusy] = useState("");
-
-  const put = (item) => qc.setQueryData(TTS_KEYS, (old) => old && { ...old, items: old.items.map((k) => (k.id === item.id ? item : k)) });
-  async function act(id, fn, ok) {
-    setBusy(id);
-    try {
-      await fn();
-      qc.invalidateQueries({ queryKey: ["tts"] });
-      if (ok) toast(ok);
-    } catch (e) {
-      toast(e.message, { tone: "danger" });
-    } finally {
-      setBusy("");
-    }
-  }
-  const checkAll = () => act("all", async () => qc.setQueryData(TTS_KEYS, await api.ttsKeys(true)), "Đã kiểm tra lại mọi key");
-  const remove = (k) =>
-    act(
-      k.id,
-      async () => {
-        await api.deleteTtsKey(k.id);
-        qc.setQueryData(TTS_KEYS, (old) => old && { ...old, items: old.items.filter((x) => x.id !== k.id) });
-      },
-      `Đã xoá key ${k.name}`
-    );
-
-  if (isLoading) return <Skeleton h={240} r={12} />;
-  if (error) return <ErrorState error={error} onRetry={refetch} />;
-  const items = data.items;
-  const usable = items.filter((k) => k.active && (k.status === "ok" || k.status === "error"));
-  const total = usable.reduce((n, k) => n + (k.limit ? Math.max(0, k.limit - k.used) : 0), 0);
-
-  return (
-    <section className="stack">
-      <div className="sec-row">
-        <p className="muted">
-          Mỗi lần tạo lời đọc, app dùng key <b>còn nhiều credit nhất</b> trong các key có giọng được chọn. Key nào hết credit hoặc bị từ chối thì tự bỏ qua và
-          chuyển sang key kế tiếp. Giọng clone chỉ nằm trong tài khoản đã tạo nó.
-          {usable.length > 0 && ` Đang dùng được ${usable.length} key, còn tổng ${nf.format(total)} ký tự.`}
-        </p>
-        <div className="btns">
-          {items.length > 0 && (
-            <button type="button" className="btn" disabled={Boolean(busy)} onClick={checkAll}>
-              {busy === "all" ? "Đang kiểm tra..." : "Kiểm tra lại tất cả"}
-            </button>
-          )}
-          {isAdmin && (
-            <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>
-              + Thêm key
-            </button>
-          )}
-        </div>
-      </div>
-      {!items.length ? (
-        <EmptyState title="Chưa có key ElevenLabs nào">
-          {isAdmin ? "Thêm key để thành viên tạo lời đọc mp3 ngay trong kế hoạch." : "Nhờ quản trị viên thêm key."}
-        </EmptyState>
-      ) : (
-        <div className="card atable-wrap">
-          <table className="atable">
-            <thead>
-              <tr>
-                <th scope="col">Key</th>
-                <th scope="col">Credit tháng này</th>
-                <th scope="col">Trạng thái</th>
-                <th scope="col">Giọng</th>
-                <th scope="col">Dùng lần cuối</th>
-                <th scope="col">Bật</th>
-                {isAdmin && <th scope="col" aria-label="Thao tác" />}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((k) => {
-                const st = KEY_STATUS[k.status] || KEY_STATUS.error;
-                return (
-                  <tr key={k.id} className={k.active ? "" : "is-off"}>
-                    <td>
-                      <b>{k.name}</b>
-                      <span className="hint key-mask">
-                        …{k.last4}
-                        {k.tier && ` · gói ${k.tier === "free" ? "Free" : k.tier.charAt(0).toUpperCase() + k.tier.slice(1)}`}
-                      </span>
-                    </td>
-                    <td data-label="Credit tháng này">
-                      <KeyCredit k={k} />
-                    </td>
-                    <td data-label="Trạng thái">
-                      <span className={`badge ${st.cls}`} title={k.statusText}>
-                        {k.active ? st.label : "Đã tắt"}
-                      </span>
-                      {k.active && k.statusText && k.status !== "ok" && k.statusText.toLowerCase() !== st.label.toLowerCase() && <span className="hint key-why">{k.statusText}</span>}
-                    </td>
-                    <td data-label="Giọng">{k.voices}</td>
-                    <td className="hint" data-label="Dùng lần cuối">{k.lastUsedAt ? fmtDateTime(k.lastUsedAt) : "Chưa dùng"}</td>
-                    <td data-label="Bật">
-                      <input
-                        type="checkbox"
-                        checked={k.active}
-                        disabled={!isAdmin || k.fromEnv || Boolean(busy)}
-                        title={k.fromEnv ? "Key trong biến môi trường ELEVENLABS_API_KEY, đổi trên máy chủ" : ""}
-                        aria-label={`Bật key ${k.name}`}
-                        onChange={(e) => act(k.id, async () => put((await api.updateTtsKey(k.id, { active: e.target.checked })).item))}
-                      />
-                    </td>
-                    {isAdmin && (
-                      <td className="key-acts">
-                        {!k.fromEnv && (
-                          <>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-ghost"
-                              disabled={Boolean(busy)}
-                              onClick={() => act(k.id, async () => put((await api.checkTtsKey(k.id)).item), `Đã kiểm tra ${k.name}`)}
-                            >
-                              {busy === k.id ? "..." : "Kiểm tra"}
-                            </button>
-                            <ConfirmButton className="btn btn-sm btn-danger-ghost" disabled={Boolean(busy)} onConfirm={() => remove(k)}>
-                              Xoá
-                            </ConfirmButton>
-                          </>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <Modal open={adding} onClose={() => setAdding(false)} title="Thêm key ElevenLabs">
-        {adding && <AddKeyForm onDone={() => setAdding(false)} />}
-      </Modal>
-    </section>
-  );
-}
-
 // ---- activity log
 
 function metaText(log) {
@@ -1206,7 +988,6 @@ export default function Admin() {
       {tab === "overview" && <Overview />}
       {tab === "users" && <Users onShowLogs={(user) => setParams({ tab: "logs", user })} />}
       {tab === "roles" && <Roles />}
-      {tab === "tts" && <TtsKeys />}
       {tab === "logs" && <Logs params={logParams} set={set} />}
     </div>
   );

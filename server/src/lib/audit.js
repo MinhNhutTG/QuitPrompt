@@ -28,7 +28,6 @@ const RULES = [
   ["POST", /^\/api\/plans\/(\w+)\/copy$/, "plan.copy", "Sao chép kế hoạch", "plan"],
   ["POST", /^\/api\/plans\/(\w+)\/files$/, "plan.file.add", "Tải file kế hoạch", "plan"],
   ["DELETE", /^\/api\/plans\/(\w+)\/files\/\w+$/, "plan.file.delete", "Xoá file kế hoạch", "plan"],
-  ["POST", /^\/api\/plans\/(\w+)\/tts$/, "plan.tts", "Tạo lời đọc bằng ElevenLabs", "plan"],
   ["POST", /^\/api\/plans\/(\w+)\/quickedit$/, "plan.quickedit", "Mở kế hoạch trong QuickEdit", "plan"],
   ["POST", /^\/api\/quickedit\/files$/, "plan.quickedit.final", "Gửi file từ QuickEdit", "plan"],
   ["POST", /^\/api\/resources$/, "resource.create", "Thêm tài nguyên", "resource"],
@@ -51,10 +50,6 @@ const RULES = [
   ["POST", /^\/api\/admin\/roles$/, "admin.role.create", "Admin: tạo vai trò", "admin"],
   ["PATCH", /^\/api\/admin\/roles\/(\w+)$/, "admin.role.update", "Admin: sửa vai trò", "admin"],
   ["DELETE", /^\/api\/admin\/roles\/(\w+)$/, "admin.role.delete", "Admin: xoá vai trò", "admin"],
-  ["POST", /^\/api\/admin\/tts-keys$/, "admin.ttskey.create", "Admin: thêm key ElevenLabs", "admin"],
-  ["PATCH", /^\/api\/admin\/tts-keys\/(\w+)$/, "admin.ttskey.update", "Admin: sửa key ElevenLabs", "admin"],
-  ["POST", /^\/api\/admin\/tts-keys\/(\w+)\/check$/, "admin.ttskey.check", "Admin: kiểm tra key ElevenLabs", "admin"],
-  ["DELETE", /^\/api\/admin\/tts-keys\/(\w+)$/, "admin.ttskey.delete", "Admin: xoá key ElevenLabs", "admin"],
   ["PATCH", /^\/api\/admin\/tiers\/(\w+)$/, "admin.tier.update", "Admin: sửa hạng tài khoản", "admin"],
 ];
 
@@ -82,7 +77,7 @@ export const ACTION_GROUPS = {
 };
 
 // Body fields never written to the log, whatever the route.
-const SECRET = new Set(["password", "current", "next", "passwordHash", "key"]);
+const SECRET = new Set(["password", "current", "next", "passwordHash"]);
 
 const clip = (s, n) => (typeof s === "string" ? s.slice(0, n) : "");
 

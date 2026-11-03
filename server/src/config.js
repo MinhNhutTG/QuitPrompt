@@ -27,6 +27,4 @@ export const config = {
   driveMaxUploadMb: Math.min(Math.max(Math.round(Number(env.DRIVE_MAX_UPLOAD_MB)) || 500, 1), 5000),
   // Proxy hops in front of Express: 1 = Render only, 2 = Vercel rewrite + Render.
   trustProxy: Number(env.TRUST_PROXY) || 1,
-  // ElevenLabs text to speech for a plan's voice-over (tài liệu 09). Empty: the button only opens the website.
-  elevenLabsKey: (env.ELEVENLABS_API_KEY || "").trim(),
 };

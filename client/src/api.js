@@ -152,9 +152,6 @@ export const api = {
   planFolder: (id) => request("POST", `/plans/${id}/folder`),
   planQuickEdit: (id) => request("POST", `/plans/${id}/quickedit`),
   planUpload,
-  // ElevenLabs: voices, Vietnamese models and credit left; then read the plan's voice-over into its "Lời đọc" slot.
-  ttsStatus: () => request("GET", "/tts"),
-  planTts: (id, body) => request("POST", `/plans/${id}/tts`, body),
   planDeleteFile: (id, slot) => request("DELETE", `/plans/${id}/files/${slot}`),
   deletePlan: (id) => request("DELETE", `/plans/${id}`),
   deletePlans: (ids) => request("POST", "/plans/bulk-delete", { ids }),
@@ -180,12 +177,6 @@ export const api = {
   adminCreateRole: (body) => request("POST", "/admin/roles", body),
   adminUpdateRole: (key, body) => request("PATCH", `/admin/roles/${key}`, body),
   adminDeleteRole: (key) => request("DELETE", `/admin/roles/${key}`),
-  // Quản trị → ElevenLabs: the team's API keys (never the key itself, only its last 4 characters).
-  ttsKeys: (check) => request("GET", "/admin/tts-keys" + (check ? "?check=1" : "")),
-  addTtsKey: (body) => request("POST", "/admin/tts-keys", body),
-  updateTtsKey: (id, body) => request("PATCH", `/admin/tts-keys/${id}`, body),
-  checkTtsKey: (id) => request("POST", `/admin/tts-keys/${id}/check`),
-  deleteTtsKey: (id) => request("DELETE", `/admin/tts-keys/${id}`),
   adminTiers: () => request("GET", "/admin/tiers"),
   adminUpdateTier: (key, body) => request("PATCH", `/admin/tiers/${key}`, body),
 
