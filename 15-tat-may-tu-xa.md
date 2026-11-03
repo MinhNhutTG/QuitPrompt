@@ -35,7 +35,7 @@ powershell -ExecutionPolicy Bypass -File uninstall.ps1       # gỡ
 
 ## 4. Giao diện (Quản trị → Máy tính)
 
-- Chưa kết nối: nút "Kết nối máy tính" → hộp thoại có mã và 3 bước cài (nút Copy cho từng lệnh, địa chỉ app điền sẵn).
+- Chưa kết nối: nút "Kết nối máy tính" → hộp thoại có mã, ô thư mục chương trình trên máy (điền sẵn `D:WorkSpace-ITQuickPrompt	oolspc-agent`, nhớ trên trình duyệt) và 3 lệnh setup, test, install ghi đường dẫn đầy đủ nên chạy ở thư mục nào cũng được (nút Copy cho từng lệnh, địa chỉ app điền sẵn).
 - Đã kết nối: chấm xanh "Đang bật, sẵn sàng nhận lệnh" hoặc "Không kết nối. Lần cuối: …", tên máy (tên Windows). Khi có lịch tắt: "Máy sẽ tắt lúc 23:11, còn 14:59" đếm từng giây. Chọn thời gian, "Tắt máy" (hay "Đổi giờ tắt"), "Huỷ tắt máy". Lệnh không chạy được thì hiện lý do. Trang tự cập nhật mỗi 4 giây.
 
 ## 5. Dữ liệu và API

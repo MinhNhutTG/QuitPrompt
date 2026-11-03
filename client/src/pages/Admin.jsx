@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { useAdminLogs, useAdminRoles, useAdminStats, useAdminTiers, useAdminUsers } from "../lib/queries.js";
-import { addDays, fmtDate, fmtDateTime, fmtDateTimeFull, useDebounce, vnDay } from "../lib/util.js";
+import { addDays, fmtDate, fmtDateTime, fmtDateTimeFull, store, useDebounce, vnDay } from "../lib/util.js";
 import { ConfirmButton, EmptyState, ErrorState, Field, Modal, Pager, Seg, Skeleton } from "../components/ui.jsx";
 import { useToast } from "../components/Toast.jsx";
 
@@ -804,10 +804,18 @@ const mmss = (ms) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
+const PC_DIR = "D:\\WorkSpace-IT\\QuickPrompt\\tools\\pc-agent";
+
 function PairSteps({ token, onDone }) {
   const toast = useToast();
   const origin = window.location.origin;
-  const setup = `node agent.mjs setup ${origin} ${token}`;
+  // Where agent.mjs sits on the computer; remembered on this browser.
+  const [dir, setDir] = useState(() => store.get("pc:dir", PC_DIR));
+  const folder = dir.trim().replace(/[\\/]+$/, "") || PC_DIR;
+  // Full paths, so the commands work whatever folder PowerShell is in.
+  const setup = `node "${folder}\\agent.mjs" setup ${origin} ${token}`;
+  const test = `node "${folder}\\agent.mjs" test`;
+  const install = `powershell -ExecutionPolicy Bypass -File "${folder}\\install.ps1"`;
   const copy = async (t) => {
     try {
       await navigator.clipboard.writeText(t);
@@ -816,32 +824,42 @@ function PairSteps({ token, onDone }) {
       toast("Trình duyệt chặn copy. Bôi đen rồi nhấn Ctrl+C.", { tone: "danger" });
     }
   };
+  const Cmd = ({ text }) => (
+    <div className="pc-code">
+      <code>{text}</code>
+      <button type="button" className="btn btn-sm" onClick={() => copy(text)}>
+        Copy
+      </button>
+    </div>
+  );
   return (
     <div className="form">
       <p>
-        Mã kết nối chỉ hiện <b>một lần</b>. Làm 3 bước trên máy tính cần tắt (cần có Node, máy đang chạy QuickEdit là có):
+        Mã kết nối chỉ hiện <b>một lần</b>. Trên máy tính cần tắt (cần có Node, máy đang chạy QuickEdit là có), mở PowerShell rồi chạy lần lượt 3 lệnh dưới đây.
       </p>
+      <Field label="Thư mục chương trình trên máy đó" hint="Thư mục chứa agent.mjs. Máy khác thì chép thư mục tools\pc-agent sang rồi sửa đường dẫn ở đây.">
+        <input
+          className="input"
+          value={dir}
+          spellCheck={false}
+          onChange={(e) => {
+            setDir(e.target.value);
+            store.set("pc:dir", e.target.value);
+          }}
+        />
+      </Field>
       <ol className="pc-steps">
         <li>
-          Mở PowerShell trong thư mục <code>tools\pc-agent</code> của QuickPrompt (hoặc chép thư mục đó sang máy kia).
+          Lưu mã:
+          <Cmd text={setup} />
         </li>
         <li>
-          Lưu mã:
-          <div className="pc-code">
-            <code>{setup}</code>
-            <button type="button" className="btn btn-sm" onClick={() => copy(setup)}>
-              Copy
-            </button>
-          </div>
+          Kiểm tra kết nối (phải thấy “Kết nối được”):
+          <Cmd text={test} />
         </li>
         <li>
           Cho nó tự chạy mỗi khi mở máy và chạy luôn bây giờ:
-          <div className="pc-code">
-            <code>powershell -ExecutionPolicy Bypass -File install.ps1</code>
-            <button type="button" className="btn btn-sm" onClick={() => copy("powershell -ExecutionPolicy Bypass -File install.ps1")}>
-              Copy
-            </button>
-          </div>
+          <Cmd text={install} />
         </li>
       </ol>
       <p className="hint">Vài giây sau, trang này hiện “Đang bật”. Gỡ: chạy uninstall.ps1 trong cùng thư mục.</p>
