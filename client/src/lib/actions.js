@@ -219,3 +219,19 @@ export function buildIndex(customActions = []) {
 
 export const roleNames = (roles) =>
   [roles.includes("o") && "Mở", roles.includes("m") && "Giữa", roles.includes("e") && "Kết"].filter(Boolean).join(", ");
+
+export const TOP_TAB = "top";
+const TOP_MAX = 20;
+const TOP_MIN = 10;
+
+// The tabs of the action list: "Đánh giá cao" first, then one per category, empty ones left out
+// ("Của bạn" stays when keepMine, so the library can say how to add one).
+// "Đánh giá cao" ranks by how many saved prompts use the action (counts); while the team has saved few prompts,
+// the ★ actions fill it up to TOP_MAX. Every item gets `uses`.
+export function actionTabs(list, counts = {}, { keepMine = false } = {}) {
+  const items = list.map((a) => ({ ...a, uses: counts[a.id] || 0 }));
+  const used = items.filter((a) => a.uses > 0).sort((a, b) => b.uses - a.uses || Number(b.bold) - Number(a.bold)).slice(0, TOP_MAX);
+  const top = used.length >= TOP_MIN ? used : [...used, ...items.filter((a) => a.bold && !a.uses)].slice(0, TOP_MAX);
+  const cats = CATS.map((c) => ({ ...c, items: items.filter((a) => a.cat === c.id) }));
+  return [{ id: TOP_TAB, label: "Đánh giá cao", items: top }, ...cats].filter((g) => g.items.length || (keepMine && g.id === "mine"));
+}

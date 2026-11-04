@@ -87,7 +87,7 @@ export const TEMPLATE_VARS = [
 
 export const DURATIONS = [10, 15, 20];
 export const ROLE_DEFAULT = { open: "ob1", mid: "mb1", end: "eb1" };
-const LEGACY_IDS = { o1: "t1", o2: "t9" };
+export const LEGACY_IDS = { o1: "t1", o2: "t9" };
 const DEFAULT_MID_COUNT = { 10: 3, 15: 4, 20: 6 };
 
 export const DEFAULT_STATE = {

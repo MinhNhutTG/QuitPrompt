@@ -1,31 +1,7 @@
-import { useMemo } from "react";
-import { CATS, FLAGS } from "../lib/actions.js";
+import { FLAGS } from "../lib/actions.js";
 import { fmtSec, fmtSecVi, nextMid, shuffleChain } from "../lib/prompt.js";
+import ActionPicker from "./ActionPicker.jsx";
 import { Seg } from "./ui.jsx";
-
-const optionLabel = (a) => `${a.bold ? "★ " : ""}${a.label}${a.conds.length ? ` (${a.conds.map((c) => FLAGS[c].label).join(", ")})` : ""}`;
-
-// Native <select> grouped by category: fast, accessible, and good on phones.
-function ActionSelect({ role, value, index, onChange, label }) {
-  const groups = useMemo(() => {
-    const list = index.forRole(role);
-    if (value && !list.some((a) => a.id === value) && index.byId.has(value)) list.push(index.byId.get(value));
-    return CATS.map((c) => ({ ...c, items: list.filter((a) => a.cat === c.id) })).filter((g) => g.items.length);
-  }, [role, value, index]);
-  return (
-    <select className="input" value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}>
-      {groups.map((g) => (
-        <optgroup key={g.id} label={g.label}>
-          {g.items.map((a) => (
-            <option key={a.id} value={a.id}>
-              {optionLabel(a)}
-            </option>
-          ))}
-        </optgroup>
-      ))}
-    </select>
-  );
-}
 
 function Beat({ beat, children, controls }) {
   const conds = beat.action?.conds || [];
@@ -85,7 +61,7 @@ export default function Sequence({ state, set, index, result }) {
       <div className="beats">
         <div className="beats-h">Mở đầu</div>
         <Beat beat={open}>
-          <ActionSelect role="open" value={state.open} index={index} label="Động tác mở đầu" onChange={(open) => set({ open })} />
+          <ActionPicker role="open" value={state.open} index={index} label="Động tác mở đầu" onChange={(open) => set({ open })} />
         </Beat>
 
         <div className="beats-h">
@@ -110,7 +86,7 @@ export default function Sequence({ state, set, index, result }) {
               </>
             }
           >
-            <ActionSelect
+            <ActionPicker
               role="mid"
               value={state.mid[j]}
               index={index}
@@ -129,7 +105,7 @@ export default function Sequence({ state, set, index, result }) {
         </label>
         {end && (
           <Beat beat={end}>
-            <ActionSelect role="end" value={state.end} index={index} label="Động tác kết" onChange={(end) => set({ end })} />
+            <ActionPicker role="end" value={state.end} index={index} label="Động tác kết" onChange={(end) => set({ end })} />
           </Beat>
         )}
       </div>

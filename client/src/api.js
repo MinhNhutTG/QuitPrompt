@@ -135,6 +135,7 @@ export const api = {
 
   prompts: (params) => request("GET", "/prompts" + qs(params)),
   promptFilters: () => request("GET", "/prompts/filters"),
+  actionStats: () => request("GET", "/prompts/action-stats"),
 
   // Realtime (components/Live.jsx): the team chat and the feed of what members did. The event stream itself is
   // opened with EventSource on /api/live.

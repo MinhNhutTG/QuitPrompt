@@ -66,6 +66,33 @@ async function decorate(viewer, prompts) {
   }));
 }
 
+// How many saved prompts (the whole team's, built in the builder) use each action: { counts: { actionId: n } }.
+// An action used twice in one prompt counts once; the closing action counts only when the prompt has one.
+// The "Đánh giá cao" tab of the action picker ranks by this.
+router.get(
+  "/action-stats",
+  ah(async (req, res) => {
+    const rows = await Prompt.aggregate([
+      { $match: { source: { $ne: "external" } } },
+      {
+        $project: {
+          ids: {
+            $setUnion: [
+              ["$settings.open"],
+              { $cond: [{ $isArray: "$settings.mid" }, "$settings.mid", []] },
+              { $cond: [{ $eq: ["$settings.endOn", true] }, ["$settings.end"], []] },
+            ],
+          },
+        },
+      },
+      { $unwind: "$ids" },
+      { $match: { ids: { $type: "string" } } },
+      { $group: { _id: "$ids", n: { $sum: 1 } } },
+    ]);
+    res.json({ counts: Object.fromEntries(rows.map((r) => [r._id, r.n])) });
+  })
+);
+
 // Options for the filters on the saved-prompts page: every member, every product category in use.
 router.get(
   "/filters",

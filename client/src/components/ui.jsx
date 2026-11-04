@@ -114,6 +114,20 @@ export function Seg({ name, value, options, onChange, label }) {
   );
 }
 
+// A row of tabs. tabs: [{ id, label, count? }]
+export function Tabs({ tabs, value, onChange, label }) {
+  return (
+    <div className="tabs" role="tablist" aria-label={label}>
+      {tabs.map((t) => (
+        <button key={t.id} type="button" role="tab" aria-selected={value === t.id} className={value === t.id ? "is-on" : ""} onClick={() => onChange(t.id)}>
+          {t.label}
+          {t.count != null && <span className="tab-count">{t.count}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function Field({ label, hint, children, className = "" }) {
   return (
     <label className={`field ${className}`}>

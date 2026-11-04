@@ -1,9 +1,24 @@
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../api.js";
+import { LEGACY_IDS } from "./prompt.js";
 
 export const useProducts = () => useQuery({ queryKey: ["products"], queryFn: () => api.products({ limit: 500 }) });
 
 export const useSettings = () => useQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 5 * 60 * 1000 });
+
+// Team-wide count of saved prompts using each action, for the "Đánh giá cao" tab.
+// Old ids are folded into the ones that replaced them. → { actionId: n }
+export const useActionStats = () =>
+  useQuery({
+    queryKey: ["actionStats"],
+    queryFn: api.actionStats,
+    staleTime: 5 * 60 * 1000,
+    select: (d) => {
+      const out = {};
+      for (const [id, n] of Object.entries(d?.counts || {})) out[LEGACY_IDS[id] || id] = (out[LEGACY_IDS[id] || id] || 0) + n;
+      return out;
+    },
+  });
 
 export const usePrompts = (params) =>
   useInfiniteQuery({
