@@ -10,6 +10,7 @@ const loaders = {
   plans: () => import("./Plans.jsx"),
   planDetail: () => import("./PlanDetail.jsx"),
   trends: () => import("./Trends.jsx"),
+  imagePrompt: () => import("./ImagePrompt.jsx"),
   resources: () => import("./Resources.jsx"),
   drive: () => import("./Drive.jsx"),
   library: () => import("./Library.jsx"),
