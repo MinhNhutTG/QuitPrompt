@@ -3847,6 +3847,243 @@ select.status-select:disabled {
   gap: 12px;
 }
 
+/* ---------- Đón sóng (pages/Trends.jsx) */
+:root {
+  /* Giai đoạn sóng: chữ đậm trên nền nhạt, tương phản ≥ 4.5:1. */
+  --wave-early: #0f7a4f;
+  --wave-early-soft: #dcf5ea;
+  --wave-mid: #c2410c;
+  --wave-mid-soft: #ffedd5;
+  --wave-spike: #9a5b00;
+  --wave-spike-soft: #fff3dc;
+  --wave-flat: #5a6884;
+  --wave-flat-soft: #edf2fa;
+  --wave-down: #b42e3c;
+  --wave-down-soft: #fde8ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --wave-early: #5fd6a2;
+    --wave-early-soft: #143428;
+    --wave-mid: #fb923c;
+    --wave-mid-soft: #3a2316;
+    --wave-spike: #f3bb55;
+    --wave-spike-soft: #36291a;
+    --wave-flat: #9aaccc;
+    --wave-flat-soft: #1a2c4e;
+    --wave-down: #ff8a96;
+    --wave-down-soft: #3a1a22;
+  }
+}
+.tone-early { --wave: var(--wave-early); --wave-soft: var(--wave-early-soft); }
+.tone-mid { --wave: var(--wave-mid); --wave-soft: var(--wave-mid-soft); }
+.tone-spike { --wave: var(--wave-spike); --wave-soft: var(--wave-spike-soft); }
+.tone-flat { --wave: var(--wave-flat); --wave-soft: var(--wave-flat-soft); }
+.tone-down { --wave: var(--wave-down); --wave-soft: var(--wave-down-soft); }
+
+.trend-seasons h2 {
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+.trend-seasons ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 4px;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+}
+.trend-seasons li {
+  flex: 0 0 auto;
+  min-width: 170px;
+  max-width: 220px;
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--sunk);
+  font-size: 13px;
+}
+.trend-seasons li span {
+  color: var(--muted);
+}
+.trend-seasons li.is-big b::after {
+  content: " ★";
+  color: var(--hot-text);
+}
+.trend-seasons li.is-prep {
+  border-color: var(--wave-mid);
+  background: var(--wave-mid-soft);
+}
+.trend-seasons li.is-prep > small:first-of-type {
+  color: var(--wave-mid);
+  font-weight: 600;
+}
+
+.trend-add .picker {
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+.trend-scan {
+  color: var(--muted);
+  font-size: 14px;
+}
+.trend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.trend-card {
+  display: grid;
+  gap: 10px;
+  border-top: 3px solid var(--wave);
+}
+.trend-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.trend-head h3 {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.badge.trend-badge {
+  flex: none;
+  background: var(--wave-soft);
+  color: var(--wave);
+}
+.trend-spark {
+  position: relative;
+}
+.trend-spark svg {
+  display: block;
+  width: 100%;
+  height: 64px;
+  touch-action: none;
+  cursor: crosshair;
+}
+.trend-spark.is-empty {
+  height: 64px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 13px;
+  background: var(--sunk);
+  border-radius: 8px;
+}
+.trend-line {
+  fill: none;
+  stroke: var(--wave);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.trend-area {
+  fill: var(--wave-soft);
+  opacity: 0.7;
+}
+.trend-cross {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.trend-tip {
+  display: block;
+  text-align: right;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.trend-tip b {
+  color: var(--fg);
+}
+.trend-nums {
+  font-size: 14px;
+}
+.trend-chips {
+  display: grid;
+  gap: 6px;
+}
+.trend-chips > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.trend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 10px;
+  border-radius: 99px;
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  min-height: 28px;
+}
+.trend-chip small {
+  color: var(--muted);
+  font-weight: 600;
+}
+.trend-chip small.trend-new {
+  color: var(--wave-early);
+}
+.trend-chip.is-new {
+  border-color: var(--wave-early);
+}
+.trend-chip:not(:has(.trend-chip-add)) {
+  padding-right: 10px;
+}
+.trend-chip-add {
+  width: 22px;
+  height: 22px;
+  border-radius: 99px;
+  border: 0;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+}
+.trend-chip-add:hover {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.trend-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.trend-product {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.trend-product a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.trend-actions {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.trend-when {
+  font-size: 12px;
+}
+.trend-source {
+  font-size: 12px;
+}
+
+
 /* ---------- Quản trị → Máy tính */
 .pc-card {
   display: grid;
@@ -3905,3 +4142,4 @@ select.status-select:disabled {
   overflow-wrap: anywhere;
   font-size: 12.5px;
 }
+

@@ -39,6 +39,10 @@ const RULES = [
   ["DELETE", /^\/api\/drive\/files\/([\w-]+)$/, "drive.delete", "Drive: xoá vào thùng rác", "drive"],
   ["POST", /^\/api\/drive\/root$/, "drive.root", "Drive: chọn thư mục của team", "drive"],
   ["POST", /^\/api\/drive\/disconnect$/, "drive.disconnect", "Drive: ngắt kết nối", "drive"],
+  ["POST", /^\/api\/trends$/, "trend.create", "Theo dõi từ khoá xu hướng", "trend"],
+  ["PATCH", /^\/api\/trends\/(\w+)$/, "trend.update", "Gắn sản phẩm cho từ khoá", "trend"],
+  ["DELETE", /^\/api\/trends\/(\w+)$/, "trend.delete", "Bỏ theo dõi từ khoá", "trend"],
+  ["POST", /^\/api\/trends\/scan$/, "trend.scan", "Quét xu hướng", "trend"],
   ["PUT", /^\/api\/settings$/, "settings.update", "Đổi cài đặt", "settings"],
   ["POST", /^\/api\/transfer\/import$/, "data.import", "Nhập dữ liệu", "data"],
   ["GET", /^\/api\/transfer\/export$/, "data.export", "Xuất dữ liệu", "data"],
@@ -75,6 +79,7 @@ export const ACTION_GROUPS = {
   plan: "Kế hoạch",
   resource: "Tài nguyên",
   drive: "Google Drive",
+  trend: "Đón sóng",
   settings: "Cài đặt",
   data: "Dữ liệu",
   admin: "Quản trị",
@@ -88,7 +93,7 @@ const clip = (s, n) => (typeof s === "string" ? s.slice(0, n) : "");
 // Best guess at a readable name for what the response is about.
 function labelOf(body) {
   const item = body?.item;
-  if (item) return item.name || item.title || item.product?.name || item.username || "";
+  if (item) return item.name || item.title || item.keyword || item.product?.name || item.username || "";
   if (Array.isArray(body?.items)) return body.items.map((i) => i.product?.name || i.name || i.title).filter(Boolean).join(", ");
   return body?.user?.username || "";
 }

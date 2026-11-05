@@ -22,6 +22,8 @@ import adminRoutes from "./routes/admin.js";
 import driveRoutes from "./routes/drive.js";
 import liveRoutes from "./routes/live.js";
 import { pcAdminRoutes, agentRoutes } from "./routes/pc.js";
+import trendRoutes from "./routes/trends.js";
+import { scheduleTrendScans } from "./lib/trends.js";
 import { ActivityLog } from "./models/ActivityLog.js";
 import { ChatMessage } from "./models/ChatMessage.js";
 import { ensureStarterRoles } from "./lib/permissions.js";
@@ -114,6 +116,8 @@ app.use("/api/resources", requireAuth, resourceRoutes);
 app.use("/api/settings", requireAuth, settingsRoutes);
 app.use("/api/transfer", requireAuth, transferRoutes);
 app.use("/api/drive", requireAuth, driveRoutes);
+// Trang "Đón sóng": watched phrases and their search trends (tài liệu 14).
+app.use("/api/trends", requireAuth, trendRoutes);
 // Realtime: the event stream, the team chat and the notifications feed (routes/live.js).
 app.use("/api", liveRoutes);
 // Each route checks its own permission: admin.view to look, an admin to change accounts and roles.
@@ -156,6 +160,7 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(config.port, () => console.log(`Xưởng Prompt: http://localhost:${config.port}`));
+scheduleTrendScans();
 // An existing TTL index keeps its old lifetime until rebuilt, so bring them in line: LOG_RETENTION_DAYS for the
 // log, CHAT_KEEP_DAYS for chat messages.
 connectDb(config.mongoUri).then(() =>

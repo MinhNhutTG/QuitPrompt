@@ -34,6 +34,7 @@ function linkOf(n) {
   if (n.group === "prompt") return "/saved";
   if (n.group === "resource") return "/resources";
   if (n.group === "drive") return "/drive";
+  if (n.group === "trend") return "/trends";
   return null;
 }
 

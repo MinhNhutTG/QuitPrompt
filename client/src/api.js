@@ -157,6 +157,13 @@ export const api = {
   deletePlan: (id) => request("DELETE", `/plans/${id}`),
   deletePlans: (ids) => request("POST", "/plans/bulk-delete", { ids }),
 
+  // Trang "Đón sóng": watched phrases and their search trends.
+  trends: () => request("GET", "/trends"),
+  createTrend: (body) => request("POST", "/trends", body),
+  updateTrend: (id, body) => request("PATCH", `/trends/${id}`, body),
+  deleteTrend: (id) => request("DELETE", `/trends/${id}`),
+  scanTrends: (ids) => request("POST", "/trends/scan", ids ? { ids } : {}),
+
   resources: () => request("GET", "/resources"),
   createResource: (body) => request("POST", "/resources", body),
   updateResource: (id, body) => request("PATCH", `/resources/${id}`, body),
