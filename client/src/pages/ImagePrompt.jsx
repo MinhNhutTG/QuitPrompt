@@ -30,7 +30,8 @@ function buildPrompt({ pose, background, ratio }) {
     "",
     "Task: dress the woman from Image 1 in the exact outfit from Image 2.",
     "",
-    "Keep the woman from Image 1 unchanged: same face, facial features, identity, hairstyle, skin tone and body shape.",
+    "FACE LOCK (most important): the woman must be the exact same person as in Image 1, not a different model and not a look-alike. Copy her face exactly from Image 1: face shape, eyes, eyebrows, nose, lips, jawline, skin tone, moles or marks, makeup and age. Do not beautify, slim, retouch or alter her face in any way. Anyone who knows her must recognize her instantly.",
+    "Also keep her hairstyle, hair color and body shape from Image 1. Only the clothing, pose and background change.",
     "Reproduce the outfit from Image 2 exactly: same colors, pattern, print, fabric texture, cut, length, neckline, sleeves, buttons, details and logos. Do not redesign or add anything to it. Ignore any person, mannequin, hanger or background in Image 2.",
     "The outfit fits her body naturally with realistic fabric folds and drape.",
     "",
@@ -38,7 +39,7 @@ function buildPrompt({ pose, background, ratio }) {
     `Background: ${bg}.`,
     "",
     `Style: photorealistic fashion photo, natural soft lighting matching the background, sharp focus on the outfit, true-to-life colors, high detail. Aspect ratio ${ratio}.`,
-    "Avoid: changing her face, changing the outfit's color or design, extra clothing items, distorted hands or fingers, text or watermarks.",
+    "Avoid: replacing her with another model, a different or generic face, changing her facial features or ethnicity, changing the outfit's color or design, extra clothing items, distorted hands or fingers, text or watermarks.",
   ].join("\n");
 }
 
@@ -97,7 +98,7 @@ export default function ImagePrompt() {
       <div className="grid-2">
         <div className="card stack">
           <div className="imgp-slots">
-            <ImageSlot n={1} title="Người mẫu nữ" hint="Rõ mặt, rõ dáng người" file={model} onFile={setModel} />
+            <ImageSlot n={1} title="Người mẫu nữ" hint="Mặt chính diện, rõ nét, đủ sáng để AI giữ đúng khuôn mặt" file={model} onFile={setModel} />
             <ImageSlot n={2} title="Sản phẩm" hint="Rõ màu, hoạ tiết, chi tiết" file={outfit} onFile={setOutfit} />
           </div>
 
@@ -138,7 +139,7 @@ export default function ImagePrompt() {
               {prompt}
             </pre>
             {poseId === "custom" && !customPose.trim() && <p className="hint">Chưa nhập động tác, prompt đang dùng dáng tự nhiên.</p>}
-            <p className="hint">Khi dán vào công cụ AI, đính kèm ảnh người mẫu trước, ảnh sản phẩm sau cho đúng thứ tự Ảnh 1, Ảnh 2.</p>
+            <p className="hint">Khi dán vào công cụ AI, đính kèm ảnh người mẫu trước, ảnh sản phẩm sau cho đúng thứ tự Ảnh 1, Ảnh 2. Nếu ảnh ra bị đổi mặt, nhắn thêm cho AI: “Giữ đúng khuôn mặt của người trong ảnh 1, làm lại”.</p>
             <div className="btns">
               <button type="button" className="btn btn-primary" onClick={() => copy(prompt, "p")}>
                 Copy prompt
