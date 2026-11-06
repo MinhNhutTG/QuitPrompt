@@ -4174,3 +4174,142 @@ select.status-select:disabled {
 .imgp-slot .btn {
   justify-self: start;
 }
+
+/* ---- plans: who is working on what ("Nhận làm", components/Claim.jsx) and the folded filters */
+.plan-search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.plan-search .filters-q {
+  flex: 1;
+  min-width: 0;
+}
+.filters-toggle {
+  flex: none;
+  min-height: 44px;
+}
+.filters-toggle.is-on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.plan-filters {
+  display: none;
+}
+.plan-filters.is-open {
+  display: grid;
+}
+@media (min-width: 900px) {
+  .filters-toggle {
+    display: none;
+  }
+  .plan-filters {
+    display: grid;
+  }
+}
+.claim-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.claim-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.claim-tag.is-mine {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+.claim-tag.is-other {
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+.claim-tag .claim-time {
+  font-weight: 500;
+  opacity: 0.85;
+}
+.claim-tag.is-mine .claim-dot {
+  animation: claim-pulse 1.6s ease-in-out infinite;
+}
+@keyframes claim-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+.note.is-mine {
+  box-shadow: 0 0 0 2px var(--ok), 0 12px 20px -10px rgba(0, 0, 0, 0.32);
+}
+.note.is-taken {
+  box-shadow: 0 0 0 2px var(--warn), 0 12px 20px -10px rgba(0, 0, 0, 0.32);
+}
+.btn-claim {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+.btn-claim:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.claim-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 14px;
+}
+.claim-bar p {
+  flex: 1 1 260px;
+  margin: 0;
+}
+.claim-bar .btns {
+  margin: 0;
+}
+.claim-bar.is-free {
+  color: var(--fg);
+}
+.claim-bar.is-free .claim-dot {
+  color: var(--muted);
+}
+.claim-bar.is-mine {
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 9%, var(--surface));
+}
+.claim-bar.is-mine .claim-dot {
+  color: var(--ok);
+  animation: claim-pulse 1.6s ease-in-out infinite;
+}
+.claim-bar.is-other {
+  border-color: var(--warn);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+@media (prefers-reduced-motion: reduce) {
+  .claim-tag.is-mine .claim-dot,
+  .claim-bar.is-mine .claim-dot {
+    animation: none;
+  }
+}
+@media (max-width: 520px) {
+  .tabs button {
+    padding: 10px 9px;
+  }
+  .tab-count {
+    margin-left: 4px;
+  }
+}

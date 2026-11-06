@@ -10,6 +10,7 @@ import { PickScript } from "../components/Scripts.jsx";
 import LazyImage from "../components/LazyImage.jsx";
 import { useToast } from "../components/Toast.jsx";
 import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
+import { ClaimBar, useClaim, useClaimGuard } from "../components/Claim.jsx";
 import { SLOTS, STATUS, isFinished, progressOf } from "../lib/plans.js";
 import { saveFiles, standalone } from "../lib/download.js";
 
@@ -29,7 +30,7 @@ const SlotIcon = ({ kind }) => (
 
 const ELEVENLABS_TTS = "https://elevenlabs.io/app/speech-synthesis/text-to-speech";
 
-function FileSlot({ plan, slot, driveReady, onChanged }) {
+function FileSlot({ plan, slot, driveReady, onChanged, guard }) {
   const toast = useToast();
   const input = useRef(null);
   const [progress, setProgress] = useState(null);
@@ -102,11 +103,11 @@ function FileSlot({ plan, slot, driveReady, onChanged }) {
           </a>
         )}
         <input ref={input} type="file" accept={slot.accept} hidden onChange={(e) => (upload(e.target.files?.[0]), (e.target.value = ""))} />
-        <button type="button" className={`btn btn-sm ${file ? "" : "btn-primary"}`} disabled={busy || !driveReady} onClick={() => input.current?.click()}>
+        <button type="button" className={`btn btn-sm ${file ? "" : "btn-primary"}`} disabled={busy || !driveReady} onClick={() => guard(() => input.current?.click())}>
           {busy ? `${Math.round(progress * 100)}%` : file ? "Thay" : "Tải lên"}
         </button>
         {file && !busy && (
-          <ConfirmButton className="btn btn-sm btn-danger-ghost" disabled={remove.isPending} onConfirm={() => remove.mutate()}>
+          <ConfirmButton className="btn btn-sm btn-danger-ghost" disabled={remove.isPending} onConfirm={() => guard(() => remove.mutate())}>
             Xoá
           </ConfirmButton>
         )}
@@ -115,7 +116,7 @@ function FileSlot({ plan, slot, driveReady, onChanged }) {
   );
 }
 
-function TextBlock({ plan, field, label, hint, onChanged }) {
+function TextBlock({ plan, field, label, hint, onChanged, guard }) {
   const toast = useToast();
   const [value, setValue] = useState(plan[field] || "");
   useEffect(() => setValue(plan[field] || ""), [plan[field]]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -138,7 +139,7 @@ function TextBlock({ plan, field, label, hint, onChanged }) {
       <div className="btns">
         {dirty && (
           <>
-            <button type="button" className="btn btn-sm btn-primary" onClick={() => save.mutate()} disabled={save.isPending}>
+            <button type="button" className="btn btn-sm btn-primary" onClick={() => guard(() => save.mutate())} disabled={save.isPending}>
               {save.isPending ? "Đang lưu..." : "Lưu"}
             </button>
             <button type="button" className="btn btn-sm btn-ghost" onClick={() => setValue(plan[field] || "")}>
@@ -217,7 +218,7 @@ function Handoff({ plan }) {
   );
 }
 
-function StatusSelect({ plan, onChanged }) {
+function StatusSelect({ plan, onChanged, guard }) {
   const toast = useToast();
   const save = useMutation({
     mutationFn: (status) => api.updatePlan(plan._id, { status }),
@@ -228,7 +229,10 @@ function StatusSelect({ plan, onChanged }) {
     onError: (e) => toast(e.message, { tone: "danger" }),
   });
   return (
-    <select className={`input status-select status-${STATUS[plan.status].tone}`} aria-label="Trạng thái" value={plan.status} disabled={save.isPending} onChange={(e) => save.mutate(e.target.value)}>
+    <select className={`input status-select status-${STATUS[plan.status].tone}`} aria-label="Trạng thái" value={plan.status} disabled={save.isPending} onChange={(e) => {
+        const v = e.target.value;
+        guard(() => save.mutate(v));
+      }}>
       {Object.entries(STATUS).map(([v, s]) => (
         <option key={v} value={v}>
           {s.label}
@@ -254,6 +258,8 @@ export default function PlanDetail() {
     qc.setQueryData(["plans", "one", id], { item });
     qc.invalidateQueries({ queryKey: ["plans"], predicate: (q) => q.queryKey[1] !== "one" });
   };
+  const claim = useClaim(plan, onChanged);
+  const { guard, dialog } = useClaimGuard(claim);
 
   // Opens the plan in QuickEdit, the desktop editor on this computer, through its quickedit:// link. The link carries
   // this site's address and a token for this plan only; QuickEdit downloads the files and sends the video back.
@@ -328,7 +334,7 @@ export default function PlanDetail() {
               Tạo prompt
             </Link>
             {editable && (
-              <button type="button" className="btn btn-primary" onClick={() => openEditor.mutate()} disabled={openEditor.isPending} title={plan.files?.audio ? "Mở 2 video và lời đọc trong QuickEdit trên máy này để dựng video" : "Mở 2 video trong QuickEdit trên máy này; QuickEdit đọc lời đọc thành giọng nói"}>
+              <button type="button" className="btn btn-primary" onClick={() => guard(() => openEditor.mutate())} disabled={openEditor.isPending} title={plan.files?.audio ? "Mở 2 video và lời đọc trong QuickEdit trên máy này để dựng video" : "Mở 2 video trong QuickEdit trên máy này; QuickEdit đọc lời đọc thành giọng nói"}>
                 {openEditor.isPending ? "Đang mở..." : "Tạo video"}
               </button>
             )}
@@ -336,6 +342,9 @@ export default function PlanDetail() {
         )}
       </div>
       <CopyPlanDialog plan={copying ? plan : null} onClose={() => setCopying(false)} />
+      {dialog}
+
+      <ClaimBar c={claim} />
 
       <Handoff plan={plan} />
 
@@ -355,7 +364,7 @@ export default function PlanDetail() {
           <div>
             <dt>Trạng thái</dt>
             <dd>
-              <StatusSelect plan={plan} onChanged={onChanged} />
+              <StatusSelect plan={plan} onChanged={onChanged} guard={guard} />
             </dd>
           </div>
           <div>
@@ -392,7 +401,7 @@ export default function PlanDetail() {
         )}
         <ul className="slots">
           {SLOTS.map((s) => (
-            <FileSlot key={s.key} plan={plan} slot={s} driveReady={driveReady} onChanged={onChanged} />
+            <FileSlot key={s.key} plan={plan} slot={s} driveReady={driveReady} onChanged={onChanged} guard={guard} />
           ))}
         </ul>
       </section>
@@ -404,13 +413,13 @@ export default function PlanDetail() {
         {!productGone && (
           <div className="sec-h">
             Lời đọc và mô tả
-            <button type="button" className="btn btn-sm" onClick={() => setPicking(true)}>
+            <button type="button" className="btn btn-sm" onClick={() => guard(() => setPicking(true))}>
               Chọn từ lời đọc đã lưu
             </button>
           </div>
         )}
-        <TextBlock plan={plan} field="voiceText" label="Lời đọc" hint="Nội dung giọng đọc của video" onChanged={onChanged} />
-        <TextBlock plan={plan} field="caption" label="Mô tả khi đăng" hint="Caption, hashtag đăng kèm video" onChanged={onChanged} />
+        <TextBlock plan={plan} field="voiceText" label="Lời đọc" hint="Nội dung giọng đọc của video" onChanged={onChanged} guard={guard} />
+        <TextBlock plan={plan} field="caption" label="Mô tả khi đăng" hint="Caption, hashtag đăng kèm video" onChanged={onChanged} guard={guard} />
       </section>
     </div>
   );

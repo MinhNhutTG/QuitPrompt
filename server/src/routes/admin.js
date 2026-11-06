@@ -317,6 +317,8 @@ router.delete(
     if (String(user._id) === String(req.userId)) throw new HttpError(400, "Không tự xoá tài khoản của chính mình được.");
     await assertKeepsAnAdmin(user, { deleted: true });
     await user.deleteOne();
+    // Plans they were working on are free for the team again.
+    await VideoPlan.updateMany({ claimedBy: user._id }, { claimedBy: null, claimedAt: null });
     res.locals.audit = { label: user.username };
     res.json({ ok: true });
   })

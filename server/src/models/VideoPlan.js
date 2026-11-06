@@ -42,6 +42,10 @@ const schema = new mongoose.Schema(
     note: { type: String, maxlength: 1000, default: "" },
     // Pinned to the top of the team's list (newest pin first); null when not pinned. Any member pins or unpins.
     pinnedAt: { type: Date, default: null },
+    // Who is working on it right now ("Nhận làm"), so two members never make the same video. Not the assignee:
+    // anyone may take an unfinished plan, and it is let go by hand or when the plan becomes done or posted.
+    claimedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    claimedAt: { type: Date, default: null },
     // The plan's own Drive folder: <team folder>/<DD_MM_YYYY>/<product name (n)>. Made on creation, or later when Drive was not connected.
     folder: {
       id: { type: String, default: "" },

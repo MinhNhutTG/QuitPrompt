@@ -5,7 +5,8 @@ import { api } from "../api.js";
 import { usePlans, usePromptFilters } from "../lib/queries.js";
 import { uid, useDebounce } from "../lib/util.js";
 import { useAuth } from "../auth.jsx";
-import { EmptyState, ErrorState, Modal, Pager, ProductName, Skeleton } from "../components/ui.jsx";
+import { EmptyState, ErrorState, Modal, Pager, ProductName, Skeleton, Tabs } from "../components/ui.jsx";
+import { ClaimButtons, ClaimTag, useClaim } from "../components/Claim.jsx";
 import ProductPicker from "../components/ProductPicker.jsx";
 import LazyImage from "../components/LazyImage.jsx";
 import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
@@ -71,16 +72,29 @@ const FIELDS = ["product", "assignee", "dueDate", "status"];
 const ICONS = {
   copy: "M10 8h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1ZM15 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3",
   trash: "M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6",
+  prompt: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z",
 };
+
+const IconSvg = ({ icon }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d={ICONS[icon]} />
+  </svg>
+);
 
 // Icon-only row action; the label stays as aria-label and tooltip.
 const IconAct = ({ icon, label, className, ...props }) => (
   <button type="button" className={`btn btn-sm btn-icon ${className}`} aria-label={label} title={label} {...props}>
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={ICONS[icon]} />
-    </svg>
+    <IconSvg icon={icon} />
   </button>
 );
+
+// Who is working on what: the views over the same filters.
+const CLAIM_VIEWS = [
+  { id: "", label: "Tất cả", key: "all" },
+  { id: "free", label: "Chưa ai nhận", key: "free" },
+  { id: "taken", label: "Đang làm", key: "taken" },
+  { id: "me", label: "Của tôi", key: "me" },
+];
 
 // Each plan keeps its own paper and tape colour (from its id), and a slight tilt, like notes stuck on a wall.
 const PAPERS = 6;
@@ -140,11 +154,12 @@ function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selecte
   const gone = plan?.product.name.startsWith("(");
   const pinned = Boolean(plan?.pinnedAt);
   const look = looks(plan?._id || "new");
+  const claim = useClaim(plan);
   const overdue = !isFinished(form.status) && form.dueDate && form.dueDate < today;
 
   return (
     <article
-      className={["note", `paper-${look.paper}`, !plan && "is-draft", plan && isFinished(plan.status) && "is-done", dirty && plan && "is-dirty", selected && "is-selected", pinned && "is-pinned"].filter(Boolean).join(" ")}
+      className={["note", `paper-${look.paper}`, !plan && "is-draft", plan && isFinished(plan.status) && "is-done", claim.state === "mine" && "is-mine", claim.state === "other" && "is-taken", dirty && plan && "is-dirty", selected && "is-selected", pinned && "is-pinned"].filter(Boolean).join(" ")}
       style={{ "--tilt": `${look.tilt * 0.4}deg` }}
       aria-label={plan ? `Kế hoạch ${plan.product.name}` : "Kế hoạch mới"}
     >
@@ -191,6 +206,7 @@ function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selecte
               Đã có {progress.have}/{progress.total} mục
             </span>
           )}
+          <ClaimTag c={claim} />
         </div>
       </div>
 
@@ -245,7 +261,8 @@ function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selecte
         )}
         {plan && !dirty && (
           <>
-            <Link className="btn btn-sm btn-primary" to={`/plans/${plan._id}`}>
+            {!gone && <ClaimButtons c={claim} small />}
+            <Link className={`btn btn-sm ${claim.state === "free" ? "" : "btn-primary"}`} to={`/plans/${plan._id}`}>
               Chi tiết
             </Link>
             {plan.files?.final && (
@@ -253,12 +270,14 @@ function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selecte
                 Tải video
               </a>
             )}
-            <Link className="btn btn-sm btn-ghost" to={`/?product=${plan.product._id}`}>
-              Prompt
-            </Link>
           </>
         )}
         <span className="note-icons">
+          {plan && !dirty && !gone && (
+            <Link className="btn btn-sm btn-icon btn-ghost" to={`/?product=${plan.product._id}`} aria-label="Tạo prompt cho sản phẩm này" title="Tạo prompt cho sản phẩm này">
+              <IconSvg icon="prompt" />
+            </Link>
+          )}
           {plan && !dirty && canEdit && !gone && <IconAct icon="copy" label="Sao chép" className="btn-ghost" onClick={() => onCopy(plan)} />}
           {(!plan || canDelete) && <IconAct icon="trash" label="Xoá" className="btn-danger-ghost" onClick={() => onDelete(plan)} />}
         </span>
@@ -280,6 +299,7 @@ export default function Plans() {
   const status = get("status");
   const due = get("due");
   const cat = get("cat");
+  const claimView = get("claim");
   const page = Math.max(Number(get("page")) || 1, 1);
 
   const set = (changes) =>
@@ -308,13 +328,17 @@ export default function Plans() {
     assignee: assignee || undefined,
     status: status || undefined,
     category: cat || undefined,
+    claim: claimView || undefined,
     today,
     ...dueRange(due, today),
     page,
   });
   const items = data?.items || [];
   const sum = data?.summary;
-  const filtered = Boolean(get("q") || assignee || status || due || cat);
+  const more = [assignee, status, due, cat].filter(Boolean).length;
+  const filtered = Boolean(get("q") || more);
+  // Phones: the four lists fold under "Bộ lọc"; computers always show them.
+  const [filtersOpen, setFiltersOpen] = useState(more > 0);
 
   useEffect(() => {
     if (data && !isPlaceholderData && data.page !== page) set({ page: data.page > 1 ? data.page : "" });
@@ -331,7 +355,7 @@ export default function Plans() {
 
   // Chosen plans by id, kept across pages; a new filter starts over.
   const [selected, setSelected] = useState(() => new Map());
-  const filterKey = [get("q"), assignee, status, due, cat].join("|");
+  const filterKey = [get("q"), assignee, status, due, cat, claimView].join("|");
   useEffect(() => setSelected(new Map()), [filterKey]);
   const select = (plan, on) =>
     setSelected((old) => {
@@ -392,8 +416,13 @@ export default function Plans() {
         )}
       </div>
 
-      <div className="filters">
+      <div className="plan-search">
         <input className="input filters-q" type="search" aria-label="Tìm theo sản phẩm" placeholder="Tìm theo tên hoặc mã sản phẩm" value={q} onChange={(e) => setQ(e.target.value)} />
+        <button type="button" className={`btn filters-toggle ${more ? "is-on" : ""}`} aria-expanded={filtersOpen} aria-controls="plan-filters" onClick={() => setFiltersOpen((o) => !o)}>
+          Bộ lọc{more ? ` (${more})` : ""}
+        </button>
+      </div>
+      <div id="plan-filters" className={`filters plan-filters ${filtersOpen ? "is-open" : ""}`}>
         <label className="filter">
           <span>Người thực hiện</span>
           <MemberSelect value={assignee} onChange={(v) => set({ assignee: v })} members={members} me={user?.id} emptyLabel="Cả team" />
@@ -432,6 +461,13 @@ export default function Plans() {
         </label>
       </div>
 
+      <Tabs
+        label="Ai đang làm"
+        value={claimView}
+        onChange={(v) => set({ claim: v })}
+        tabs={CLAIM_VIEWS.map((v) => ({ id: v.id, label: v.label, count: data?.views ? data.views[v.key] : undefined }))}
+      />
+
       {sum && sum.plans > 0 && (
         <div className="plan-sum" aria-live="polite">
           <div className="plan-sum-main">
@@ -442,19 +478,20 @@ export default function Plans() {
               <span style={{ width: `${pct}%` }} />
             </div>
           </div>
+          {/* Only the statuses that have plans, so the row stays short. */}
           <div className="plan-sum-counts">
-            <span className="status status-todo">
-              {STATUS.todo.label} {sum.todo}
-            </span>
-            <span className="status status-partial">
-              {STATUS.partial.label} {sum.partial}
-            </span>
-            <span className="status status-done">
-              {STATUS.done.label} {sum.finished}
-            </span>
-            <span className="status status-posted">
-              {STATUS.posted.label} {sum.posted || 0}
-            </span>
+            {[
+              ["todo", sum.todo],
+              ["partial", sum.partial],
+              ["done", sum.finished],
+              ["posted", sum.posted || 0],
+            ]
+              .filter(([, n]) => n > 0)
+              .map(([k, n]) => (
+                <span key={k} className={`status status-${k}`}>
+                  {STATUS[k].label} {n}
+                </span>
+              ))}
             {sum.overdue > 0 && <span className="plan-overdue">Quá hạn {sum.overdue}</span>}
           </div>
         </div>
@@ -485,7 +522,11 @@ export default function Plans() {
       ) : error ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : !showBoard ? (
-        filtered ? (
+        claimView && !filtered ? (
+          <EmptyState title={claimView === "free" ? "Kế hoạch nào cũng đã có người nhận" : claimView === "me" ? "Bạn chưa nhận làm kế hoạch nào" : "Chưa ai đang làm kế hoạch nào"}>
+            {claimView === "free" ? "Xem tab Đang làm để biết ai làm gì." : "Vào tab Chưa ai nhận, chọn một kế hoạch rồi bấm Nhận làm."}
+          </EmptyState>
+        ) : filtered || claimView ? (
           <EmptyState title="Không thấy kế hoạch nào khớp">Thử bỏ bớt bộ lọc.</EmptyState>
         ) : (
           <EmptyState

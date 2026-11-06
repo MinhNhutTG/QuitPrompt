@@ -80,21 +80,24 @@ const PRODUCT_FIELDS = { name: 1, sku: 1, category: 1, hot: 1, images: { $slice:
 const GONE_PRODUCT = { name: "(sản phẩm đã xoá)", images: [] };
 const GONE_USER = { id: "", displayName: "(tài khoản đã xoá)" };
 
-// Attaches product { _id, name, sku, category, hot, images: [cover] }, assignee and createdBy { id, displayName }.
+// Attaches product { _id, name, sku, category, hot, images: [cover] }, assignee and createdBy { id, displayName },
+// and claim { by: { id, displayName }, at } or null.
 async function decorate(plans) {
   const productIds = [...new Set(plans.map((p) => String(p.product)))];
-  const userIds = [...new Set(plans.flatMap((p) => [String(p.assignee), String(p.createdBy)]))];
+  const userIds = [...new Set(plans.flatMap((p) => [String(p.assignee), String(p.createdBy), ...(p.claimedBy ? [String(p.claimedBy)] : [])]))];
   const [products, users] = await Promise.all([
     Product.find({ _id: { $in: productIds } }, PRODUCT_FIELDS).lean(),
     User.find({ _id: { $in: userIds } }, { username: 1, displayName: 1 }).lean(),
   ]);
   const productById = new Map(products.map((p) => [String(p._id), p]));
   const userById = new Map(users.map((u) => [String(u._id), { id: String(u._id), displayName: u.displayName || u.username }]));
-  return plans.map(({ __v, ...p }) => ({
+  return plans.map(({ __v, claimedBy, claimedAt, ...p }) => ({
     ...p,
     product: productById.get(String(p.product)) || { _id: p.product, ...GONE_PRODUCT },
     assignee: userById.get(String(p.assignee)) || GONE_USER,
     createdBy: userById.get(String(p.createdBy)) || GONE_USER,
+    // A claim by a deleted account holds nothing.
+    claim: claimedBy && userById.has(String(claimedBy)) ? { by: userById.get(String(claimedBy)), at: claimedAt } : null,
   }));
 }
 
@@ -102,11 +105,15 @@ async function assertMember(userId) {
   if (!(await User.exists({ _id: userId }))) throw new HttpError(404, "Không tìm thấy người thực hiện.");
 }
 
-// Keeps done consistent with the chosen status.
+// Keeps done consistent with the chosen status. A finished plan is no longer anyone's to work on.
 function settle(plan) {
   if (plan.status === "todo") plan.done = 0;
   else if (FINISHED_STATUSES.includes(plan.status)) plan.done = plan.target;
   else plan.done = Math.min(Math.max(plan.done || 0, 0), Math.max(plan.target - 1, 0));
+  if (FINISHED_STATUSES.includes(plan.status) && plan.claimedBy) {
+    plan.claimedBy = null;
+    plan.claimedAt = null;
+  }
 }
 
 // How many of the plan's files and two texts are in (the client's progressOf counts the same).
@@ -127,9 +134,11 @@ function autoStatus(plan, before) {
   settle(plan);
 }
 
-// Filters: assignee, status ("open" = todo + partial), category, q (product name or sku),
-// dueFrom/dueTo (inclusive days), overdue=1 with today (the viewer's local day, "YYYY-MM-DD").
-// Pinned first (newest pin first), then unfinished, then done, posted last; within each, by due day (none last), then newest. Returns one numbered page plus a summary of the whole filter.
+// Filters: assignee, status ("open" = todo + partial, "finished" = done + posted), category, q (product name or sku),
+// claim (free | taken | me), dueFrom/dueTo (inclusive days), overdue=1 with today (the viewer's local day, "YYYY-MM-DD").
+// Pinned first (newest pin first), then unfinished, then done, posted last; within each, the plans I am working on,
+// then the ones nobody took, then other people's; then by due day (none last), then newest.
+// Returns one numbered page, a summary of the whole filter, and how many plans each claim view would show.
 router.get(
   "/",
   ah(async (req, res) => {
@@ -138,6 +147,7 @@ router.get(
     // Aggregation pipelines are not cast by Mongoose, so ids must be ObjectIds here.
     if (assignee) match.assignee = new mongoose.Types.ObjectId(assertId(String(assignee), "người thực hiện"));
     if (status === "open") match.status = { $in: ["todo", "partial"] };
+    else if (status === "finished") match.status = { $in: FINISHED_STATUSES };
     else if (PLAN_STATUSES.includes(status)) match.status = status;
 
     const productConds = [];
@@ -165,6 +175,31 @@ router.get(
     }
     if (Object.keys(due).length) match.dueDate = { $gt: "", ...due };
 
+    // Who is on it: free = unfinished and nobody took it, taken = someone is working on it, me = I am.
+    // The counts of the three views are for the same filters without this one.
+    const me = new mongoose.Types.ObjectId(req.userId);
+    const OPEN = { $nin: FINISHED_STATUSES };
+    const claimMatch = { free: { claimedBy: null, status: OPEN }, taken: { claimedBy: { $ne: null } }, me: { claimedBy: me } }[req.query.claim];
+    const [views = {}] = await VideoPlan.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: null,
+          all: { $sum: 1 },
+          free: { $sum: { $cond: [{ $and: [{ $not: [{ $ifNull: ["$claimedBy", false] }] }, { $not: [{ $in: ["$status", FINISHED_STATUSES] }] }] }, 1, 0] } },
+          taken: { $sum: { $cond: [{ $ifNull: ["$claimedBy", false] }, 1, 0] } },
+          me: { $sum: { $cond: [{ $eq: ["$claimedBy", me] }, 1, 0] } },
+        },
+      },
+      { $project: { _id: 0 } },
+    ]);
+    if (claimMatch) {
+      const { status: open, ...rest } = claimMatch;
+      Object.assign(match, rest);
+      // Kept apart so it narrows a chosen status instead of replacing it.
+      if (open) match.$and = [{ status: open }];
+    }
+
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
     const [summary] = await VideoPlan.aggregate([
       { $match: match },
@@ -189,21 +224,22 @@ router.get(
     const page = Math.min(Math.max(Math.floor(Number(req.query.page)) || 1, 1), pages);
     const rows = await VideoPlan.aggregate([
       { $match: match },
-      // pin: 0 pinned, 1 not. finish: -1 unfinished, 0 done, 1 posted.
+      // pin: 0 pinned, 1 not. finish: -1 unfinished, 0 done, 1 posted. who: 0 mine, 1 nobody's, 2 someone else's.
       {
         $addFields: {
           pin: { $cond: [{ $ifNull: ["$pinnedAt", false] }, 0, 1] },
           finish: { $indexOfArray: [FINISHED_STATUSES, "$status"] },
+          who: { $cond: [{ $eq: ["$claimedBy", me] }, 0, { $cond: [{ $ifNull: ["$claimedBy", false] }, 2, 1] }] },
           noDue: { $eq: ["$dueDate", ""] },
         },
       },
-      { $sort: { pin: 1, pinnedAt: -1, finish: 1, noDue: 1, dueDate: 1, _id: -1 } },
+      { $sort: { pin: 1, pinnedAt: -1, finish: 1, who: 1, noDue: 1, dueDate: 1, _id: -1 } },
       { $skip: (page - 1) * limit },
       { $limit: limit },
-      { $project: { pin: 0, finish: 0, noDue: 0 } },
+      { $project: { pin: 0, finish: 0, who: 0, noDue: 0 } },
     ]);
     const { _id, plans, ...counts } = summary || { target: 0, done: 0, todo: 0, partial: 0, finished: 0, posted: 0, overdue: 0 };
-    res.json({ items: await decorate(rows), total, page, pages, limit, today, summary: { plans: total, ...counts } });
+    res.json({ items: await decorate(rows), total, page, pages, limit, today, summary: { plans: total, ...counts }, views: { all: 0, free: 0, taken: 0, me: 0, ...views } });
   })
 );
 
@@ -282,6 +318,69 @@ router.patch(
     await plan.save();
     if (script) await markUsed(script, plan._id);
     const [item] = await decorate([plan.toObject()]);
+    res.json({ item });
+  })
+);
+
+// ---- "Nhận làm": one member says they are making this video now, so nobody else starts it too.
+
+// "21:05 06/11" on the team's clock (vi-VN Intl would write "21:05 06-11").
+const clockParts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", hourCycle: "h23" });
+const clock = {
+  format: (d) => {
+    const p = Object.fromEntries(clockParts.formatToParts(d).map((x) => [x.type, x.value]));
+    return `${p.hour}:${p.minute} ${p.day}/${p.month}`;
+  },
+};
+const nameOf = async (userId) => {
+  const u = await User.findById(userId, { username: 1, displayName: 1 }).lean();
+  return u ? u.displayName || u.username : "";
+};
+async function takenError(plan) {
+  const name = (await nameOf(plan.claimedBy)) || "Một thành viên khác";
+  return new HttpError(409, `${name} đang làm kế hoạch này (nhận lúc ${clock.format(plan.claimedAt || new Date())}). Bấm "Nhận làm thay" nếu bạn chắc muốn làm.`);
+}
+
+// force: take it over from whoever has it. The swap is one conditional update, so two people pressing at once
+// cannot both get it: the slower one is told who won.
+router.post(
+  "/:id/claim",
+  ah(async (req, res) => {
+    const { force } = parse(z.object({ force: z.boolean().optional().default(false) }), req.body || {});
+    const plan = await loadPlan(req.params.id);
+    if (FINISHED_STATUSES.includes(plan.status)) throw new HttpError(409, "Kế hoạch này đã hoàn thành, không cần nhận làm nữa.");
+    const name = await productName(plan);
+    const mine = String(plan.claimedBy) === String(req.userId);
+    if (!mine) {
+      if (plan.claimedBy && !force) throw await takenError(plan);
+      const prev = plan.claimedBy;
+      const won = await VideoPlan.findOneAndUpdate(
+        { _id: plan._id, claimedBy: prev, status: { $nin: FINISHED_STATUSES } },
+        { claimedBy: req.userId, claimedAt: new Date() },
+        { new: true }
+      ).lean();
+      if (!won) throw await takenError(await loadPlan(req.params.id));
+      res.locals.audit = { label: prev ? `${name} (thay ${(await nameOf(prev)) || "người khác"})` : name };
+      const [item] = await decorate([won]);
+      return res.json({ item });
+    }
+    res.locals.audit = { label: name };
+    const [item] = await decorate([plan.toObject()]);
+    res.json({ item });
+  })
+);
+
+// Lets it go: the one working on it, or whoever may edit plans (someone forgot). Others take it over instead.
+router.delete(
+  "/:id/claim",
+  ah(async (req, res) => {
+    const plan = await loadPlan(req.params.id);
+    if (plan.claimedBy && String(plan.claimedBy) !== String(req.userId) && !req.permissions.has("plan.edit")) {
+      throw new HttpError(403, `Chỉ ${(await nameOf(plan.claimedBy)) || "người đang làm"} hoặc người có quyền sửa kế hoạch mới thả được. Muốn làm thì bấm "Nhận làm thay".`);
+    }
+    const released = await VideoPlan.findOneAndUpdate({ _id: plan._id }, { claimedBy: null, claimedAt: null }, { new: true }).lean();
+    res.locals.audit = { label: await productName(plan) };
+    const [item] = await decorate([released]);
     res.json({ item });
   })
 );

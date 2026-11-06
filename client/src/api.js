@@ -150,6 +150,8 @@ export const api = {
   plan: (id) => request("GET", `/plans/${id}`),
   updatePlan: (id, body) => request("PATCH", `/plans/${id}`, body),
   copyPlan: (id, body) => request("POST", `/plans/${id}/copy`, body),
+  claimPlan: (id, force = false) => request("POST", `/plans/${id}/claim`, { force }),
+  releasePlan: (id) => request("DELETE", `/plans/${id}/claim`),
   planFolder: (id) => request("POST", `/plans/${id}/folder`),
   planQuickEdit: (id) => request("POST", `/plans/${id}/quickedit`),
   planUpload,

@@ -42,18 +42,30 @@ Kế hoạch cũ có trường mục tiêu (số video); trường này không c
 - **Sửa trực tiếp trên thẻ**, không mở hộp thoại. Mỗi thẻ gồm: ảnh nhỏ và tên sản phẩm (bấm để mở chi tiết), "Đã có x/6 mục" · Người làm · Hạn (chữ đỏ "Quá hạn" dưới nhãn) · Trạng thái · các nút.
 - **Ghim:** nút ghim ở góc phải trên của thẻ, mọi thành viên bấm được. Thẻ đã ghim hiện đinh ghim đỏ thay cho băng dính, không nghiêng, và **luôn nằm đầu danh sách** cho cả team (ghim sau cùng đứng trước), trước cả thứ tự hạn và trạng thái. Bấm lần nữa để bỏ ghim.
 - **Thêm kế hoạch:** bấm "+ Thêm kế hoạch" thì một thẻ trống (viền nét đứt) hiện ở đầu lưới, người thực hiện mặc định là mình, hạn mặc định là hôm nay. Điền xong bấm Lưu; máy chủ tạo luôn thư mục trên Drive. Không tạo được thư mục thì vẫn lưu kế hoạch và báo lý do. Bấm Xoá thì bỏ thẻ chưa lưu.
-- **Thẻ đã lưu:** sửa ô nào thì thẻ có viền xanh và hiện nút Lưu, Huỷ sửa; không sửa gì thì hiện **Chi tiết**, **Tải video** (khi đã có video thành phẩm), **Prompt** (tạo prompt cho sản phẩm), biểu tượng **Sao chép** và **Xoá**.
+- **Thẻ đã lưu:** sửa ô nào thì thẻ có viền xanh và hiện nút Lưu, Huỷ sửa; không sửa gì thì hiện **Nhận làm** / **Thả ra** (mục 4a), **Chi tiết**, **Tải video** (khi đã có video thành phẩm), các biểu tượng **Prompt** (tạo prompt cho sản phẩm), **Sao chép** và **Xoá**.
 - **Sao chép** (cần `plan.edit`, có ở cả trang danh sách và trang chi tiết): hộp thoại tạo kế hoạch mới cùng sản phẩm, người thực hiện, hạn nộp, ghi chú; trạng thái "Chưa thực hiện", ngày tạo là hôm nay, thư mục Drive riêng. Tick để chép thêm lời đọc và mô tả (mặc định có) và từng file đã có (mặc định không; file được nhân bản trên Drive vào thư mục mới). Xong thì mở luôn kế hoạch mới. Xoá kế hoạch hỏi Có/Không.
 - **Xoá nhiều:** tick ô ở góc trái trên mỗi thẻ ("Chọn mọi kế hoạch trên trang này" phía trên lưới chọn cả trang). Lựa chọn giữ khi sang trang khác, đổi bộ lọc thì bỏ chọn. Thanh "Đã chọn N kế hoạch" hiện nút Xoá N kế hoạch, hỏi Có/Không kèm danh sách rồi xoá một lượt (`POST /api/plans/bulk-delete` với `{ ids }`, tối đa 500).
-- Kế hoạch đã hoàn thành và đã đăng bài nằm cuối (sau các thẻ ghim và thẻ chưa xong), nội dung mờ đi.
-- **Bộ lọc:** tìm theo tên/mã sản phẩm, Người thực hiện (mặc định "Cả team"), Trạng thái (thêm "Chưa xong"), Hạn (Quá hạn, Hôm nay, 7 ngày tới, Tháng này), Loại sản phẩm. Bộ lọc và trang nằm trên URL.
-- **Tổng hợp** theo bộ lọc: số kế hoạch, số đã hoàn thành (%), số kế hoạch theo từng trạng thái, số quá hạn.
+- Thứ tự: thẻ ghim → thẻ chưa xong → đã hoàn thành → đã đăng bài (hai nhóm cuối mờ đi). Trong mỗi nhóm: kế hoạch **tôi đang làm**, rồi **chưa ai nhận**, rồi người khác đang làm; sau đó theo hạn (không hạn cuối cùng), mới nhất trước.
+- **Bộ lọc:** ô tìm theo tên/mã sản phẩm luôn hiện. Bốn ô Người thực hiện (mặc định "Cả team"), Trạng thái (thêm "Chưa xong"), Hạn (Quá hạn, Hôm nay, 7 ngày tới, Tháng này), Loại sản phẩm: trên máy tính luôn hiện; trên điện thoại gập sau nút **Bộ lọc (n)** (n = số ô đang lọc, tự mở khi có). Bộ lọc, tab và trang nằm trên URL.
+- **Tab ai đang làm** (kèm số, tính trên cùng bộ lọc): Tất cả · Chưa ai nhận (chưa xong và chưa ai nhận) · Đang làm (có người nhận) · Của tôi (tôi đang nhận).
+- **Tổng hợp** theo bộ lọc: số kế hoạch, số đã hoàn thành (%), số kế hoạch theo từng trạng thái (chỉ hiện trạng thái có kế hoạch), số quá hạn.
+
+## 4a. Nhận làm (tránh hai người làm trùng một kế hoạch)
+
+- Khác "Người thực hiện" (người được giao): **Nhận làm** là "tôi đang làm video này ngay bây giờ". Mọi thành viên nhận được kế hoạch chưa xong. Quyết định ngày 06/11/2026: bấm tay (không tự nhận khi mở trang), và **chỉ cảnh báo, không khoá**.
+- Thẻ có người nhận: nhãn "Lan đang làm · 14:05" (giờ nhận; khác ngày thì kèm ngày), viền cam; của mình thì "Bạn đang làm", viền xanh lá. Thẻ chưa ai nhận có nút xanh **Nhận làm**.
+- Trang chi tiết có dải trạng thái ở đầu: chưa ai nhận (nút Nhận làm), mình đang làm (nút Thả ra), người khác đang làm (nền cam, nút **Nhận làm thay** bấm hai lần; người có `plan.edit` thêm nút Thả ra). Khi người khác đang làm, **lần sửa đầu tiên** trên trang (tải/xoá file, lưu text, đổi trạng thái, chọn lời đọc, Tạo video) hỏi "Lan đang làm kế hoạch này… Vẫn làm tiếp / Thôi"; đồng ý một lần thì không hỏi lại trong lần mở trang đó.
+- Thả ra: người đang làm, hoặc người có `plan.edit`. Tự thả khi kế hoạch thành Đã hoàn thành / Đã đăng bài, và khi tài khoản người nhận bị xoá. Kế hoạch đã xong không nhận được.
+- Nhận và thả ghi nhật ký (`plan.claim`, `plan.release`), cả team thấy ngay qua chuông thông báo và danh sách tự tải lại.
+- Hai người bấm cùng lúc: máy chủ đổi bằng một lệnh có điều kiện nên chỉ một người được, người kia nhận lỗi 409 "Lan đang làm kế hoạch này (nhận lúc 21:05 06/11)".
+- API: `POST /api/plans/:id/claim` `{ force? }` (force = nhận làm thay), `DELETE /api/plans/:id/claim`. `GET /api/plans` nhận thêm `claim=free|taken|me`, `status=finished`, trả thêm `views: { all, free, taken, me }`; mỗi kế hoạch có `claim: { by: { id, displayName }, at } | null`. Trường lưu: `claimedBy`, `claimedAt`.
 - Phân trang đánh số, 20 thẻ mỗi trang.
 
 ## 5. Màn hình chi tiết `/plans/:id`
 
 - Đầu trang: ảnh và tên sản phẩm (bấm để mở sản phẩm), "Đã có x/6 mục", nút Tạo prompt.
 - **Lấy file và text** (hiện khi đã có ít nhất một file hoặc text; viền xanh và tiêu đề "Thành phẩm đã xong" khi kế hoạch hoàn thành): nút tải từng file (video thành phẩm nổi bật), **Tải tất cả** (tải lần lượt từng file, trình duyệt có thể hỏi cho phép tải nhiều file), **Copy lời đọc**, **Copy mô tả khi đăng**. Mọi thành viên dùng được, kể cả khi kế hoạch đã hoàn thành.
+- **Dải Nhận làm** ngay dưới đầu trang (mục 4a).
 - **Thông tin:** người thực hiện, hạn nộp (kèm "Quá hạn"), trạng thái (thành viên nào cũng đổi ngay tại đây), người tạo, ngày tạo, thư mục Drive (bấm để mở trong trang Google Drive của app).
 - **File:** 4 mục Video 10s 1, Video 10s 2, Lời đọc (mp3), Video thành phẩm. Mỗi mục hiện tên file và dung lượng, nút **Tải về**, **Tải lên** (chưa có) hoặc **Thay** (đã có), **Xoá** (bấm hai lần). Riêng mục Lời đọc (mp3) có thêm nút **ElevenLabs**: mở trang Text to Speech của ElevenLabs ở tab mới và copy sẵn text lời đọc của kế hoạch (nếu có) để dán vào. Tải lên có thanh phần trăm; file đi thẳng từ trình duyệt lên Google như trang Drive.
 - **Lời đọc** và **Mô tả khi đăng:** ô nhập nhiều dòng (tối đa 5000 ký tự), nút Lưu và Huỷ sửa khi có thay đổi, nút Copy khi đã lưu.
