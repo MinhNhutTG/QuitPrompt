@@ -4425,11 +4425,6 @@ select.status-select:disabled {
     width: 120px;
   }
 }
-.aiflow-builder .sec {
-  padding: 0;
-  border: 0;
-  margin: 0;
-}
 .aiflow-builder .sec-n {
   display: none;
 }
