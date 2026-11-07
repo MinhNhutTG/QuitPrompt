@@ -77,7 +77,7 @@ const productName = async (plan) => (await Product.findById(plan.product, { name
 
 const slotKey = z.enum(Object.keys(PLAN_SLOTS), { errorMap: () => ({ message: "Mục file không hợp lệ." }) });
 
-const PRODUCT_FIELDS = { name: 1, sku: 1, category: 1, hot: 1, images: { $slice: 1 } };
+const PRODUCT_FIELDS = { name: 1, sku: 1, category: 1, hot: 1, closed: 1, extraNeg: 1, images: { $slice: 1 } };
 const GONE_PRODUCT = { name: "(sản phẩm đã xoá)", images: [] };
 const GONE_USER = { id: "", displayName: "(tài khoản đã xoá)" };
 

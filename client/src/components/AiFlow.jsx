@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { copyText, fmtDateTimeFull } from "../lib/util.js";
-import { FRAMINGS, NEGATIVE, PLACES, TYPES, buildDolaPrompt, dolaTypeOf } from "../lib/dola.js";
 import { IMAGE_SLOTS, SLOTS } from "../lib/plans.js";
-import { Field, Seg } from "./ui.jsx";
+import { Field } from "./ui.jsx";
 import { useToast } from "./Toast.jsx";
 import FileSlot from "./FileSlot.jsx";
+import AiVideo from "./AiVideo.jsx";
 
 // "Ảnh & video AI" on a plan (doc 09 §4b), half by hand: the site prepares everything and keeps where the plan is,
 // the member pastes into ChatGPT and Dola themselves.
@@ -103,11 +103,6 @@ export default function AiFlow({ plan, driveReady, onChanged, guard }) {
   const [request, setRequest] = useState(plan.imageRequest || "");
   useEffect(() => setRequest(plan.imageRequest || ""), [plan.imageRequest]);
 
-  const [type, setType] = useState(() => dolaTypeOf(plan.product.category));
-  const [framing, setFraming] = useState("waist-up");
-  const [place, setPlace] = useState("outdoor");
-  const [details, setDetails] = useState("");
-
   async function copy(text, what) {
     const ok = await copyText(text);
     toast(ok ? `Đã copy ${what}` : "Trình duyệt chặn copy. Bôi đen rồi nhấn Ctrl/Cmd+C.", { tone: ok ? "ok" : "danger" });
@@ -176,7 +171,6 @@ export default function AiFlow({ plan, driveReady, onChanged, guard }) {
   });
 
   const prompt = editPrompt(request);
-  const dola = (part) => buildDolaPrompt({ type, part, framing, place, setting: "", details });
   const slotProps = { plan, driveReady, onChanged, guard };
 
   return (
@@ -287,48 +281,7 @@ export default function AiFlow({ plan, driveReady, onChanged, guard }) {
         {!approved ? (
           <p className="hint">Mở khi ảnh AI đã được duyệt.</p>
         ) : (
-          <>
-            <div className="aiflow-opts">
-              <div className="field">
-                <span className="field-label">Loại sản phẩm</span>
-                <Seg name="aiflow-type" label="Loại sản phẩm" value={type} options={TYPES} onChange={setType} />
-              </div>
-              <div className="field">
-                <span className="field-label">Cỡ cảnh</span>
-                <Seg name="aiflow-framing" label="Cỡ cảnh" value={framing} options={FRAMINGS} onChange={setFraming} />
-              </div>
-              <div className="field">
-                <span className="field-label">Không gian</span>
-                <Seg name="aiflow-place" label="Không gian" value={place} options={PLACES} onChange={setPlace} />
-              </div>
-              <Field label="Chi tiết sản phẩm cần giữ" hint="Nên viết tiếng Anh. Bỏ trống thì giữ theo ảnh">
-                <input className="input" value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Ví dụ: cream linen shirt with small brown buttons" />
-              </Field>
-            </div>
-            <div className="btns">
-              <button type="button" className="btn btn-sm btn-primary" onClick={() => imageTo(ai, DOLA, "Dola")}>
-                Copy ảnh AI và mở Dola
-              </button>
-              <button type="button" className="btn btn-sm btn-ghost" onClick={() => copy(NEGATIVE[type], "negative")}>
-                Copy negative
-              </button>
-            </div>
-            <ul className="slots">
-              {CLIPS.map((c, i) => (
-                <FileSlot
-                  key={c.key}
-                  {...slotProps}
-                  slot={c}
-                  extra={
-                    <button type="button" className="btn btn-sm" onClick={() => copy(dola(i + 1), `prompt Part ${i + 1}`)}>
-                      Copy prompt Part {i + 1}
-                    </button>
-                  }
-                />
-              ))}
-            </ul>
-            <p className="hint">Part 2 nối tiếp khung cuối của Part 1. Tạo 3–4 lần mỗi clip rồi chọn bản đẹp nhất, che watermark Dola trước khi đăng.</p>
-          </>
+          <AiVideo plan={plan} ai={ai} slotProps={slotProps} imageTo={imageTo} copy={copy} dolaUrl={DOLA} />
         )}
       </Step>
     </section>

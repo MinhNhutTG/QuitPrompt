@@ -67,7 +67,12 @@ Khung "Ảnh & video AI" trên trang chi tiết kế hoạch gom 3 bước làm 
 
 1. **Ảnh tham chiếu** (`files.ref`): tải lên, kéo thả, dán Ctrl+V, hoặc "Dùng ảnh bìa sản phẩm".
 2. **Ảnh AI** (`files.aiImage`): nhập yêu cầu sửa ảnh (`imageRequest`, tiếng Việt được, có gợi ý đổi nền / đổi dáng) → "Copy ảnh và mở ChatGPT" (ảnh vào clipboard dạng PNG) → "Copy prompt" (prompt luôn giữ nguyên khuôn mặt và sản phẩm) → ảnh kết quả dán Ctrl+V về trang → **Duyệt ảnh này**. Thay hoặc xoá ảnh AI thì mất duyệt.
-3. **Video (Dola AI)**: chỉ mở khi ảnh đã duyệt. "Copy ảnh AI và mở Dola", "Copy prompt Part 1/2" (cùng bộ dựng prompt với trang Video Dola, `client/src/lib/dola.js`), tải clip vào Video 10s 1/2.
+3. **Video (Dola AI)**: chỉ mở khi ảnh đã duyệt. Chọn **Prompt dùng cho Dola** (`components/AiVideo.jsx`):
+   - **Mẫu Dola**: cùng bộ dựng prompt với trang Video Dola (`client/src/lib/dola.js`), chọn loại sản phẩm, cỡ cảnh, không gian.
+   - **Tạo prompt**: bộ dựng của trang Tạo prompt (`lib/prompt.js`, template và negative trong Cài đặt): kiểu video, người mẫu, thời lượng, áo luôn đóng, âm thanh dùng chung; mỗi part một chuỗi động tác riêng (chọn "Part 1 / Part 2" rồi sửa chuỗi), Part 2 tự bật "Nối tiếp clip trước". "Áo luôn đóng" và lỗi riêng lấy mặc định từ sản phẩm.
+   - **Prompt đã lưu**: chọn một prompt đã lưu của sản phẩm cho từng part (50 prompt mới nhất).
+
+   Lựa chọn được nhớ theo từng kế hoạch trên trình duyệt đó (localStorage `ps:aiflow:<id kế hoạch>`), không lưu lên máy chủ. Sau đó "Copy ảnh AI và mở Dola", "Copy negative", "Copy prompt Part 1/2", tải clip vào Video 10s 1/2.
 
 Dán ảnh ở bất kỳ đâu trên trang (ngoài ô chữ): chưa có ảnh tham chiếu thì vào ảnh tham chiếu, có rồi thì vào ảnh AI. Hai ảnh **không** tính vào tiến độ x/6 và trạng thái tự động (`COUNTED_SLOTS`), có thể chọn chép sang khi Sao chép kế hoạch.
 
