@@ -145,6 +145,12 @@ export const api = {
   notifications: () => request("GET", "/notifications"),
   seenNotifications: () => request("POST", "/notifications/seen"),
 
+  // Kênh đăng: anyone reads, an admin changes (doc 09 §4c).
+  channels: () => request("GET", "/channels"),
+  createChannel: (body) => request("POST", "/channels", body),
+  updateChannel: (id, body) => request("PATCH", `/channels/${id}`, body),
+  deleteChannel: (id) => request("DELETE", `/channels/${id}`),
+
   plans: (params) => request("GET", "/plans" + qs(params)),
   createPlans: (body) => request("POST", "/plans", body),
   plan: (id) => request("GET", `/plans/${id}`),

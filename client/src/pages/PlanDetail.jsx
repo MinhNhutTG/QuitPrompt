@@ -15,6 +15,7 @@ import { SLOTS, STATUS, isFinished, progressOf } from "../lib/plans.js";
 import { saveFiles, standalone } from "../lib/download.js";
 import FileSlot from "../components/FileSlot.jsx";
 import AiFlow from "../components/AiFlow.jsx";
+import { ChannelPicker } from "../components/Channels.jsx";
 
 function TextBlock({ plan, field, label, hint, onChanged, guard }) {
   const toast = useToast();
@@ -142,10 +143,22 @@ function StatusSelect({ plan, onChanged, guard }) {
   );
 }
 
+// Where the video will be posted: each tap saves at once (doc 09 §4c). Any member may change it.
+function PlanChannels({ plan, onChanged, isAdmin }) {
+  const toast = useToast();
+  const value = plan.channels.map((c) => c._id);
+  const save = useMutation({
+    mutationFn: (channels) => api.updatePlan(plan._id, { channels }),
+    onSuccess: ({ item }) => onChanged(item),
+    onError: (e) => toast(e.message, { tone: "danger" }),
+  });
+  return <ChannelPicker value={save.isPending ? save.variables : value} onChange={(v) => save.mutate(v)} disabled={save.isPending} isAdmin={isAdmin} />;
+}
+
 // One plan: its details, its files (in the plan's own Drive folder) and the two texts.
 export default function PlanDetail() {
   const { id } = useParams();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
   const { data, isLoading, error, refetch } = usePlan(id);
@@ -265,6 +278,12 @@ export default function PlanDetail() {
             <dt>Trạng thái</dt>
             <dd>
               <StatusSelect plan={plan} onChanged={onChanged} guard={guard} />
+            </dd>
+          </div>
+          <div className="plan-info-wide">
+            <dt>Kênh đăng</dt>
+            <dd>
+              <PlanChannels plan={plan} onChanged={onChanged} isAdmin={user?.role === "admin"} />
             </dd>
           </div>
           <div>

@@ -72,6 +72,8 @@ const schema = new mongoose.Schema(
       type: new mongoose.Schema({ by: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, at: { type: Date, default: Date.now } }, { _id: false }),
       default: null,
     },
+    // Where the video will be posted (Kênh đăng, doc 09 §4c). Any member marks them.
+    channels: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Channel" }], default: [] },
     // What the voice-over says, and the text posted with the video.
     voiceText: { type: String, maxlength: 5000, default: "" },
     caption: { type: String, maxlength: 5000, default: "" },

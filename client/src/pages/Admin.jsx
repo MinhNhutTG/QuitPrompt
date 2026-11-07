@@ -3,15 +3,17 @@ import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
-import { useAdminLogs, useAdminRoles, useAdminStats, useAdminTiers, useAdminUsers } from "../lib/queries.js";
+import { useAdminLogs, useAdminRoles, useAdminStats, useAdminTiers, useAdminUsers, useChannels } from "../lib/queries.js";
 import { addDays, fmtDate, fmtDateTime, fmtDateTimeFull, store, useDebounce, vnDay } from "../lib/util.js";
 import { ConfirmButton, EmptyState, ErrorState, Field, Modal, Pager, Seg, Skeleton } from "../components/ui.jsx";
 import { useToast } from "../components/Toast.jsx";
+import { PLATFORMS } from "../components/Channels.jsx";
 
 const TABS = [
   { value: "overview", label: "Tổng quan" },
   { value: "users", label: "Thành viên" },
   { value: "roles", label: "Phân quyền & hạng" },
+  { value: "channels", label: "Kênh đăng" },
   { value: "pc", label: "Máy tính" },
   { value: "logs", label: "Nhật ký" },
 ];
@@ -27,6 +29,8 @@ const FIELD_NAMES = {
   assignee: "người làm",
   dueDate: "hạn",
   status: "trạng thái",
+  channels: "kênh đăng",
+  platform: "nền tảng",
   done: "số đã làm",
   title: "tên",
   content: "nội dung",
@@ -1163,6 +1167,159 @@ function Logs({ params, set }) {
   );
 }
 
+// ---- Kênh đăng (doc 09 §4c): where the team posts. Members tick them on a plan; only an admin changes the list.
+
+function ChannelRow({ c, canManage }) {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(c.name);
+  const [platform, setPlatform] = useState(c.platform);
+  const done = () => {
+    qc.invalidateQueries({ queryKey: ["channels"] });
+    qc.invalidateQueries({ queryKey: ["plans"] });
+  };
+  const save = useMutation({
+    mutationFn: () => api.updateChannel(c._id, { name: name.trim(), platform }),
+    onSuccess: () => {
+      done();
+      setEditing(false);
+      toast("Đã lưu kênh");
+    },
+    onError: (e) => toast(e.message, { tone: "danger" }),
+  });
+  const remove = useMutation({
+    mutationFn: () => api.deleteChannel(c._id),
+    onSuccess: ({ plans }) => {
+      done();
+      toast(`Đã xoá kênh ${c.name}`, plans ? { detail: `Đã bỏ kênh này khỏi ${plans} kế hoạch.` } : undefined);
+    },
+    onError: (e) => toast(e.message, { tone: "danger" }),
+  });
+  if (editing)
+    return (
+      <tr>
+        <td>
+          <input className="input" value={name} maxLength={60} aria-label="Tên kênh" onChange={(e) => setName(e.target.value)} autoFocus />
+        </td>
+        <td>
+          <PlatformSelect value={platform} onChange={setPlatform} />
+        </td>
+        <td />
+        <td className="au-actions">
+          <button type="button" className="btn btn-sm btn-primary" disabled={save.isPending || !name.trim()} onClick={() => save.mutate()}>
+            {save.isPending ? "Đang lưu..." : "Lưu"}
+          </button>
+          <button type="button" className="btn btn-sm btn-ghost" onClick={() => (setEditing(false), setName(c.name), setPlatform(c.platform))}>
+            Huỷ
+          </button>
+        </td>
+      </tr>
+    );
+  return (
+    <tr>
+      <td>
+        <span className={`ch-tag ch-${c.platform}`}>{c.name}</span>
+      </td>
+      <td data-label="Nền tảng">{PLATFORMS[c.platform]}</td>
+      <td data-label="Kế hoạch">{c.plans || <span className="hint">0</span>}</td>
+      <td className="au-actions">
+        {canManage && (
+          <>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(true)}>
+              Sửa
+            </button>
+            <ConfirmButton className="btn btn-sm btn-danger-ghost" confirmLabel={c.plans ? `Xoá khỏi ${c.plans} kế hoạch?` : "Bấm lần nữa để xoá"} onConfirm={() => remove.mutate()} disabled={remove.isPending}>
+              Xoá
+            </ConfirmButton>
+          </>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+const PlatformSelect = ({ value, onChange }) => (
+  <select className="input" value={value} aria-label="Nền tảng" onChange={(e) => onChange(e.target.value)}>
+    {Object.entries(PLATFORMS).map(([v, l]) => (
+      <option key={v} value={v}>
+        {l}
+      </option>
+    ))}
+  </select>
+);
+
+function ChannelsPanel() {
+  const { user } = useAuth();
+  const canManage = user?.role === "admin";
+  const toast = useToast();
+  const qc = useQueryClient();
+  const { data, isLoading, error, refetch } = useChannels();
+  const [name, setName] = useState("");
+  const [platform, setPlatform] = useState("tiktok");
+  const add = useMutation({
+    mutationFn: () => api.createChannel({ name: name.trim(), platform }),
+    onSuccess: ({ item }) => {
+      qc.invalidateQueries({ queryKey: ["channels"] });
+      setName("");
+      toast(`Đã thêm kênh ${item.name}`);
+    },
+    onError: (e) => toast(e.message, { tone: "danger" }),
+  });
+
+  if (isLoading) return <Skeleton h={200} r={12} />;
+  if (error) return <ErrorState error={error} onRetry={refetch} />;
+  const items = data.items;
+  return (
+    <div className="stack">
+      <p className="muted">
+        Các kênh team đăng video. Trên mỗi kế hoạch, thành viên nào cũng đánh dấu được video sẽ đăng ở kênh nào, rồi lọc kế hoạch theo kênh.
+        {!canManage && " Chỉ quản trị viên thêm, sửa, xoá được kênh."}
+      </p>
+      {canManage && (
+        <form
+          className="ch-add"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!name.trim()) return toast("Cần nhập tên kênh.", { tone: "danger" });
+            add.mutate();
+          }}
+        >
+          <input className="input" value={name} maxLength={60} placeholder="Tên kênh, ví dụ: TikTok Shop Mia" aria-label="Tên kênh mới" onChange={(e) => setName(e.target.value)} />
+          <PlatformSelect value={platform} onChange={setPlatform} />
+          <button type="submit" className="btn btn-primary" disabled={add.isPending}>
+            {add.isPending ? "Đang thêm..." : "+ Thêm kênh"}
+          </button>
+        </form>
+      )}
+      {items.length === 0 ? (
+        <EmptyState title="Chưa có kênh nào">{canManage ? "Thêm kênh đầu tiên ở ô bên trên." : "Nhờ quản trị viên thêm kênh."}</EmptyState>
+      ) : (
+        <div className="card atable-wrap">
+          <table className="atable">
+            <thead>
+              <tr>
+                <th scope="col">Kênh</th>
+                <th scope="col">Nền tảng</th>
+                <th scope="col">Kế hoạch</th>
+                <th scope="col">
+                  <span className="sr-only">Thao tác</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((c) => (
+                <ChannelRow key={c._id + c.name + c.platform} c={c} canManage={canManage} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="hint">Xoá một kênh thì kênh đó cũng được bỏ khỏi mọi kế hoạch đang chọn nó.</p>
+    </div>
+  );
+}
+
 export default function Admin() {
   const { can } = useAuth();
   const [params, setParams] = useSearchParams();
@@ -1212,6 +1369,7 @@ export default function Admin() {
       {tab === "overview" && <Overview />}
       {tab === "users" && <Users onShowLogs={(user) => setParams({ tab: "logs", user })} />}
       {tab === "roles" && <Roles />}
+      {tab === "channels" && <ChannelsPanel />}
       {tab === "pc" && <PcPanel />}
       {tab === "logs" && <Logs params={logParams} set={set} />}
     </div>

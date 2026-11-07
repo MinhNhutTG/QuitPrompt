@@ -23,6 +23,7 @@ import driveRoutes from "./routes/drive.js";
 import liveRoutes from "./routes/live.js";
 import { pcAdminRoutes, agentRoutes } from "./routes/pc.js";
 import trendRoutes from "./routes/trends.js";
+import { channelRoutes } from "./routes/channels.js";
 import { scheduleTrendScans } from "./lib/trends.js";
 import { ActivityLog } from "./models/ActivityLog.js";
 import { ChatMessage } from "./models/ChatMessage.js";
@@ -110,6 +111,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", requireAuth, productRoutes);
 app.use("/api/prompts", requireAuth, promptRoutes);
 app.use("/api/plans", requireAuth, planRoutes);
+// Kênh đăng: anyone reads, an admin changes (doc 09 §4c).
+app.use("/api/channels", requireAuth, channelRoutes);
 // QuickEdit, the desktop editor, with the token of one plan (see routes/plans.js).
 app.use("/api/quickedit", requireHandoff, quickeditRoutes);
 app.use("/api/resources", requireAuth, resourceRoutes);

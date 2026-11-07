@@ -12,6 +12,7 @@ import LazyImage from "../components/LazyImage.jsx";
 import CopyPlanDialog from "../components/CopyPlanDialog.jsx";
 import { ScriptSelect } from "../components/Scripts.jsx";
 import { useToast } from "../components/Toast.jsx";
+import { ChannelOptions, ChannelPicker, ChannelTags } from "../components/Channels.jsx";
 import { STATUS, isFinished, progressOf } from "../lib/plans.js";
 
 const NO_CATEGORY = "__none";
@@ -65,7 +66,7 @@ function MemberSelect({ value, onChange, members, me, emptyLabel, label, disable
 const formOf = (plan, me, today) =>
   plan
     ? { product: plan.product._id, assignee: plan.assignee.id, dueDate: plan.dueDate || "", status: plan.status }
-    : { product: null, assignee: me || "", dueDate: today || "", status: "todo", script: "" };
+    : { product: null, assignee: me || "", dueDate: today || "", status: "todo", script: "", channels: [] };
 
 const FIELDS = ["product", "assignee", "dueDate", "status"];
 
@@ -108,7 +109,7 @@ function looks(id) {
 // One plan as a sticky note. plan = null for a new, unsaved one.
 // A new note is filled in by whoever may add plans (status included). On a saved note, roles with plan.edit change
 // the assignee and due day; any member changes the status and pins it; roles with plan.delete may delete or select it.
-function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selected, onSelect, canEdit, canDelete }) {
+function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selected, onSelect, canEdit, canDelete, isAdmin }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState(() => formOf(plan, me, today));
@@ -148,6 +149,7 @@ function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selecte
     // A saved note only sends the status when it changed, so it never undoes an automatic change made meanwhile.
     if (!plan || form.status !== base.status) body.status = form.status;
     if (!plan && form.script) body.script = form.script;
+    if (!plan && form.channels.length) body.channels = form.channels;
     save.mutate(body);
   }
   const progress = plan && progressOf(plan);
@@ -207,6 +209,7 @@ function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selecte
             </span>
           )}
           <ClaimTag c={claim} />
+          {plan && <ChannelTags channels={plan.channels} />}
         </div>
       </div>
 
@@ -216,6 +219,14 @@ function PlanNote({ plan, members, me, today, onSaved, onDelete, onCopy, selecte
             <dt>Lời đọc</dt>
             <dd>
               <ScriptSelect productId={form.product} value={form.script} onChange={set("script")} />
+            </dd>
+          </div>
+        )}
+        {!plan && (
+          <div>
+            <dt>Kênh đăng</dt>
+            <dd>
+              <ChannelPicker value={form.channels} onChange={set("channels")} isAdmin={isAdmin} />
             </dd>
           </div>
         )}
@@ -299,6 +310,7 @@ export default function Plans() {
   const status = get("status");
   const due = get("due");
   const cat = get("cat");
+  const channel = get("channel");
   const claimView = get("claim");
   const page = Math.max(Number(get("page")) || 1, 1);
 
@@ -328,6 +340,7 @@ export default function Plans() {
     assignee: assignee || undefined,
     status: status || undefined,
     category: cat || undefined,
+    channel: channel || undefined,
     claim: claimView || undefined,
     today,
     ...dueRange(due, today),
@@ -335,7 +348,7 @@ export default function Plans() {
   });
   const items = data?.items || [];
   const sum = data?.summary;
-  const more = [assignee, status, due, cat].filter(Boolean).length;
+  const more = [assignee, status, due, cat, channel].filter(Boolean).length;
   const filtered = Boolean(get("q") || more);
   // Phones: the four lists fold under "Bộ lọc"; computers always show them.
   const [filtersOpen, setFiltersOpen] = useState(more > 0);
@@ -355,7 +368,7 @@ export default function Plans() {
 
   // Chosen plans by id, kept across pages; a new filter starts over.
   const [selected, setSelected] = useState(() => new Map());
-  const filterKey = [get("q"), assignee, status, due, cat, claimView].join("|");
+  const filterKey = [get("q"), assignee, status, due, cat, channel, claimView].join("|");
   useEffect(() => setSelected(new Map()), [filterKey]);
   const select = (plan, on) =>
     setSelected((old) => {
@@ -457,6 +470,13 @@ export default function Plans() {
               </option>
             ))}
             <option value={NO_CATEGORY}>Chưa phân loại</option>
+          </select>
+        </label>
+        <label className="filter">
+          <span>Kênh đăng</span>
+          <select className="input" value={channel} onChange={(e) => set({ channel: e.target.value })}>
+            <option value="">Mọi kênh</option>
+            <ChannelOptions />
           </select>
         </label>
       </div>
@@ -570,7 +590,7 @@ export default function Plans() {
           )}
           <div className={`notes ${isPlaceholderData ? "is-stale" : ""}`} aria-busy={isFetching}>
             {drafts.map((key) => (
-              <PlanNote key={key} plan={null} members={members} me={user?.id} today={today} onSaved={() => dropDraft(key)} onDelete={() => dropDraft(key)} canEdit />
+              <PlanNote key={key} plan={null} members={members} me={user?.id} today={today} onSaved={() => dropDraft(key)} onDelete={() => dropDraft(key)} canEdit isAdmin={user?.role === "admin"} />
             ))}
             {items.map((p) => (
               <PlanNote key={p._id} plan={p} members={members} me={user?.id} today={data.today || today} onDelete={setDeleting} onCopy={setCopying} selected={selected.has(p._id)} onSelect={select} canEdit={canEdit} canDelete={canDelete} />

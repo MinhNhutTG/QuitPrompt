@@ -4428,3 +4428,77 @@ select.status-select:disabled {
 .aiflow-builder .sec-n {
   display: none;
 }
+
+/* ---- Kênh đăng (components/Channels.jsx, doc 09 §4c). Each platform has its own tint. */
+.ch-tiktok { --ch: #e0245e; }
+.ch-facebook { --ch: #1877f2; }
+.ch-youtube { --ch: #d93025; }
+.ch-instagram { --ch: #c13584; }
+.ch-shopee { --ch: #ee4d2d; }
+.ch-other { --ch: var(--muted); }
+.ch-tags,
+.ch-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+.ch-tag {
+  display: inline-block;
+  max-width: 100%;
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ch);
+  background: color-mix(in srgb, var(--ch) 13%, transparent);
+}
+.ch-chip {
+  padding: 3px 10px;
+  min-height: 30px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ch-chip:hover:not(:disabled) {
+  border-color: var(--ch);
+}
+.ch-chip.is-on {
+  border-color: var(--ch);
+  color: var(--ch);
+  background: color-mix(in srgb, var(--ch) 13%, transparent);
+  font-weight: 600;
+}
+.ch-chip:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.note .ch-chip {
+  min-height: 26px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+.plan-info .plan-info-wide {
+  grid-column: 1 / -1;
+}
+.ch-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  max-width: 640px;
+}
+@media (max-width: 560px) {
+  .ch-add {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ch-add .btn {
+    grid-column: 1 / -1;
+  }
+}

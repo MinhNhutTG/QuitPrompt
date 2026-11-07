@@ -73,6 +73,17 @@ Dán ảnh ở bất kỳ đâu trên trang (ngoài ô chữ): chưa có ảnh t
 
 API: `PATCH /api/plans/:id { imageRequest }`, `POST|DELETE /api/plans/:id/image-approval` (ai cũng được, cần đã có ảnh AI; ghi nhật ký "Duyệt ảnh AI" / "Bỏ duyệt ảnh AI"). `imageApproved` trả về `{ by: { id, displayName }, at }` hoặc `null`.
 
+## 4c. Kênh đăng
+
+Đánh dấu video của kế hoạch sẽ đăng ở kênh nào (một hoặc nhiều kênh).
+
+- **Danh sách kênh**: quản trị viên thêm, đổi tên, đổi nền tảng (TikTok, Facebook, YouTube, Instagram, Shopee, Khác), xoá ở **Quản trị → Kênh đăng** (`/admin?tab=channels`). Tên không trùng (không phân biệt hoa thường). Bảng có cột số kế hoạch đang chọn mỗi kênh. Xoá kênh thì kênh đó được bỏ khỏi mọi kế hoạch. Người có quyền xem Quản trị nhưng không phải admin chỉ xem.
+- **Trên kế hoạch**: dòng "Kênh đăng" ở khung Thông tin của trang chi tiết, bấm từng kênh để bật/tắt, lưu ngay. Thành viên nào cũng đánh dấu được (giống trạng thái, không cần `plan.edit`). Ghi chú mới trên trang Kế hoạch cũng chọn được kênh trước khi Lưu. Thẻ kế hoạch hiện tên kênh, mỗi nền tảng một màu.
+- **Lọc**: bộ lọc "Kênh đăng" ở trang Kế hoạch (`?channel=<id>`, hoặc "Chưa chọn kênh" = `__none`, gồm cả kế hoạch cũ chưa có trường này).
+- Sao chép kế hoạch không chép kênh.
+
+API: `GET /api/channels` (mọi thành viên, `{ items: [{ _id, name, platform, plans }], platforms }`), `POST /api/channels`, `PATCH|DELETE /api/channels/:id` (chỉ admin, ghi nhật ký nhóm Quản trị). Kế hoạch: `channels` (mảng id) trong `POST /api/plans` và `PATCH /api/plans/:id`, trả về `channels: [{ _id, name, platform }]`; `GET /api/plans?channel=`. Collection `channels`, trường `videoplans.channels`.
+
 ## 5. Màn hình chi tiết `/plans/:id`
 
 - Đầu trang: ảnh và tên sản phẩm (bấm để mở sản phẩm), "Đã có x/6 mục", nút Tạo prompt.

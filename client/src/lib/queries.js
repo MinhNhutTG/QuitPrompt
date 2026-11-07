@@ -32,6 +32,9 @@ export const usePrompts = (params) =>
 export const usePromptPage = (params) =>
   useQuery({ queryKey: ["prompts", "page", params], queryFn: () => api.prompts({ ...params, limit: 20 }), placeholderData: keepPreviousData });
 
+// Kênh đăng (doc 09 §4c): { items: [{ _id, name, platform, plans }], platforms }.
+export const useChannels = () => useQuery({ queryKey: ["channels"], queryFn: api.channels, staleTime: 60 * 1000 });
+
 export const usePlans = (params) =>
   useQuery({ queryKey: ["plans", params], queryFn: () => api.plans({ ...params, limit: 20 }), placeholderData: keepPreviousData });
 

@@ -6,6 +6,8 @@ import { VideoPlan, PLAN_SLOTS, COUNTED_SLOTS, PLAN_STATUSES, FINISHED_STATUSES 
 import { Product } from "../models/Product.js";
 import { User } from "../models/User.js";
 import { Script } from "../models/Script.js";
+import { Channel } from "../models/Channel.js";
+import { channelOut } from "./channels.js";
 import { config } from "../config.js";
 import { ah, parse, assertId, isId, escapeRegex, text, HttpError } from "../lib/http.js";
 import { HANDOFF_HOURS, can, signHandoff } from "../middleware/auth.js";
@@ -32,6 +34,7 @@ const createSchema = z.object({
   done: z.number().int().min(0).max(999).optional().default(0),
   // A saved voice-over and caption of one of the chosen products: its texts go into that product's plan.
   script: id("lời đọc").optional(),
+  channels: z.array(id("kênh đăng")).max(20, "Tối đa 20 kênh.").optional().default([]),
 });
 
 const patchSchema = z.object({
@@ -45,13 +48,23 @@ const patchSchema = z.object({
   caption: text("mô tả khi đăng", 5000).optional(),
   imageRequest: text("yêu cầu sửa ảnh", 1000).optional(),
   pinned: z.boolean({ invalid_type_error: "Ghim không hợp lệ." }).optional(),
+  channels: z.array(id("kênh đăng")).max(20, "Tối đa 20 kênh.").optional(),
   // A saved voice-over and caption of the plan's product: replaces both texts.
   script: id("lời đọc").optional(),
 });
 
 // The team works on every plan, whoever it is for: any member changes the status, the texts and the files, and
-// pins it. The rest (assignee, due day, note) needs plan.edit.
-const WORK_FIELDS = new Set(["status", "done", "voiceText", "caption", "imageRequest", "pinned", "script"]);
+// pins it and marks where it will be posted. The rest (assignee, due day, note) needs plan.edit.
+const WORK_FIELDS = new Set(["status", "done", "voiceText", "caption", "imageRequest", "pinned", "script", "channels"]);
+
+// The chosen channels, without repeats; every one must still exist.
+async function checkChannels(ids) {
+  const list = [...new Set(ids)];
+  if (list.length && (await Channel.countDocuments({ _id: { $in: list } })) !== list.length) {
+    throw new HttpError(404, "Có kênh đăng vừa bị xoá. Tải lại trang rồi chọn lại.");
+  }
+  return list;
+}
 
 // A saved voice-over and caption, checked to belong to the product.
 async function loadScript(scriptId, productId) {
@@ -82,16 +95,19 @@ const GONE_PRODUCT = { name: "(sản phẩm đã xoá)", images: [] };
 const GONE_USER = { id: "", displayName: "(tài khoản đã xoá)" };
 
 // Attaches product { _id, name, sku, category, hot, images: [cover] }, assignee and createdBy { id, displayName },
-// and claim { by: { id, displayName }, at } or null.
+// claim { by: { id, displayName }, at } or null, and channels [{ _id, name, platform }].
 async function decorate(plans) {
   const productIds = [...new Set(plans.map((p) => String(p.product)))];
   const userIds = [
     ...new Set(plans.flatMap((p) => [String(p.assignee), String(p.createdBy), ...(p.claimedBy ? [String(p.claimedBy)] : []), ...(p.imageApproved?.by ? [String(p.imageApproved.by)] : [])])),
   ];
-  const [products, users] = await Promise.all([
+  const channelIds = [...new Set(plans.flatMap((p) => (p.channels || []).map(String)))];
+  const [products, users, channels] = await Promise.all([
     Product.find({ _id: { $in: productIds } }, PRODUCT_FIELDS).lean(),
     User.find({ _id: { $in: userIds } }, { username: 1, displayName: 1 }).lean(),
+    channelIds.length ? Channel.find({ _id: { $in: channelIds } }).lean() : [],
   ]);
+  const channelById = new Map(channels.map((c) => [String(c._id), channelOut(c)]));
   const productById = new Map(products.map((p) => [String(p._id), p]));
   const userById = new Map(users.map((u) => [String(u._id), { id: String(u._id), displayName: u.displayName || u.username }]));
   return plans.map(({ __v, claimedBy, claimedAt, imageApproved, ...p }) => ({
@@ -103,6 +119,7 @@ async function decorate(plans) {
     claim: claimedBy && userById.has(String(claimedBy)) ? { by: userById.get(String(claimedBy)), at: claimedAt } : null,
     // The AI image was approved: { by: { id, displayName }, at } or null.
     imageApproved: imageApproved ? { by: userById.get(String(imageApproved.by)) || GONE_USER, at: imageApproved.at } : null,
+    channels: (p.channels || []).map((c) => channelById.get(String(c))).filter(Boolean),
   }));
 }
 
@@ -140,7 +157,7 @@ function autoStatus(plan, before) {
 }
 
 // Filters: assignee, status ("open" = todo + partial, "finished" = done + posted), category, q (product name or sku),
-// claim (free | taken | me), dueFrom/dueTo (inclusive days), overdue=1 with today (the viewer's local day, "YYYY-MM-DD").
+// channel (an id, or "__none" for plans with no channel yet), claim (free | taken | me), dueFrom/dueTo (inclusive days), overdue=1 with today (the viewer's local day, "YYYY-MM-DD").
 // Pinned first (newest pin first), then unfinished, then done, posted last; within each, the plans I am working on,
 // then the ones nobody took, then other people's; then by due day (none last), then newest.
 // Returns one numbered page, a summary of the whole filter, and how many plans each claim view would show.
@@ -154,6 +171,9 @@ router.get(
     if (status === "open") match.status = { $in: ["todo", "partial"] };
     else if (status === "finished") match.status = { $in: FINISHED_STATUSES };
     else if (PLAN_STATUSES.includes(status)) match.status = status;
+    const { channel } = req.query;
+    if (channel === "__none") match.channels = { $in: [null, []] }; // older plans have no field at all
+    else if (channel) match.channels = new mongoose.Types.ObjectId(assertId(String(channel), "kênh đăng"));
 
     const productConds = [];
     if (typeof category === "string" && category) {
@@ -259,10 +279,11 @@ router.post(
     const script = data.script ? await Script.findById(data.script) : null;
     if (data.script && !script) throw new HttpError(404, "Không tìm thấy lời đọc đã chọn. Có thể nó vừa bị xoá.");
     if (script && !productIds.includes(String(script.product))) throw new HttpError(400, "Lời đọc đã chọn không thuộc sản phẩm nào của kế hoạch.");
+    const channels = await checkChannels(data.channels);
     const day = vnDay();
     const docs = await VideoPlan.insertMany(
       productIds.map((product) => {
-        const plan = { product, target: data.target, assignee: data.assignee, dueDate: data.dueDate, note: data.note, status: data.status, done: data.done, day, createdBy: req.userId };
+        const plan = { product, target: data.target, assignee: data.assignee, dueDate: data.dueDate, note: data.note, status: data.status, done: data.done, channels, day, createdBy: req.userId };
         if (script && String(script.product) === product) {
           plan.voiceText = script.voiceText;
           plan.caption = script.caption;
@@ -313,6 +334,7 @@ router.patch(
     if (data.assignee) await assertMember(data.assignee);
     const before = filled(plan);
     const { pinned, script: scriptId, ...fields } = data;
+    if (fields.channels) fields.channels = await checkChannels(fields.channels);
     const script = scriptId ? await loadScript(scriptId, plan.product) : null;
     plan.set(fields);
     if (script) plan.set({ voiceText: script.voiceText, caption: script.caption });
