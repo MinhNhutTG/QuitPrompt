@@ -350,7 +350,7 @@ export default function ProductDetail() {
         </div>
       </div>
 
-      <ProductScripts productId={p._id} productName={p.name} />
+      <ProductScripts product={p} />
 
       <ProductPrompts productId={p._id} />
 

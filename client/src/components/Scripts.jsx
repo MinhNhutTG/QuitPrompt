@@ -7,6 +7,7 @@ import { useScripts } from "../lib/queries.js";
 import { copyText, fmtDate } from "../lib/util.js";
 import { ConfirmButton, EmptyState, ErrorState, Field, Seg, Skeleton } from "./ui.jsx";
 import { useToast } from "./Toast.jsx";
+import ClaudeScripts from "./ClaudeScripts.jsx";
 
 // Saved voice-overs and captions of a product ("Lời đọc & mô tả video"). Each one is a pair, or a caption alone;
 // Chưa dùng until a plan takes it (or someone marks it by hand), then Đã dùng.
@@ -159,27 +160,16 @@ const FILTERS = [
   { value: "all", label: "Tất cả" },
 ];
 
-// "Nhập Excel" and "Tải file mẫu": the template has two columns, Lời đọc and Mô tả video, one pair per row.
-function ExcelButtons({ productId, productName, canImport }) {
+// Reads an Excel file of pairs (Lời đọc | Mô tả video) and saves them on the product. → { input, pick, busy }:
+// render `input` once, call pick() from a button.
+export function useScriptImport(productId, onDone) {
   const qc = useQueryClient();
   const toast = useToast();
-  const input = useRef(null);
-  const [busy, setBusy] = useState("");
-
-  async function template() {
-    setBusy("template");
-    try {
-      const { downloadTemplate } = await import("../lib/scriptExcel.js");
-      await downloadTemplate(productName);
-    } catch (e) {
-      toast("Không tạo được file mẫu.", { tone: "danger", detail: e.message });
-    } finally {
-      setBusy("");
-    }
-  }
+  const ref = useRef(null);
+  const [busy, setBusy] = useState(false);
 
   async function importFile(file) {
-    setBusy("import");
+    setBusy(true);
     try {
       const { readScripts } = await import("../lib/scriptExcel.js");
       let read;
@@ -199,30 +189,55 @@ function ExcelButtons({ productId, productName, canImport }) {
       refresh(qc, productId);
       if (res.skipped) notes.unshift(`${res.skipped} dòng đã có sẵn nên không thêm lại.`);
       toast(`Đã nhập ${res.items.length} lời đọc`, { tone: notes.length ? "info" : "ok", detail: notes.join(" ") || undefined });
+      onDone?.();
     } catch (e) {
       toast(e.message, { tone: "danger" });
     } finally {
-      setBusy("");
-      if (input.current) input.current.value = "";
+      setBusy(false);
+      if (ref.current) ref.current.value = "";
+    }
+  }
+
+  const input = (
+    <input
+      ref={ref}
+      type="file"
+      accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      hidden
+      onChange={(e) => e.target.files?.[0] && importFile(e.target.files[0])}
+    />
+  );
+  return { input, pick: () => ref.current?.click(), busy };
+}
+
+// "Nhập Excel" and "Tải file mẫu": the template has two columns, Lời đọc and Mô tả video, one pair per row.
+function ExcelButtons({ productId, productName, canImport }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const imp = useScriptImport(productId);
+
+  async function template() {
+    setBusy(true);
+    try {
+      const { downloadTemplate } = await import("../lib/scriptExcel.js");
+      await downloadTemplate(productName);
+    } catch (e) {
+      toast("Không tạo được file mẫu.", { tone: "danger", detail: e.message });
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
     <>
-      <button type="button" className="btn btn-ghost" onClick={template} disabled={Boolean(busy)}>
-        {busy === "template" ? "Đang tạo..." : "Tải file mẫu"}
+      <button type="button" className="btn btn-ghost" onClick={template} disabled={busy || imp.busy}>
+        {busy ? "Đang tạo..." : "Tải file mẫu"}
       </button>
       {canImport && (
         <>
-          <input
-            ref={input}
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            hidden
-            onChange={(e) => e.target.files?.[0] && importFile(e.target.files[0])}
-          />
-          <button type="button" className="btn" onClick={() => input.current?.click()} disabled={Boolean(busy)}>
-            {busy === "import" ? "Đang nhập..." : "Nhập Excel"}
+          {imp.input}
+          <button type="button" className="btn" onClick={imp.pick} disabled={busy || imp.busy}>
+            {imp.busy ? "Đang nhập..." : "Nhập Excel"}
           </button>
         </>
       )}
@@ -231,7 +246,8 @@ function ExcelButtons({ productId, productName, canImport }) {
 }
 
 // The section on the product page.
-export function ProductScripts({ productId, productName }) {
+export function ProductScripts({ product }) {
+  const { _id: productId, name: productName } = product;
   const { data, isLoading, error, refetch } = useScripts(productId);
   const editable = useCan()("product.edit");
   const [adding, setAdding] = useState(false);
@@ -255,6 +271,7 @@ export function ProductScripts({ productId, productName }) {
           </p>
         </div>
         <div className="btns">
+          <ClaudeScripts product={product} canImport={editable} />
           <ExcelButtons productId={productId} productName={productName} canImport={editable} />
           {addButton}
         </div>

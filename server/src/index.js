@@ -42,8 +42,9 @@ app.use(
         imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        // Drive uploads go from the browser straight to Google.
-        connectSrc: ["'self'", "https://www.googleapis.com"],
+        // Drive uploads go from the browser straight to Google. Product photos are fetched from Cloudinary to be
+        // copied or redrawn (the plan's "Dùng ảnh bìa sản phẩm", the photo collage of "Tạo bằng Claude").
+        connectSrc: ["'self'", "https://www.googleapis.com", "https://res.cloudinary.com"],
         scriptSrc: ["'self'"],
       },
     },
