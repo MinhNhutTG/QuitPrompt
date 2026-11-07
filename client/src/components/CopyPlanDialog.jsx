@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
-import { SLOTS } from "../lib/plans.js";
+import { IMAGE_SLOTS, SLOTS } from "../lib/plans.js";
 import { Modal } from "./ui.jsx";
 import { useToast } from "./Toast.jsx";
 
@@ -13,7 +13,7 @@ export default function CopyPlanDialog({ plan, onClose }) {
   const toast = useToast();
   const navigate = useNavigate();
   const hasTexts = Boolean(plan?.voiceText || plan?.caption);
-  const fileSlots = SLOTS.filter((s) => plan?.files?.[s.key]);
+  const fileSlots = [...IMAGE_SLOTS, ...SLOTS].filter((s) => plan?.files?.[s.key]);
   const [texts, setTexts] = useState(true);
   const [files, setFiles] = useState(() => new Set());
   useEffect(() => {

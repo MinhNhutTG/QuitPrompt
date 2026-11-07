@@ -28,6 +28,8 @@ const RULES = [
   ["POST", /^\/api\/plans\/(\w+)\/copy$/, "plan.copy", "Sao chép kế hoạch", "plan"],
   ["POST", /^\/api\/plans\/(\w+)\/claim$/, "plan.claim", "Nhận làm kế hoạch", "plan"],
   ["DELETE", /^\/api\/plans\/(\w+)\/claim$/, "plan.release", "Thả kế hoạch", "plan"],
+  ["POST", /^\/api\/plans\/(\w+)\/image-approval$/, "plan.image.approve", "Duyệt ảnh AI", "plan"],
+  ["DELETE", /^\/api\/plans\/(\w+)\/image-approval$/, "plan.image.unapprove", "Bỏ duyệt ảnh AI", "plan"],
   ["POST", /^\/api\/plans\/(\w+)\/files$/, "plan.file.add", "Tải file kế hoạch", "plan"],
   ["DELETE", /^\/api\/plans\/(\w+)\/files\/\w+$/, "plan.file.delete", "Xoá file kế hoạch", "plan"],
   ["POST", /^\/api\/plans\/(\w+)\/quickedit$/, "plan.quickedit", "Mở kế hoạch trong QuickEdit", "plan"],

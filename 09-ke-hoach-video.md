@@ -61,6 +61,18 @@ Kế hoạch cũ có trường mục tiêu (số video); trường này không c
 - API: `POST /api/plans/:id/claim` `{ force? }` (force = nhận làm thay), `DELETE /api/plans/:id/claim`. `GET /api/plans` nhận thêm `claim=free|taken|me`, `status=finished`, trả thêm `views: { all, free, taken, me }`; mỗi kế hoạch có `claim: { by: { id, displayName }, at } | null`. Trường lưu: `claimedBy`, `claimedAt`.
 - Phân trang đánh số, 20 thẻ mỗi trang.
 
+## 4b. Ảnh & video AI (bán tự động)
+
+Khung "Ảnh & video AI" trên trang chi tiết kế hoạch gom 3 bước làm clip, người làm tự dán vào ChatGPT và Dola (không gọi API, không tự điều khiển trình duyệt):
+
+1. **Ảnh tham chiếu** (`files.ref`): tải lên, kéo thả, dán Ctrl+V, hoặc "Dùng ảnh bìa sản phẩm".
+2. **Ảnh AI** (`files.aiImage`): nhập yêu cầu sửa ảnh (`imageRequest`, tiếng Việt được, có gợi ý đổi nền / đổi dáng) → "Copy ảnh và mở ChatGPT" (ảnh vào clipboard dạng PNG) → "Copy prompt" (prompt luôn giữ nguyên khuôn mặt và sản phẩm) → ảnh kết quả dán Ctrl+V về trang → **Duyệt ảnh này**. Thay hoặc xoá ảnh AI thì mất duyệt.
+3. **Video (Dola AI)**: chỉ mở khi ảnh đã duyệt. "Copy ảnh AI và mở Dola", "Copy prompt Part 1/2" (cùng bộ dựng prompt với trang Video Dola, `client/src/lib/dola.js`), tải clip vào Video 10s 1/2.
+
+Dán ảnh ở bất kỳ đâu trên trang (ngoài ô chữ): chưa có ảnh tham chiếu thì vào ảnh tham chiếu, có rồi thì vào ảnh AI. Hai ảnh **không** tính vào tiến độ x/6 và trạng thái tự động (`COUNTED_SLOTS`), có thể chọn chép sang khi Sao chép kế hoạch.
+
+API: `PATCH /api/plans/:id { imageRequest }`, `POST|DELETE /api/plans/:id/image-approval` (ai cũng được, cần đã có ảnh AI; ghi nhật ký "Duyệt ảnh AI" / "Bỏ duyệt ảnh AI"). `imageApproved` trả về `{ by: { id, displayName }, at }` hoặc `null`.
+
 ## 5. Màn hình chi tiết `/plans/:id`
 
 - Đầu trang: ảnh và tên sản phẩm (bấm để mở sản phẩm), "Đã có x/6 mục", nút Tạo prompt.

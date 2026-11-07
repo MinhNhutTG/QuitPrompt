@@ -4313,3 +4313,115 @@ select.status-select:disabled {
     margin-left: 4px;
   }
 }
+
+/* ---- plan: "Ảnh & video AI" (components/AiFlow.jsx, doc 09 §4b) */
+.aiflow {
+  display: grid;
+  gap: 12px;
+}
+.aiflow-step {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-width: 0;
+}
+.aiflow-step.is-done {
+  border-color: var(--ok);
+}
+.aiflow-step.is-locked {
+  background: var(--sunk);
+}
+.aiflow-step-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.aiflow-n {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 99px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  flex: none;
+}
+.aiflow-step.is-done .aiflow-n {
+  background: var(--ok);
+  color: var(--surface);
+}
+.aiflow-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+.aiflow-row > .slots:only-child {
+  grid-column: 1 / -1;
+}
+.aiflow-img {
+  display: block;
+  width: 96px;
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--sunk);
+}
+.aiflow-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.aiflow-ideas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.aiflow-chip {
+  padding: 4px 10px;
+  text-align: left;
+  border-radius: 99px;
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  min-height: 28px;
+  cursor: pointer;
+}
+.aiflow-chip:hover {
+  border-color: var(--accent);
+}
+.aiflow-how {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+.aiflow-prompt summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}
+.aiflow-ok {
+  margin: 0;
+  color: var(--ok);
+  font-weight: 600;
+}
+.aiflow-opts {
+  display: grid;
+  gap: 10px;
+}
+@media (max-width: 560px) {
+  .aiflow-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .aiflow-img {
+    width: 120px;
+  }
+}

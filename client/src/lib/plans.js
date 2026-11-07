@@ -16,6 +16,12 @@ export const SLOTS = [
   { key: "final", label: "Video thành phẩm", accept: "video/*", kind: "video" },
 ];
 
+// The AI image flow (doc 09 §4b). Not counted in the progress: a plan made without them is still complete.
+export const IMAGE_SLOTS = [
+  { key: "ref", label: "Ảnh tham chiếu", accept: "image/*", kind: "image" },
+  { key: "aiImage", label: "Ảnh AI", accept: "image/*", kind: "image" },
+];
+
 // How many of the plan's files and two texts are in, out of all of them.
 export function progressOf(plan) {
   const have = SLOTS.filter((s) => plan.files?.[s.key]).length + (plan.voiceText ? 1 : 0) + (plan.caption ? 1 : 0);

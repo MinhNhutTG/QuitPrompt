@@ -155,6 +155,8 @@ export const api = {
   planFolder: (id) => request("POST", `/plans/${id}/folder`),
   planQuickEdit: (id) => request("POST", `/plans/${id}/quickedit`),
   planUpload,
+  planApproveImage: (id) => request("POST", `/plans/${id}/image-approval`),
+  planUnapproveImage: (id) => request("DELETE", `/plans/${id}/image-approval`),
   planDeleteFile: (id, slot) => request("DELETE", `/plans/${id}/files/${slot}`),
   deletePlan: (id) => request("DELETE", `/plans/${id}`),
   deletePlans: (ids) => request("POST", "/plans/bulk-delete", { ids }),

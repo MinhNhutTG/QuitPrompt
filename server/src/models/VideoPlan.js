@@ -10,7 +10,13 @@ export const PLAN_SLOTS = {
   clip2: "Video 10s 2",
   audio: "Lời đọc",
   final: "Video thành phẩm",
+  // The AI image flow (doc 09 §4b): the reference photo, and the image made from it in ChatGPT that the clips start from.
+  ref: "Ảnh tham chiếu",
+  aiImage: "Ảnh AI",
 };
+// The slots a plan's progress and status count. The two images only help make the clips, so a plan made without
+// them is still complete.
+export const COUNTED_SLOTS = ["clip1", "clip2", "audio", "final"];
 
 // A file uploaded to the plan's Drive folder.
 const fileSchema = new mongoose.Schema(
@@ -56,6 +62,15 @@ const schema = new mongoose.Schema(
       clip2: { type: fileSchema, default: undefined },
       audio: { type: fileSchema, default: undefined },
       final: { type: fileSchema, default: undefined },
+      ref: { type: fileSchema, default: undefined },
+      aiImage: { type: fileSchema, default: undefined },
+    },
+    // What was asked of ChatGPT for the AI image ("đổi nền thành quán cà phê"...), kept so the next try starts from it.
+    imageRequest: { type: String, maxlength: 1000, default: "" },
+    // The AI image was checked and the clips may be made from it. Cleared whenever that image is replaced or removed.
+    imageApproved: {
+      type: new mongoose.Schema({ by: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, at: { type: Date, default: Date.now } }, { _id: false }),
+      default: null,
     },
     // What the voice-over says, and the text posted with the video.
     voiceText: { type: String, maxlength: 5000, default: "" },

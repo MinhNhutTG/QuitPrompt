@@ -2,7 +2,7 @@ import { Readable } from "node:stream";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
-import { VideoPlan, PLAN_SLOTS, PLAN_STATUSES, FINISHED_STATUSES } from "../models/VideoPlan.js";
+import { VideoPlan, PLAN_SLOTS, COUNTED_SLOTS, PLAN_STATUSES, FINISHED_STATUSES } from "../models/VideoPlan.js";
 import { Product } from "../models/Product.js";
 import { User } from "../models/User.js";
 import { Script } from "../models/Script.js";
@@ -43,6 +43,7 @@ const patchSchema = z.object({
   done: z.number().int().min(0).max(999).optional(),
   voiceText: text("lời đọc", 5000).optional(),
   caption: text("mô tả khi đăng", 5000).optional(),
+  imageRequest: text("yêu cầu sửa ảnh", 1000).optional(),
   pinned: z.boolean({ invalid_type_error: "Ghim không hợp lệ." }).optional(),
   // A saved voice-over and caption of the plan's product: replaces both texts.
   script: id("lời đọc").optional(),
@@ -50,7 +51,7 @@ const patchSchema = z.object({
 
 // The team works on every plan, whoever it is for: any member changes the status, the texts and the files, and
 // pins it. The rest (assignee, due day, note) needs plan.edit.
-const WORK_FIELDS = new Set(["status", "done", "voiceText", "caption", "pinned", "script"]);
+const WORK_FIELDS = new Set(["status", "done", "voiceText", "caption", "imageRequest", "pinned", "script"]);
 
 // A saved voice-over and caption, checked to belong to the product.
 async function loadScript(scriptId, productId) {
@@ -84,20 +85,24 @@ const GONE_USER = { id: "", displayName: "(tài khoản đã xoá)" };
 // and claim { by: { id, displayName }, at } or null.
 async function decorate(plans) {
   const productIds = [...new Set(plans.map((p) => String(p.product)))];
-  const userIds = [...new Set(plans.flatMap((p) => [String(p.assignee), String(p.createdBy), ...(p.claimedBy ? [String(p.claimedBy)] : [])]))];
+  const userIds = [
+    ...new Set(plans.flatMap((p) => [String(p.assignee), String(p.createdBy), ...(p.claimedBy ? [String(p.claimedBy)] : []), ...(p.imageApproved?.by ? [String(p.imageApproved.by)] : [])])),
+  ];
   const [products, users] = await Promise.all([
     Product.find({ _id: { $in: productIds } }, PRODUCT_FIELDS).lean(),
     User.find({ _id: { $in: userIds } }, { username: 1, displayName: 1 }).lean(),
   ]);
   const productById = new Map(products.map((p) => [String(p._id), p]));
   const userById = new Map(users.map((u) => [String(u._id), { id: String(u._id), displayName: u.displayName || u.username }]));
-  return plans.map(({ __v, claimedBy, claimedAt, ...p }) => ({
+  return plans.map(({ __v, claimedBy, claimedAt, imageApproved, ...p }) => ({
     ...p,
     product: productById.get(String(p.product)) || { _id: p.product, ...GONE_PRODUCT },
     assignee: userById.get(String(p.assignee)) || GONE_USER,
     createdBy: userById.get(String(p.createdBy)) || GONE_USER,
     // A claim by a deleted account holds nothing.
     claim: claimedBy && userById.has(String(claimedBy)) ? { by: userById.get(String(claimedBy)), at: claimedAt } : null,
+    // The AI image was approved: { by: { id, displayName }, at } or null.
+    imageApproved: imageApproved ? { by: userById.get(String(imageApproved.by)) || GONE_USER, at: imageApproved.at } : null,
   }));
 }
 
@@ -117,8 +122,8 @@ function settle(plan) {
 }
 
 // How many of the plan's files and two texts are in (the client's progressOf counts the same).
-const ITEM_COUNT = Object.keys(PLAN_SLOTS).length + 2;
-const filled = (plan) => Object.keys(PLAN_SLOTS).filter((s) => plan.files?.[s]?.id).length + (plan.voiceText ? 1 : 0) + (plan.caption ? 1 : 0);
+const ITEM_COUNT = COUNTED_SLOTS.length + 2;
+const filled = (plan) => COUNTED_SLOTS.filter((s) => plan.files?.[s]?.id).length + (plan.voiceText ? 1 : 0) + (plan.caption ? 1 : 0);
 
 // After a file or text changes, the status follows what is in: none → todo, some → partial, all → done.
 // A plan marked done by hand before it was full stays done; one that was done only because it was full drops back.
@@ -391,7 +396,7 @@ router.post(
   "/:id/copy",
   can("plan.edit"),
   ah(async (req, res) => {
-    const data = parse(z.object({ texts: z.boolean().optional().default(false), files: z.array(slotKey).max(4).optional().default([]) }), req.body);
+    const data = parse(z.object({ texts: z.boolean().optional().default(false), files: z.array(slotKey).max(Object.keys(PLAN_SLOTS).length).optional().default([]) }), req.body);
     const src = await loadPlan(req.params.id);
     const name = await productName(src);
     if (!name) throw new HttpError(404, "Sản phẩm của kế hoạch này đã bị xoá.");
@@ -433,6 +438,32 @@ router.post(
     res.locals.audit = { label: name };
     const [item] = await decorate([plan.toObject()]);
     res.status(201).json({ item, driveWarning });
+  })
+);
+
+// ---- the AI image (doc 09 §4b): approving it lets the clips be made from it. Any member may approve or undo.
+router.post(
+  "/:id/image-approval",
+  ah(async (req, res) => {
+    const plan = await loadWorkablePlan(req);
+    if (!plan.files?.aiImage?.id) throw new HttpError(400, "Kế hoạch chưa có ảnh AI để duyệt.");
+    plan.imageApproved = { by: req.userId, at: new Date() };
+    await plan.save();
+    res.locals.audit = { label: await productName(plan) };
+    const [item] = await decorate([plan.toObject()]);
+    res.json({ item });
+  })
+);
+
+router.delete(
+  "/:id/image-approval",
+  ah(async (req, res) => {
+    const plan = await loadWorkablePlan(req);
+    plan.imageApproved = null;
+    await plan.save();
+    res.locals.audit = { label: await productName(plan) };
+    const [item] = await decorate([plan.toObject()]);
+    res.json({ item });
   })
 );
 
@@ -491,6 +522,8 @@ async function putFile(req, res, plan, slot, fileId) {
   const old = plan.files?.[slot];
   const before = filled(plan);
   plan.set(`files.${slot}`, { id: f.id, name: f.name, size: Number(f.size) || 0, mimeType: f.mimeType || "", by: req.userId, at: new Date() });
+  // A new AI image has not been checked yet.
+  if (slot === "aiImage") plan.imageApproved = null;
   autoStatus(plan, before);
   await plan.save();
   if (old?.id && old.id !== f.id) await trash(old.id).catch((err) => console.error("Drive: không xoá được file cũ", old.id, err.message));
@@ -543,7 +576,7 @@ quickeditRoutes.get(
       day: plan.day,
       voiceText: plan.voiceText,
       caption: plan.caption,
-      files: Object.fromEntries(Object.keys(PLAN_SLOTS).filter((s) => plan.files?.[s]?.id).map((s) => [s, { name: plan.files[s].name, size: plan.files[s].size }])),
+      files: Object.fromEntries(COUNTED_SLOTS.filter((s) => plan.files?.[s]?.id).map((s) => [s, { name: plan.files[s].name, size: plan.files[s].size }])),
       // The slots QuickEdit may send into; a server from before this list only took the finished video.
       accepts: Object.keys(SENT),
     });
@@ -625,6 +658,7 @@ router.delete(
     }
     const before = filled(plan);
     plan.set(`files.${slot}`, undefined);
+    if (slot === "aiImage") plan.imageApproved = null;
     autoStatus(plan, before);
     await plan.save();
     res.locals.audit = { label: PLAN_SLOTS[slot] };
