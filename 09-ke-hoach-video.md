@@ -90,7 +90,7 @@ API: `GET /api/channels` (mọi thành viên, `{ items: [{ _id, name, platform, 
 - **Lấy file và text** (hiện khi đã có ít nhất một file hoặc text; viền xanh và tiêu đề "Thành phẩm đã xong" khi kế hoạch hoàn thành): nút tải từng file (video thành phẩm nổi bật), **Tải tất cả** (tải lần lượt từng file, trình duyệt có thể hỏi cho phép tải nhiều file), **Copy lời đọc**, **Copy mô tả khi đăng**. Mọi thành viên dùng được, kể cả khi kế hoạch đã hoàn thành.
 - **Dải Nhận làm** ngay dưới đầu trang (mục 4a).
 - **Thông tin:** người thực hiện, hạn nộp (kèm "Quá hạn"), trạng thái (thành viên nào cũng đổi ngay tại đây), người tạo, ngày tạo, thư mục Drive (bấm để mở trong trang Google Drive của app).
-- **File:** 4 mục Video 10s 1, Video 10s 2, Lời đọc (mp3), Video thành phẩm. Mỗi mục hiện tên file và dung lượng, nút **Tải về**, **Tải lên** (chưa có) hoặc **Thay** (đã có), **Xoá** (bấm hai lần). Riêng mục Lời đọc (mp3) có thêm nút **ElevenLabs**: mở trang Text to Speech của ElevenLabs ở tab mới và copy sẵn text lời đọc của kế hoạch (nếu có) để dán vào. Tải lên có thanh phần trăm; file đi thẳng từ trình duyệt lên Google như trang Drive.
+- **File:** 4 mục Video 10s 1, Video 10s 2, Lời đọc (mp3), Video thành phẩm. Mỗi mục hiện tên file và dung lượng, nút **Tải về**, **Tải lên** (chưa có) hoặc **Thay** (đã có), **Xoá** (bấm hai lần). Riêng mục Lời đọc (mp3) có thêm nút **Tạo bằng ElevenLabs** (người có quyền "Tạo lời đọc bằng ElevenLabs", xem mục 8b) để máy chủ tự tạo mp3. Ai không có quyền này thì thấy nút **ElevenLabs** cũ: mở trang Text to Speech ở tab mới và copy sẵn lời đọc để dán vào. Tải lên có thanh phần trăm; file đi thẳng từ trình duyệt lên Google như trang Drive.
 - **Lời đọc** và **Mô tả khi đăng:** ô nhập nhiều dòng (tối đa 5000 ký tự), nút Lưu và Huỷ sửa khi có thay đổi, nút Copy khi đã lưu.
 - Drive chưa kết nối: hiện thông báo, nút tải lên bị khoá; vẫn xem và sửa text được.
 
@@ -120,6 +120,26 @@ Mỗi lần viết lời đọc thường ra nhiều bản nhưng chỉ dùng m�
 - **Chi tiết kế hoạch:** nút **Chọn từ lời đọc đã lưu** thay cả hai text của kế hoạch bằng một cặp đã lưu, và đánh dấu cặp đó đã dùng.
 - Thêm, sửa, đánh dấu, xoá cần quyền "Thêm, sửa sản phẩm và ảnh"; ai cũng xem được. Xoá sản phẩm thì xoá luôn các lời đọc của nó.
 - Dữ liệu: collection `scripts` `{ product, voiceText, caption, used, usedAt, usedPlan, createdBy }`. API: `GET/POST /api/products/:id/scripts`, `PATCH/DELETE /api/products/:id/scripts/:sid` (`PATCH` nhận `voiceText`, `caption`, `used`); `POST /api/plans` và `PATCH /api/plans/:id` nhận thêm `script` (id cặp của đúng sản phẩm đó).
+
+## 8b. Tạo lời đọc bằng ElevenLabs
+
+Đọc **lời đọc đã lưu** của kế hoạch bằng một giọng ElevenLabs rồi lưu mp3 vào mục **Lời đọc (mp3)**. Nếu mục đó đã có file thì file cũ vào thùng rác Drive.
+
+| Vấn đề | Quyết định |
+|---|---|
+| API key | **Nhiều key** (thường là nhiều tài khoản ElevenLabs), quản trị viên thêm ở **Quản trị → ElevenLabs**: nhập tên và key, key được kiểm tra với ElevenLabs trước khi lưu, lưu **mã hoá** (AES-256-GCM, khoá suy ra từ `JWT_SECRET`) và không bao giờ gửi xuống trình duyệt, chỉ hiện 4 ký tự cuối. Đổi `JWT_SECRET` thì phải nhập lại key. Biến môi trường `ELEVENLABS_API_KEY` vẫn dùng được, hiện như một key không sửa được trên web. Key cần quyền Text to Speech, Voices (đọc), Models (đọc), User (đọc). Không có key nào thì nút chỉ mở trang ElevenLabs |
+| Chọn key | Mỗi lần tạo, dùng key **còn nhiều credit nhất** trong các key đang bật, còn dùng được và **có giọng được chọn** (giọng clone chỉ nằm trong tài khoản đã tạo nó), bỏ qua key không đủ ký tự cho lời đọc. ElevenLabs báo hết credit hoặc từ chối key thì key đó được đánh dấu "Hết credit" hay "Key hỏng" và **tự chuyển sang key kế tiếp**. Số credit đọc lại từ ElevenLabs sau mỗi 10 phút; "Kiểm tra" đọc lại ngay (key được nạp thêm credit sẽ dùng lại được) |
+| Quản trị → ElevenLabs | Bảng key: tên, 4 ký tự cuối, credit đã dùng / giới hạn và ngày làm mới, trạng thái (Dùng được, Hết credit, Key hỏng, Chưa kiểm tra được, Đã tắt), số giọng, lần dùng cuối, ô Bật. Ai xem được Quản trị thì xem được bảng; thêm, bật/tắt, kiểm tra, xoá chỉ quản trị viên. Tối đa 30 key |
+| Quyền | `plan.tts` "Tạo lời đọc bằng ElevenLabs (tốn credit)", nhóm Kế hoạch. Quản trị viên có sẵn. Vai trò đã có từ trước thì quản trị viên phải tick thêm |
+| Giọng và model | Hỏi thẳng tài khoản ElevenLabs (lưu tạm 10 phút): giọng của team (clone, tự tạo) xếp trước giọng có sẵn. Chỉ hiện model đọc được tiếng Việt. Mặc định Eleven v3. Lựa chọn lần trước được nhớ trên trình duyệt |
+| Thẻ cảm xúc | Eleven v3 trở lên hiểu `[excited]`, `[pause]`... Model cũ hơn thì thẻ `[ ]` được bỏ trước khi đọc, để không bị đọc thành tiếng |
+| Kiểm tra trước khi tốn credit | Có lời đọc, model còn và đọc được tiếng Việt, không vượt số ký tự tối đa của model, **thư mục Drive của kế hoạch tạo được**, có key có giọng đó và còn đủ credit. Mỗi kế hoạch chỉ một lượt tạo cùng lúc. Hộp thoại khoá nút khi key nhiều credit nhất có giọng đó cũng không đủ |
+| File | `Lời đọc.mp3`, mp3 44,1 kHz 128 kbps, máy chủ gửi thẳng lên Drive rồi gắn vào mục như một lần tải lên. Xong thì hộp thoại phát luôn file để nghe |
+| Lỗi | Hết credit, key sai, ElevenLabs bận hoặc quá lâu (chờ tối đa 2 phút), Drive chưa kết nối: đều báo bằng câu tiếng Việt |
+
+API: `GET /api/tts` → `{ configured, voices: [{ id, name, category, gender, accent, previewUrl, best }], models: [{ id, name, maxChars, tags }], credits: { keys, left, limit } }` (`best`: số ký tự nhiều nhất một key có giọng đó còn). `POST /api/plans/:id/tts` `{ voiceId, modelId }` → `{ item }` (kế hoạch sau khi gắn file). 409 khi kế hoạch đang được tạo lời đọc, 402 khi không key nào trả được. Ghi nhật ký kèm model, số ký tự và tên key đã dùng.
+
+Key: `GET /api/admin/tts-keys[?check=1]` → `{ items: [{ id, name, last4, active, fromEnv, status, statusText, used, limit, resetAt, voices, checkedAt, lastUsedAt }] }` (quyền `admin.view`; `check=1` đọc lại mọi key). Chỉ quản trị viên: `POST /api/admin/tts-keys` `{ name, key }` (400 key bị từ chối, 409 trùng), `PATCH /:id` `{ name?, active? }`, `POST /:id/check`, `DELETE /:id`. Collection `ttskeys`.
 
 ## 9. Để sau
 

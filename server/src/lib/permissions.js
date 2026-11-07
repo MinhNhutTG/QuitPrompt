@@ -10,6 +10,7 @@ export const PERMISSIONS = [
   { key: "prompt.delete", label: "Xoá prompt của người khác", group: "Prompt" },
   { key: "plan.edit", label: "Tạo, sửa kế hoạch", group: "Kế hoạch" },
   { key: "plan.delete", label: "Xoá kế hoạch", group: "Kế hoạch" },
+  { key: "plan.tts", label: "Tạo lời đọc bằng ElevenLabs (tốn credit)", group: "Kế hoạch" },
   { key: "resource.edit", label: "Thêm, sửa tài nguyên", group: "Tài nguyên" },
   { key: "resource.delete", label: "Xoá tài nguyên", group: "Tài nguyên" },
   { key: "drive.edit", label: "Tải file lên, tạo thư mục, đổi tên trên Drive", group: "Google Drive" },

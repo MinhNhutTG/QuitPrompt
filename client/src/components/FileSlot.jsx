@@ -1,9 +1,11 @@
 import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api.js";
+import { useAuth } from "../auth.jsx";
 import { copyText, fmtDateTimeFull } from "../lib/util.js";
 import { ConfirmButton } from "./ui.jsx";
 import { useToast } from "./Toast.jsx";
+import TtsDialog, { ELEVENLABS_TTS } from "./TtsDialog.jsx";
 
 // One file of a plan (in the plan's Drive folder): upload, replace, download, delete. `extra` adds buttons;
 // `uploadRef.current(file)` uploads a file the parent got another way (pasted or dropped).
@@ -22,12 +24,12 @@ const SlotIcon = ({ kind }) => (
   </svg>
 );
 
-const ELEVENLABS_TTS = "https://elevenlabs.io/app/speech-synthesis/text-to-speech";
-
 export default function FileSlot({ plan, slot, driveReady, onChanged, guard, extra, uploadRef }) {
   const toast = useToast();
+  const { can } = useAuth();
   const input = useRef(null);
   const [progress, setProgress] = useState(null);
+  const [tts, setTts] = useState(false);
   const file = plan.files?.[slot.key];
 
   async function upload(f) {
@@ -76,7 +78,18 @@ export default function FileSlot({ plan, slot, driveReady, onChanged, guard, ext
         )}
       </div>
       <div className="slot-acts">
-        {slot.key === "audio" && (
+        {slot.key === "audio" && can("plan.tts") && (
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            disabled={busy || !driveReady}
+            title="Đọc lời đọc đã lưu bằng giọng ElevenLabs và lưu mp3 vào đây"
+            onClick={() => guard(() => setTts(true))}
+          >
+            Tạo bằng ElevenLabs
+          </button>
+        )}
+        {slot.key === "audio" && !can("plan.tts") && (
           <a
             className="btn btn-sm btn-ghost"
             href={ELEVENLABS_TTS}
@@ -109,6 +122,7 @@ export default function FileSlot({ plan, slot, driveReady, onChanged, guard, ext
           </ConfirmButton>
         )}
       </div>
+      {slot.key === "audio" && <TtsDialog open={tts} onClose={() => setTts(false)} plan={plan} onChanged={onChanged} />}
     </li>
   );
 }
