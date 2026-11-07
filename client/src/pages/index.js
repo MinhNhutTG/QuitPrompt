@@ -11,6 +11,7 @@ const loaders = {
   planDetail: () => import("./PlanDetail.jsx"),
   trends: () => import("./Trends.jsx"),
   imagePrompt: () => import("./ImagePrompt.jsx"),
+  dolaVideo: () => import("./DolaVideo.jsx"),
   resources: () => import("./Resources.jsx"),
   drive: () => import("./Drive.jsx"),
   library: () => import("./Library.jsx"),
