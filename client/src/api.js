@@ -65,10 +65,11 @@ const qs = (params = {}) => {
 };
 
 // XHR instead of fetch: fetch cannot report upload progress.
-function uploadImage(productId, file, onProgress) {
+// base: "products" or "assets" (người mẫu / phông nền); both answer with the whole item.
+function uploadImage(productId, file, onProgress, base = "products") {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/products/${productId}/images`);
+    xhr.open("POST", `/api/${base}/${productId}/images`);
     xhr.withCredentials = true;
     xhr.setRequestHeader("X-Requested-With", "fetch");
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
@@ -181,6 +182,15 @@ export const api = {
   createResource: (body) => request("POST", "/resources", body),
   updateResource: (id, body) => request("PATCH", `/resources/${id}`, body),
   deleteResource: (id) => request("DELETE", `/resources/${id}`),
+
+  // Kho người mẫu và phông nền (pages/Models.jsx), picked on "Ảnh AI".
+  assets: () => request("GET", "/assets"),
+  createAsset: (body) => request("POST", "/assets", body),
+  updateAsset: (id, body) => request("PATCH", `/assets/${id}`, body),
+  deleteAsset: (id) => request("DELETE", `/assets/${id}`),
+  deleteAssetImage: (id, publicId) => request("DELETE", `/assets/${id}/images` + qs({ publicId })),
+  setAssetCover: (id, publicId) => request("POST", `/assets/${id}/cover`, { publicId }),
+  uploadAssetImage: (id, file, onProgress) => uploadImage(id, file, onProgress, "assets"),
 
   createPrompt: (body) => request("POST", "/prompts", body),
   updatePrompt: (id, body) => request("PATCH", `/prompts/${id}`, body),

@@ -33,7 +33,7 @@ function PublicOnly({ children }) {
   return children;
 }
 
-const { login: Login, builder: Builder, products: Products, productDetail: ProductDetail, saved: Saved, plans: Plans, planDetail: PlanDetail, trends: Trends, imagePrompt: ImagePrompt, dolaVideo: DolaVideo, resources: Resources, drive: Drive, library: Library, settings: Settings, admin: Admin, notFound: NotFound } = pages;
+const { login: Login, builder: Builder, products: Products, productDetail: ProductDetail, saved: Saved, plans: Plans, planDetail: PlanDetail, trends: Trends, imagePrompt: ImagePrompt, models: Models, dolaVideo: DolaVideo, resources: Resources, drive: Drive, library: Library, settings: Settings, admin: Admin, notFound: NotFound } = pages;
 
 function App() {
   return (
@@ -63,6 +63,7 @@ function App() {
         <Route path="plans/:id" element={<PlanDetail />} />
         <Route path="trends" element={<Trends />} />
         <Route path="image-prompt" element={<ImagePrompt />} />
+        <Route path="models" element={<Models />} />
         <Route path="dola-video" element={<DolaVideo />} />
         <Route path="resources" element={<Resources />} />
         <Route path="drive" element={<Drive />} />

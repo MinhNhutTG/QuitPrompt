@@ -39,6 +39,11 @@ export const usePlans = (params) =>
   useQuery({ queryKey: ["plans", params], queryFn: () => api.plans({ ...params, limit: 20 }), placeholderData: keepPreviousData });
 
 export const useResources = () => useQuery({ queryKey: ["resources"], queryFn: api.resources });
+export const useAssets = () => useQuery({ queryKey: ["assets"], queryFn: api.assets });
+// A changed or new người mẫu / phông nền, written into the cached list without refetching.
+export function putAsset(qc, item) {
+  qc.setQueryData(["assets"], (old) => (old ? { ...old, items: [item, ...old.items.filter((a) => a._id !== item._id)] } : old));
+}
 
 export const usePlan = (id) => useQuery({ queryKey: ["plans", "one", id], queryFn: () => api.plan(id), enabled: Boolean(id) });
 export const useDriveStatus = () => useQuery({ queryKey: ["drive", "status"], queryFn: api.driveStatus, staleTime: 60 * 1000 });

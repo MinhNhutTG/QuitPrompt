@@ -17,7 +17,8 @@ const isImage = (f) => f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|hei
 
 // Compress then upload one file at a time: every response carries the full product,
 // so sequential uploads can never apply an older image list over a newer one.
-export function useUploads(onItem, { notify = true } = {}) {
+// upload: (id, file, onProgress) → { item }; defaults to product images.
+export function useUploads(onItem, { notify = true, upload = api.uploadImage } = {}) {
   const toast = useToast();
   const [jobs, setJobs] = useState([]);
   const onItemRef = useRef(onItem);
@@ -34,7 +35,7 @@ export function useUploads(onItem, { notify = true } = {}) {
         patch(job.id, { status: "compress" });
         const small = await compressImage(job.file);
         patch(job.id, { status: "upload" });
-        const { item } = await api.uploadImage(productId, small, (progress) => patch(job.id, { progress }));
+        const { item } = await upload(productId, small, (progress) => patch(job.id, { progress }));
         onItemRef.current?.(item);
         setJobs((all) => all.filter((j) => j.id !== job.id));
       } catch (e) {
@@ -52,7 +53,7 @@ export function useUploads(onItem, { notify = true } = {}) {
     if (notify && ok) toast(`Đã tải lên ${ok} ảnh`, failed ? { detail: `${failed} ảnh lỗi, xem danh sách bên dưới.` } : undefined);
     if (notify && !ok && failed) toast(`Chưa tải được ${failed} ảnh`, { tone: "danger", detail: "Xem lỗi trong danh sách bên dưới." });
     return failed;
-  }, [notify, toast]);
+  }, [notify, toast, upload]);
 
   const dismiss = useCallback(() => setJobs((all) => all.filter((j) => j.status !== "error")), []);
   return { jobs, run, dismiss, busy: jobs.some((j) => j.status !== "error") };
@@ -94,16 +95,19 @@ export function JobList({ jobs, onDismiss }) {
 }
 
 // Drop zone + file picker. On phones accept="image/*" also offers the camera.
-export function DropZone({ onFiles, room, disabled, label = "+ Ảnh" }) {
+// what: how the full message names the item ("Mỗi sản phẩm", "Mỗi người mẫu"…).
+// max: the item's own image limit when it is not a product (no tier limit applies).
+export function DropZone({ onFiles, room, disabled, label = "+ Ảnh", what = "Mỗi sản phẩm", max }) {
   const toast = useToast();
-  const cap = useImageCap();
+  const tierCap = useImageCap();
+  const cap = max ?? tierCap;
   room ??= cap;
   const [over, setOver] = useState(false);
 
   function take(fileList) {
     const files = [...(fileList || [])].filter(isImage);
     if (!files.length) return toast("Chỉ nhận file ảnh (JPG, PNG, WEBP, HEIC...).", { tone: "danger" });
-    if (room <= 0) return toast(`Mỗi sản phẩm tối đa ${cap} ảnh${cap < MAX_IMAGES ? " với hạng tài khoản của bạn" : ""}.`, { tone: "danger" });
+    if (room <= 0) return toast(`${what} tối đa ${cap} ảnh${cap < MAX_IMAGES ? " với hạng tài khoản của bạn" : ""}.`, { tone: "danger" });
     if (files.length > room) toast(`Chỉ thêm được ${room} ảnh nữa, đã bỏ bớt ${files.length - room} ảnh.`, { tone: "danger" });
     onFiles(files.slice(0, room));
   }

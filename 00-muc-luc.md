@@ -19,6 +19,7 @@ Bộ tài liệu này mô tả việc nâng cấp **Xưởng Prompt Thời Trang
 | 13 | [Chat và thông báo realtime](13-chat-thong-bao.md) | Phòng chat chung, thông báo hành động của thành viên ngay khi xảy ra, ai đang online | Mọi người, lập trình viên |
 | 14 | [Đón sóng](14-don-song.md) | Theo dõi xu hướng tìm kiếm (Google Trends, TikTok) và lịch mùa sale để làm video trước khi sóng lên | Mọi người, lập trình viên |
 | 15 | [Tắt máy tính từ xa](15-tat-may-tu-xa.md) | Nút tắt máy Windows trong trang Quản trị, chương trình nhận lệnh trên máy, cách cài, API | Quản trị viên, lập trình viên |
+| 16 | [Người mẫu và phông nền](16-nguoi-mau-phong-nen.md) | Kho ảnh người mẫu (nhiều ảnh mỗi người) và phông nền của team, chọn ở trang Ảnh AI | Mọi người, lập trình viên |
 
 ## Tóm tắt một đoạn
 

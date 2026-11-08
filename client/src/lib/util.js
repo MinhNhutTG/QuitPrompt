@@ -8,6 +8,8 @@ export function cld(url, transform) {
 }
 export const thumbUrl = (url, w) => cld(url, `f_auto,q_auto,w_${w},c_limit`);
 export const blurUrl = (url) => cld(url, "f_auto,q_auto:low,w_24,e_blur:200");
+// The original file, sent by Cloudinary as a download (so <a download> works across origins).
+export const attachmentUrl = (url) => cld(url, "fl_attachment");
 
 // ---- Vietnamese-friendly search: "non" matches "Nón".
 export const norm = (s) =>
