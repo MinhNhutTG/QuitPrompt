@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { copyText, fmtDateTimeFull } from "../lib/util.js";
+import { openAiTab } from "../lib/aiTab.js";
 import { IMAGE_SLOTS, SLOTS } from "../lib/plans.js";
 import { Field } from "./ui.jsx";
 import { useToast } from "./Toast.jsx";
@@ -109,13 +110,16 @@ export default function AiFlow({ plan, driveReady, onChanged, guard }) {
     return ok;
   }
 
-  // Copies the image, then opens the AI site in a new tab: paste the image there first (Ctrl+V), then the prompt.
+  // Copies the image, then goes to the AI site: paste the image there first (Ctrl+V), then the prompt.
+  // A tab of that site opened earlier is reused instead of loading the site again (lib/aiTab.js).
   function imageTo(file, site, name) {
     const copying = copyImage(api.driveDownloadUrl(file.id));
-    window.open(site, "_blank", "noopener");
+    const how = openAiTab(name.toLowerCase(), site);
+    if (how === "blocked") toast(`Trình duyệt chặn mở ${name}`, { tone: "danger", detail: "Cho phép cửa sổ bật lên (popup) cho trang này rồi bấm lại." });
+    const where = how === "reused" ? `tab ${name} đang mở` : name;
     copying.then(
-      () => toast(`Đã copy ảnh, dán vào ${name} (Ctrl+V)`, { detail: "Sau đó quay lại đây bấm Copy prompt rồi dán tiếp." }),
-      () => toast(`Đã mở ${name}`, { tone: "info", detail: "Trình duyệt này không copy được ảnh: bấm Tải về rồi kéo ảnh vào." })
+      () => toast(`Đã copy ảnh, dán vào ${where} (Ctrl+V)`, { detail: "Sau đó quay lại đây bấm Copy prompt rồi dán tiếp." }),
+      () => toast(how === "reused" ? `Đã chuyển sang ${where}` : `Đã mở ${name}`, { tone: "info", detail: "Trình duyệt này không copy được ảnh: bấm Tải về rồi kéo ảnh vào." })
     );
   }
 
